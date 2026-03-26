@@ -9,6 +9,7 @@ import 'sections/appearance_section.dart';
 import 'sections/encryption_section.dart';
 import 'sections/server_section.dart';
 import 'sections/about_section.dart';
+import 'sections/notification_section.dart';
 
 enum _SettingsSection {
   account('account', Icons.person_outline),
@@ -195,7 +196,7 @@ class _SettingsModalState extends ConsumerState<SettingsModal> {
     return switch (_selected) {
       _SettingsSection.account => const AccountSection(),
       _SettingsSection.appearance => const AppearanceSection(),
-      _SettingsSection.notifications => const _PlaceholderSection('notifications'),
+      _SettingsSection.notifications => const NotificationSection(),
       _SettingsSection.encryption => const EncryptionSection(),
       _SettingsSection.server => const ServerSection(),
       _SettingsSection.about => const AboutSection(),

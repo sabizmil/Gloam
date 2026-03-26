@@ -70,6 +70,41 @@ class NotificationService {
     }
   }
 
+  /// Fire a single test notification to verify system configuration.
+  static Future<bool> sendTestNotification() async {
+    if (!Platform.isMacOS && !Platform.isLinux && !Platform.isWindows) {
+      return false;
+    }
+    try {
+      final plugin = FlutterLocalNotificationsPlugin();
+      const initMacOS = DarwinInitializationSettings();
+      const initLinux =
+          LinuxInitializationSettings(defaultActionName: 'Open');
+      const initSettings = InitializationSettings(
+        macOS: initMacOS,
+        linux: initLinux,
+      );
+      await plugin.initialize(initSettings);
+      await plugin.show(
+        0,
+        'Gloam',
+        'Notifications are working.',
+        const NotificationDetails(
+          macOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentSound: true,
+            presentBanner: true,
+            presentList: true,
+          ),
+          linux: LinuxNotificationDetails(),
+        ),
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _showNotification({
     required Room room,
     required String sender,
