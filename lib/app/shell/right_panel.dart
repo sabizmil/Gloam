@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/chat/presentation/providers/timeline_provider.dart';
+import '../../features/chat/presentation/widgets/media_gallery.dart';
 import '../../features/chat/presentation/widgets/thread_panel.dart';
+import '../../features/search/presentation/search_screen.dart';
 import 'room_info_panel.dart';
 
 /// What's currently shown in the right panel.
-enum RightPanelView { none, thread, roomInfo, members }
+enum RightPanelView { none, thread, roomInfo, members, media, search }
 
 /// State for the right panel.
 class RightPanelState {
@@ -33,6 +35,8 @@ class RightPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final panelState = ref.watch(rightPanelProvider);
+    final close = () => ref.read(rightPanelProvider.notifier).state =
+        RightPanelState.closed;
 
     return switch (panelState.view) {
       RightPanelView.none => const SizedBox.shrink(),
@@ -40,19 +44,29 @@ class RightPanel extends ConsumerWidget {
           ? ThreadPanel(
               roomId: roomId,
               rootMessage: panelState.threadRoot!,
-              onClose: () => ref.read(rightPanelProvider.notifier).state =
-                  RightPanelState.closed,
+              onClose: close,
             )
           : const SizedBox.shrink(),
       RightPanelView.roomInfo => RoomInfoPanel(
           roomId: roomId,
-          onClose: () => ref.read(rightPanelProvider.notifier).state =
-              RightPanelState.closed,
+          onClose: close,
         ),
       RightPanelView.members => RoomInfoPanel(
           roomId: roomId,
-          onClose: () => ref.read(rightPanelProvider.notifier).state =
-              RightPanelState.closed,
+          onClose: close,
+        ),
+      RightPanelView.media => MediaGallery(
+          roomId: roomId,
+          onClose: close,
+        ),
+      RightPanelView.search => SizedBox(
+          width: 380,
+          child: SearchScreen(
+            onSelectResult: (roomId, eventId) {
+              ref.read(selectedRoomProvider.notifier).state = roomId;
+              close();
+            },
+          ),
         ),
     };
   }

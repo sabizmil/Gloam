@@ -109,6 +109,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           topic: topic,
           memberCount: memberCount,
           isEncrypted: room?.encrypted ?? false,
+          onSearchTap: () => ref.read(rightPanelProvider.notifier).state =
+              const RightPanelState(view: RightPanelView.search),
           onInfoTap: () => ref.read(rightPanelProvider.notifier).state =
               const RightPanelState(view: RightPanelView.roomInfo),
           onMembersTap: () => ref.read(rightPanelProvider.notifier).state =
@@ -327,6 +329,7 @@ class _ChatHeader extends StatelessWidget {
     required this.isEncrypted,
     this.onInfoTap,
     this.onMembersTap,
+    this.onSearchTap,
   });
 
   final String roomName;
@@ -335,6 +338,7 @@ class _ChatHeader extends StatelessWidget {
   final bool isEncrypted;
   final VoidCallback? onInfoTap;
   final VoidCallback? onMembersTap;
+  final VoidCallback? onSearchTap;
 
   @override
   Widget build(BuildContext context) {
@@ -396,7 +400,8 @@ class _ChatHeader extends StatelessWidget {
                 onTap: () => showRecoveryKeyDialog(ctx),
               ),
             ),
-          _HeaderAction(icon: Icons.search, onTap: () {}),
+          _HeaderAction(
+              icon: Icons.search, onTap: onSearchTap ?? () {}),
           _HeaderAction(
               icon: Icons.push_pin_outlined, onTap: onInfoTap ?? () {}),
           _HeaderAction(

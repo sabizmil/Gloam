@@ -11,6 +11,7 @@ import '../../../app/shell/adaptive_shell.dart';
 import '../../../app/shell/quick_switcher.dart';
 import '../../../services/matrix_service.dart';
 import '../../../services/notification_service.dart';
+import '../../../services/search_service.dart';
 import '../../../services/verification_service.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
 
@@ -139,6 +140,12 @@ class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
       _notificationService = NotificationService(client);
       _notificationService!.initialize().then((_) {
         _notificationService!.start();
+      });
+
+      // Initialize search indexing
+      final searchService = ref.read(searchServiceProvider);
+      searchService.initialize().then((_) {
+        searchService.startLiveIndexing();
       });
     }
   }
