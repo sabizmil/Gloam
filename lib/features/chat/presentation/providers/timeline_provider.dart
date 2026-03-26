@@ -1,0 +1,294 @@
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:matrix/matrix.dart';
+
+import '../../../../services/matrix_service.dart';
+
+/// Lightweight message model — isolates UI from SDK types.
+class TimelineMessage {
+  final String eventId;
+  final String senderId;
+  final String senderName;
+  final DateTime timestamp;
+  final String type; // m.text, m.image, m.file, m.audio, m.video, m.emote, m.notice
+  final String body;
+  final String? formattedBody;
+  final String? mimeType;
+  final Uri? mediaUrl;
+  final MessageSendState sendState;
+  final bool isEdited;
+  final String? replyToEventId;
+  final String? replyToSenderName;
+  final String? replyToBody;
+  final Map<String, ReactionGroup> reactions;
+  final bool isRedacted;
+  final int? mediaSizeBytes;
+  final int? imageWidth;
+  final int? imageHeight;
+
+  const TimelineMessage({
+    required this.eventId,
+    required this.senderId,
+    required this.senderName,
+    required this.timestamp,
+    required this.type,
+    required this.body,
+    this.formattedBody,
+    this.mimeType,
+    this.mediaUrl,
+    this.sendState = MessageSendState.sent,
+    this.isEdited = false,
+    this.replyToEventId,
+    this.replyToSenderName,
+    this.replyToBody,
+    this.reactions = const {},
+    this.isRedacted = false,
+    this.mediaSizeBytes,
+    this.imageWidth,
+    this.imageHeight,
+  });
+
+  bool get isLocalEcho => eventId.startsWith('~');
+}
+
+enum MessageSendState { sending, sent, error }
+
+class ReactionGroup {
+  final String emoji;
+  final int count;
+  final bool includesMe;
+  const ReactionGroup({
+    required this.emoji,
+    required this.count,
+    required this.includesMe,
+  });
+}
+
+/// Provides the room's timeline as a list of [TimelineMessage]s.
+/// Rebuilds when the timeline updates (new messages, edits, reactions, etc.)
+class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
+  final Client _client;
+  final String _roomId;
+  Timeline? _timeline;
+  StreamSubscription? _sub;
+
+  TimelineNotifier(this._client, this._roomId) : super([]) {
+    _init();
+  }
+
+  Room? get _room => _client.getRoomById(_roomId);
+
+  Future<void> _init() async {
+    final room = _room;
+    if (room == null) return;
+
+    _timeline = await room.getTimeline(
+      onChange: (_) => _rebuild(),
+      onInsert: (_) => _rebuild(),
+      onRemove: (_) => _rebuild(),
+    );
+    _rebuild();
+  }
+
+  void _rebuild() {
+    final timeline = _timeline;
+    if (timeline == null) return;
+
+    final messages = <TimelineMessage>[];
+    final myUserId = _client.userID;
+
+    for (final event in timeline.events) {
+      // Use getDisplayEvent to get the decrypted version
+      final displayEvent = event.getDisplayEvent(timeline);
+
+      if (displayEvent.type == EventTypes.Message ||
+          displayEvent.type == EventTypes.Encrypted ||
+          displayEvent.type == EventTypes.Sticker) {
+        messages.add(_mapEvent(displayEvent, myUserId));
+      } else if (displayEvent.type == EventTypes.Redaction) {
+        continue;
+      }
+      // Skip state events for now (joins, leaves, etc.)
+    }
+
+    // SDK returns newest first — reverse for display (oldest at top)
+    state = messages.reversed.toList();
+  }
+
+  TimelineMessage _mapEvent(Event event, String? myUserId) {
+    // Handle replies
+    String? replyToEventId;
+    String? replyToSenderName;
+    String? replyToBody;
+
+    // Check if this message is a reply via m.relates_to
+    final relatesTo = event.content.tryGetMap<String, Object?>('m.relates_to');
+    final inReplyToMap = relatesTo?.tryGetMap<String, Object?>('m.in_reply_to');
+    replyToEventId = inReplyToMap?.tryGet<String>('event_id');
+
+    // Handle reactions
+    final reactionMap = <String, ReactionGroup>{};
+    final aggregatedEvents = event.aggregatedEvents(
+      _timeline!,
+      RelationshipTypes.reaction,
+    );
+    final reactionCounts = <String, int>{};
+    final reactionIncludesMe = <String, bool>{};
+
+    for (final reaction in aggregatedEvents) {
+      final relatesToMap =
+          reaction.content.tryGetMap<String, Object?>('m.relates_to');
+      final emoji = relatesToMap?.tryGet<String>('key') ?? '';
+      if (emoji.isEmpty) continue;
+      reactionCounts[emoji] = (reactionCounts[emoji] ?? 0) + 1;
+      if (reaction.senderId == myUserId) {
+        reactionIncludesMe[emoji] = true;
+      }
+    }
+    for (final entry in reactionCounts.entries) {
+      reactionMap[entry.key] = ReactionGroup(
+        emoji: entry.key,
+        count: entry.value,
+        includesMe: reactionIncludesMe[entry.key] ?? false,
+      );
+    }
+
+    // Determine send state
+    var sendState = MessageSendState.sent;
+    if (event.status.isSending) {
+      sendState = MessageSendState.sending;
+    } else if (event.status.isError) {
+      sendState = MessageSendState.error;
+    }
+
+    // Determine message type
+    String type;
+    final msgType = event.messageType;
+    switch (msgType) {
+      case MessageTypes.Image:
+        type = 'm.image';
+      case MessageTypes.File:
+        type = 'm.file';
+      case MessageTypes.Audio:
+        type = 'm.audio';
+      case MessageTypes.Video:
+        type = 'm.video';
+      case MessageTypes.Emote:
+        type = 'm.emote';
+      case MessageTypes.Notice:
+        type = 'm.notice';
+      default:
+        type = 'm.text';
+    }
+
+    return TimelineMessage(
+      eventId: event.eventId,
+      senderId: event.senderId,
+      senderName: event.senderFromMemoryOrFallback.calcDisplayname(),
+      timestamp: event.originServerTs,
+      type: type,
+      body: event.body,
+      formattedBody: event.formattedText.isNotEmpty ? event.formattedText : null,
+      mimeType: event.content.tryGetMap<String, Object?>('info')?.tryGet<String>('mimetype'),
+      mediaUrl: event.attachmentMxcUrl,
+      sendState: sendState,
+      isEdited: event.hasAggregatedEvents(
+        _timeline!,
+        RelationshipTypes.edit,
+      ),
+      replyToEventId: replyToEventId,
+      replyToSenderName: replyToSenderName,
+      replyToBody: replyToBody,
+      reactions: reactionMap,
+      isRedacted: event.redacted,
+      mediaSizeBytes:
+          event.content.tryGetMap<String, Object?>('info')?.tryGet<int>('size'),
+      imageWidth:
+          event.content.tryGetMap<String, Object?>('info')?.tryGet<int>('w'),
+      imageHeight:
+          event.content.tryGetMap<String, Object?>('info')?.tryGet<int>('h'),
+    );
+  }
+
+  /// Request older messages from the server.
+  Future<void> loadMore() async {
+    await _timeline?.requestHistory();
+  }
+
+  /// Send a text message. Returns immediately (optimistic).
+  Future<void> sendTextMessage(String text) async {
+    final room = _room;
+    if (room == null) return;
+    await room.sendTextEvent(text);
+  }
+
+  /// Send a reply to a specific event.
+  Future<void> sendReply(String text, String replyToEventId) async {
+    final room = _room;
+    if (room == null || _timeline == null) return;
+
+    // Find the event in the loaded timeline first, fall back to fetching
+    Event? replyEvent;
+    try {
+      replyEvent = _timeline!.events.firstWhere(
+        (e) => e.eventId == replyToEventId,
+      );
+    } catch (_) {
+      replyEvent = await room.getEventById(replyToEventId);
+    }
+    if (replyEvent != null) {
+      await room.sendTextEvent(text, inReplyTo: replyEvent);
+    }
+  }
+
+  /// Edit a message.
+  Future<void> editMessage(String eventId, String newText) async {
+    final room = _room;
+    if (room == null) return;
+    await room.sendTextEvent(newText, editEventId: eventId);
+  }
+
+  /// Redact (delete) a message.
+  Future<void> redactMessage(String eventId) async {
+    final room = _room;
+    if (room == null) return;
+    await room.redactEvent(eventId);
+  }
+
+  /// Send a reaction.
+  Future<void> react(String eventId, String emoji) async {
+    final room = _room;
+    if (room == null) return;
+    await room.sendReaction(eventId, emoji);
+  }
+
+  /// Send typing notification.
+  Future<void> setTyping(bool isTyping) async {
+    final room = _room;
+    if (room == null) return;
+    await room.setTyping(isTyping);
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    _timeline?.cancelSubscriptions();
+    super.dispose();
+  }
+}
+
+/// Family provider — one timeline per room.
+final timelineProvider = StateNotifierProvider.family<TimelineNotifier,
+    List<TimelineMessage>, String>(
+  (ref, roomId) {
+    final client = ref.watch(matrixServiceProvider).client;
+    if (client == null) {
+      return TimelineNotifier(Client('dummy'), roomId);
+    }
+    return TimelineNotifier(client, roomId);
+  },
+);
+
+/// Currently selected room ID.
+final selectedRoomProvider = StateProvider<String?>((ref) => null);

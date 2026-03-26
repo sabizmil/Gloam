@@ -1,0 +1,140 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/spacing.dart';
+import '../../../../widgets/gloam_avatar.dart';
+import '../providers/room_list_provider.dart';
+
+class RoomListTile extends StatelessWidget {
+  const RoomListTile({
+    super.key,
+    required this.room,
+    this.isActive = false,
+    this.onTap,
+  });
+
+  final RoomListItem room;
+  final bool isActive;
+  final VoidCallback? onTap;
+
+  String _formatTimestamp(DateTime? ts) {
+    if (ts == null) return '';
+    final now = DateTime.now();
+    final diff = now.difference(ts);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inDays < 7) return '${diff.inDays}d';
+    return '${ts.month}/${ts.day}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: isActive ? GloamColors.bgElevated : Colors.transparent,
+      borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
+        hoverColor: GloamColors.bgElevated,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Row(
+            children: [
+              // Avatar
+              room.isDirect
+                  ? GloamAvatar(
+                      displayName: room.displayName,
+                      size: 36,
+                    )
+                  : GloamAvatar(
+                      displayName: room.displayName,
+                      size: 36,
+                      borderRadius: 8,
+                    ),
+              const SizedBox(width: 10),
+
+              // Name + preview
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      room.displayName,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: room.unreadCount > 0
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                        color: room.unreadCount > 0
+                            ? GloamColors.textPrimary
+                            : GloamColors.textSecondary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (room.lastMessagePreview != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        room.isDirect
+                            ? room.lastMessagePreview!
+                            : '${room.lastMessageSender ?? ''}: ${room.lastMessagePreview!}',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: GloamColors.textTertiary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Timestamp + badge
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _formatTimestamp(room.lastMessageTimestamp),
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 10,
+                      color: room.unreadCount > 0
+                          ? GloamColors.accent
+                          : GloamColors.textTertiary,
+                    ),
+                  ),
+                  if (room.unreadCount > 0) ...[
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: GloamColors.accent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        room.unreadCount > 99
+                            ? '99+'
+                            : '${room.unreadCount}',
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: GloamColors.bg,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

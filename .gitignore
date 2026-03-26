@@ -1,0 +1,57 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+*.iml
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# FVM
+.fvm/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Android
+android/.gradle/
+android/local.properties
+android/key.properties
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+
+# Generated
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+
+# Generated plugin registrants
+macos/Flutter/GeneratedPluginRegistrant.swift
+linux/flutter/generated_plugin_registrant.cc
+linux/flutter/generated_plugin_registrant.h
+linux/flutter/generated_plugins.cmake
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugin_registrant.h
+windows/flutter/generated_plugins.cmake
+
+# CocoaPods
+macos/Pods/
+macos/Podfile.lock
+
+# Planck (Pencil editor state)
+.planck/
+
+# Native library binaries (built/bundled at build time)
+macos/Runner/lib/
+
+# Secrets
+.env
+*.jks
+*.keystore
