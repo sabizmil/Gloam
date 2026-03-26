@@ -16,6 +16,7 @@ class MessageBubble extends StatelessWidget {
     super.key,
     required this.message,
     required this.isGrouped,
+    this.roomId,
     this.onReply,
     this.onEdit,
     this.onReact,
@@ -23,6 +24,7 @@ class MessageBubble extends StatelessWidget {
   });
 
   final TimelineMessage message;
+  final String? roomId;
 
   /// True if this message is from the same sender as the previous one
   /// within the grouping window (no avatar/name shown).
@@ -59,19 +61,22 @@ class MessageBubble extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Avatar column
-            SizedBox(
-              width: 48,
-              child: isGrouped
-                  ? null
-                  : Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: GloamAvatar(
-                        displayName: message.senderName,
-                        size: 36,
-                      ),
-                    ),
-            ),
+            // Avatar — Align prevents Row from stretching it vertically
+            if (!isGrouped)
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: GloamAvatar(
+                    displayName: message.senderName,
+                    mxcUrl: message.senderAvatarUrl,
+                    size: 36,
+                  ),
+                ),
+              )
+            else
+              const SizedBox(width: 48),
 
             // Content column
             Expanded(
@@ -156,7 +161,7 @@ class MessageBubble extends StatelessWidget {
                     ),
 
                   // Message body
-                  _MessageContent(message: message),
+                  _MessageContent(message: message, roomId: roomId),
 
                   // Reactions
                   if (message.reactions.isNotEmpty)
@@ -198,8 +203,9 @@ class MessageBubble extends StatelessWidget {
 }
 
 class _MessageContent extends StatelessWidget {
-  const _MessageContent({required this.message});
+  const _MessageContent({required this.message, this.roomId});
   final TimelineMessage message;
+  final String? roomId;
 
   @override
   Widget build(BuildContext context) {
@@ -222,7 +228,7 @@ class _MessageContent extends StatelessWidget {
             height: 1.5,
           ),
         ),
-      'm.image' => ImageMessage(message: message),
+      'm.image' => ImageMessage(message: message, roomId: roomId),
       'm.video' => VideoMessage(message: message),
       'm.file' => FileMessage(message: message),
       'm.audio' => VoiceMessage(message: message),

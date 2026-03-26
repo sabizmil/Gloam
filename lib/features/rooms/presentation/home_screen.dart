@@ -12,6 +12,7 @@ import '../../../app/shell/quick_switcher.dart';
 import '../../../app/shell/right_panel.dart';
 import '../../../app/shell/shortcut_help_overlay.dart';
 import '../../../app/shortcuts.dart';
+import '../../../features/settings/presentation/settings_modal.dart';
 import '../../../services/matrix_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/search_service.dart';
@@ -205,6 +206,12 @@ class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
             ),
             ShortcutHelpIntent: CallbackAction<ShortcutHelpIntent>(
               onInvoke: (_) => showShortcutHelp(context),
+            ),
+            PreferencesIntent: CallbackAction<PreferencesIntent>(
+              onInvoke: (_) {
+                showSettingsModal(context);
+                return null;
+              },
             ),
           },
           child: const Focus(

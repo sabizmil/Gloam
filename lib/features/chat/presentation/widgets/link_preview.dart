@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme/color_tokens.dart';
 import '../../../../app/theme/spacing.dart';
@@ -63,7 +64,11 @@ class _LinkPreviewState extends ConsumerState<LinkPreview> {
     if (_loading || _url == null) return const SizedBox.shrink();
 
     // Show a minimal link card even without OG metadata
-    return Container(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => launchUrl(Uri.parse(_url!), mode: LaunchMode.externalApplication),
+        child: Container(
       margin: const EdgeInsets.only(top: 6),
       constraints: const BoxConstraints(maxWidth: 400),
       padding: const EdgeInsets.all(12),
@@ -117,7 +122,7 @@ class _LinkPreviewState extends ConsumerState<LinkPreview> {
           ),
         ],
       ),
-    );
+    )));
   }
 
   String _extractDomain(String url) {

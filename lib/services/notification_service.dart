@@ -25,6 +25,13 @@ class NotificationService {
     );
 
     await _plugin.initialize(initSettings);
+
+    if (Platform.isMacOS) {
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+              MacOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
+    }
   }
 
   void start() {
@@ -79,7 +86,12 @@ class NotificationService {
       title,
       body,
       const NotificationDetails(
-        macOS: DarwinNotificationDetails(),
+        macOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentSound: true,
+          presentBanner: true,
+          presentList: true,
+        ),
         linux: LinuxNotificationDetails(),
       ),
     );

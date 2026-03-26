@@ -10,6 +10,7 @@ class TimelineMessage {
   final String eventId;
   final String senderId;
   final String senderName;
+  final Uri? senderAvatarUrl;
   final DateTime timestamp;
   final String type; // m.text, m.image, m.file, m.audio, m.video, m.emote, m.notice
   final String body;
@@ -31,6 +32,7 @@ class TimelineMessage {
     required this.eventId,
     required this.senderId,
     required this.senderName,
+    this.senderAvatarUrl,
     required this.timestamp,
     required this.type,
     required this.body,
@@ -186,6 +188,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
       eventId: event.eventId,
       senderId: event.senderId,
       senderName: event.senderFromMemoryOrFallback.calcDisplayname(),
+      senderAvatarUrl: event.senderFromMemoryOrFallback.avatarUrl,
       timestamp: event.originServerTs,
       type: type,
       body: event.body,
@@ -261,6 +264,13 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     final room = _room;
     if (room == null) return;
     await room.sendReaction(eventId, emoji);
+  }
+
+  /// Send a file/image attachment.
+  Future<void> sendFileMessage(MatrixFile file) async {
+    final room = _room;
+    if (room == null) return;
+    await room.sendFileEvent(file);
   }
 
   /// Send typing notification.

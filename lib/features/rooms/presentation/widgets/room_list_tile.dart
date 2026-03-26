@@ -46,16 +46,12 @@ class RoomListTile extends StatelessWidget {
           child: Row(
             children: [
               // Avatar
-              room.isDirect
-                  ? GloamAvatar(
-                      displayName: room.displayName,
-                      size: 36,
-                    )
-                  : GloamAvatar(
-                      displayName: room.displayName,
-                      size: 36,
-                      borderRadius: 8,
-                    ),
+              GloamAvatar(
+                displayName: room.displayName,
+                mxcUrl: room.avatarUrl,
+                size: 36,
+                borderRadius: room.isDirect ? null : 8,
+              ),
               const SizedBox(width: 10),
 
               // Name + preview

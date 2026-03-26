@@ -281,8 +281,11 @@ Future<String?> showEmojiPicker(BuildContext context) {
         Positioned(
           bottom: 80,
           right: 20,
-          child: GloamEmojiPicker(
-            onSelect: (emoji) => Navigator.pop(ctx, emoji),
+          child: Material(
+            color: Colors.transparent,
+            child: GloamEmojiPicker(
+              onSelect: (emoji) => Navigator.pop(ctx, emoji),
+            ),
           ),
         ),
       ],

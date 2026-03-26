@@ -1,3 +1,5 @@
+import 'package:desktop_drop/desktop_drop.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -5,8 +7,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../app/theme/color_tokens.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/matrix_service.dart';
+import '../../../../services/upload_service.dart';
 import '../providers/timeline_provider.dart';
 import '../widgets/date_separator.dart';
+import '../widgets/drop_overlay.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/message_composer.dart';
 import '../widgets/typing_indicator.dart';
@@ -69,6 +73,62 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return a.year != b.year || a.month != b.month || a.day != b.day;
   }
 
+  Future<void> _pickAndUploadFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles();
+      if (result == null || result.files.isEmpty) return;
+      final picked = result.files.first;
+      if (picked.path == null) return;
+
+      final sizeError = UploadService.validateFileSize(picked.size);
+      if (sizeError != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(sizeError), backgroundColor: GloamColors.danger),
+        );
+        return;
+      }
+
+      final matrixFile = await UploadService.fromPath(picked.path!);
+      ref.read(timelineProvider(widget.roomId).notifier).sendFileMessage(matrixFile);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('upload failed: $e'), backgroundColor: GloamColors.danger),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleDroppedFiles(List<DropDoneDetails> detailsList) async {
+    for (final details in detailsList) {
+      for (final xFile in details.files) {
+        try {
+          final bytes = await xFile.readAsBytes();
+
+          final sizeError = UploadService.validateFileSize(bytes.length);
+          if (sizeError != null && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(sizeError), backgroundColor: GloamColors.danger),
+            );
+            continue;
+          }
+
+          final matrixFile = UploadService.createMatrixFile(
+            bytes: bytes,
+            name: xFile.name,
+          );
+          ref.read(timelineProvider(widget.roomId).notifier).sendFileMessage(matrixFile);
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('upload failed: $e'), backgroundColor: GloamColors.danger),
+            );
+          }
+        }
+      }
+    }
+  }
+
   void _handleReplyAction(TimelineMessage msg) {
     setState(() {
       _composerState = ComposerState(
@@ -101,7 +161,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final memberCount = room?.summary.mJoinedMemberCount ?? 0;
     final myUserId = client?.userID;
 
-    return Column(
+    return FileDropZone(
+      onFilesDropped: _handleDroppedFiles,
+      child: Column(
       children: [
         // Header
         _ChatHeader(
@@ -109,6 +171,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           topic: topic,
           memberCount: memberCount,
           isEncrypted: room?.encrypted ?? false,
+          hasUndecryptable: messages.any((m) =>
+              m.body.contains('sender has not sent us the session key') ||
+              m.body == 'Encrypted message'),
           onSearchTap: () => ref.read(rightPanelProvider.notifier).state =
               const RightPanelState(view: RightPanelView.search),
           onInfoTap: () => ref.read(rightPanelProvider.notifier).state =
@@ -160,6 +225,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         child: MessageBubble(
                           message: msg,
                           isGrouped: isGrouped,
+                          roomId: widget.roomId,
                           onReply: () => _handleReplyAction(msg),
                           onEdit: () => _handleEditAction(msg),
                           onReact: (emoji) => ref
@@ -222,11 +288,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           onTyping: (isTyping) => ref
               .read(timelineProvider(widget.roomId).notifier)
               .setTyping(isTyping),
+          onAttach: () => _pickAndUploadFile(),
           onCancelAction: () =>
               setState(() => _composerState = ComposerState.normal),
         ),
       ],
-    );
+    ));
   }
 
   void _showMessageActions(
@@ -330,6 +397,7 @@ class _ChatHeader extends StatelessWidget {
     this.onInfoTap,
     this.onMembersTap,
     this.onSearchTap,
+    this.hasUndecryptable = false,
   });
 
   final String roomName;
@@ -339,6 +407,7 @@ class _ChatHeader extends StatelessWidget {
   final VoidCallback? onInfoTap;
   final VoidCallback? onMembersTap;
   final VoidCallback? onSearchTap;
+  final bool hasUndecryptable;
 
   @override
   Widget build(BuildContext context) {
@@ -392,8 +461,8 @@ class _ChatHeader extends StatelessWidget {
             ),
           ),
 
-          // Header actions
-          if (isEncrypted)
+          // Key icon — only show if there are undecryptable messages
+          if (hasUndecryptable)
             Builder(
               builder: (ctx) => _HeaderAction(
                 icon: Icons.key,

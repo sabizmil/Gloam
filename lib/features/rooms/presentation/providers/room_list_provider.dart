@@ -57,10 +57,25 @@ List<RoomListItem> _buildRoomList(Client client) {
       }
     }
 
+    // Self-DM: the SDK filters out the current user from heroes,
+    // leaving an empty display name and unreliable avatar.
+    final isSelfDM =
+        room.isDirectChat && room.directChatMatrixID == client.userID;
+    final String displayName;
+    final Uri? avatarUrl;
+    if (isSelfDM) {
+      final self = room.unsafeGetUserFromMemoryOrFallback(client.userID!);
+      displayName = self.calcDisplayname();
+      avatarUrl = self.avatarUrl;
+    } else {
+      displayName = room.getLocalizedDisplayname();
+      avatarUrl = room.avatar;
+    }
+
     return RoomListItem(
       roomId: room.id,
-      displayName: room.getLocalizedDisplayname(),
-      avatarUrl: room.avatar,
+      displayName: displayName,
+      avatarUrl: avatarUrl,
       lastMessagePreview: preview,
       lastMessageSender: sender,
       lastMessageTimestamp: lastEvent?.originServerTs,

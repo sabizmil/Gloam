@@ -33,6 +33,7 @@ class MessageComposer extends StatefulWidget {
     this.onReply,
     this.onEdit,
     this.onTyping,
+    this.onAttach,
     this.composerState = const ComposerState(),
     this.onCancelAction,
   });
@@ -42,6 +43,7 @@ class MessageComposer extends StatefulWidget {
   final void Function(String text, String eventId)? onReply;
   final void Function(String text, String eventId)? onEdit;
   final void Function(bool isTyping)? onTyping;
+  final VoidCallback? onAttach;
   final ComposerState composerState;
   final VoidCallback? onCancelAction;
 
@@ -169,7 +171,7 @@ class _MessageComposerState extends State<MessageComposer> {
               children: [
                 // Attachment button
                 IconButton(
-                  onPressed: () {},
+                  onPressed: widget.onAttach,
                   icon: const Icon(Icons.add_circle_outline,
                       size: 22, color: GloamColors.textTertiary),
                   padding: EdgeInsets.zero,

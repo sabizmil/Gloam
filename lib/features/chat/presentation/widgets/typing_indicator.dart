@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -19,14 +21,13 @@ class TypingIndicator extends ConsumerWidget {
     final room = client.getRoomById(roomId);
     if (room == null) return const SizedBox.shrink();
 
-    return StreamBuilder<List<User>>(
-      stream: client.onSync.stream.map((_) {
-        return room.typingUsers
+    return StreamBuilder(
+      stream: client.onSync.stream,
+      builder: (context, _) {
+        final typingUsers = room.typingUsers
             .where((u) => u.id != client.userID)
             .toList();
-      }),
-      builder: (context, snapshot) {
-        final typingUsers = snapshot.data ?? [];
+
         if (typingUsers.isEmpty) return const SizedBox.shrink();
 
         final text = _buildTypingText(typingUsers);
@@ -34,6 +35,7 @@ class TypingIndicator extends ConsumerWidget {
         return Padding(
           padding: const EdgeInsets.fromLTRB(68, 0, 20, 4),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 text,
@@ -93,13 +95,13 @@ class _AnimatedDotsState extends State<_AnimatedDots>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _controller,
-      builder: (context, _) {
+      builder: (context, child) {
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: List.generate(3, (i) {
-            final delay = i * 0.2;
-            final t = (_controller.value - delay).clamp(0.0, 1.0);
-            final opacity = 0.3 + 0.7 * (0.5 + 0.5 * _bounce(t));
+            final delay = i * 0.3;
+            final t = ((_controller.value - delay) % 1.0).clamp(0.0, 1.0);
+            final opacity = (0.3 + 0.7 * sin(t * pi)).clamp(0.3, 1.0);
             return Padding(
               padding: const EdgeInsets.only(left: 1),
               child: Opacity(
@@ -118,10 +120,5 @@ class _AnimatedDotsState extends State<_AnimatedDots>
         );
       },
     );
-  }
-
-  double _bounce(double t) {
-    // Simple sine bounce for dot animation
-    return (t * 3.14159 * 2).clamp(0, 6.28).toDouble();
   }
 }

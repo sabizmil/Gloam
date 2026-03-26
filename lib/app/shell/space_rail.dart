@@ -5,6 +5,7 @@ import 'package:matrix/matrix.dart';
 
 import '../theme/color_tokens.dart';
 import '../theme/spacing.dart';
+import '../../features/settings/presentation/settings_modal.dart';
 import '../../services/matrix_service.dart';
 import '../../widgets/gloam_avatar.dart';
 
@@ -159,6 +160,18 @@ class SpaceRail extends ConsumerWidget {
             isDashed: true,
             tooltip: 'Join or create space',
             onTap: () {},
+          ),
+          const SizedBox(height: 8),
+
+          // Settings button
+          Builder(
+            builder: (ctx) => _SpaceIcon(
+              child: const Icon(Icons.settings_outlined,
+                  size: 18, color: GloamColors.textSecondary),
+              isActive: false,
+              tooltip: 'Settings',
+              onTap: () => showSettingsModal(ctx),
+            ),
           ),
           const SizedBox(height: 16),
         ],
