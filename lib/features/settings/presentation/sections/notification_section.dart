@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/theme/color_tokens.dart';
+import '../../../../services/notification_diagnostic.dart';
 import '../../../../services/notification_service.dart';
 import '../widgets/settings_tile.dart';
 
@@ -57,6 +58,56 @@ class _NotificationSectionState extends State<NotificationSection> {
           padding: const EdgeInsets.fromLTRB(42, 0, 12, 0),
           child: Text(
             'Fires a local notification to verify your system is configured correctly.',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: GloamColors.textTertiary,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SettingsTile(
+          icon: Icons.bug_report_outlined,
+          label: 'run notification diagnostic',
+          onTap: () async {
+            final result = await NotificationDiagnostic.run();
+            if (!context.mounted) return;
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                backgroundColor: GloamColors.bgSurface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: GloamColors.border),
+                ),
+                title: Text('diagnostic results',
+                    style: GoogleFonts.jetBrainsMono(
+                        fontSize: 13, color: GloamColors.textPrimary)),
+                content: SizedBox(
+                  width: 500,
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      result,
+                      style: GoogleFonts.jetBrainsMono(
+                          fontSize: 11,
+                          color: GloamColors.textSecondary,
+                          height: 1.6),
+                    ),
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('close'),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(42, 0, 12, 0),
+          child: Text(
+            'Runs a step-by-step diagnostic and logs results to the console. Run this via flutter run to see output.',
             style: GoogleFonts.inter(
               fontSize: 12,
               color: GloamColors.textTertiary,
