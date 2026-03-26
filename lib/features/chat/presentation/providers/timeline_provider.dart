@@ -154,19 +154,14 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
   /// For edited messages, uses m.new_content body instead of the raw
   /// event body which includes a "* old text" fallback prefix.
   String _extractBody(Event event) {
-    // Check if this event has m.new_content (it's an edit)
+    // If this event has m.new_content (it's an edit), use the new body
     final newContent = event.content.tryGetMap<String, Object?>('m.new_content');
     if (newContent != null) {
       final newBody = newContent.tryGet<String>('body');
       if (newBody != null) return newBody;
     }
-    // For non-edits, or if m.new_content doesn't have a body, use the
-    // SDK's calcLocalizedBodyFallback which strips reply fallbacks
-    return event.calcLocalizedBodyFallback(
-      const MatrixDefaultLocalizations(),
-      hideEdit: true,
-      hideReply: true,
-    );
+    // Plain event — use body directly
+    return event.body;
   }
 
   TimelineMessage _mapEvent(Event event, String? myUserId) {
