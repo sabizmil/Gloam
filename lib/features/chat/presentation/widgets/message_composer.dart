@@ -34,6 +34,7 @@ class MessageComposer extends StatefulWidget {
     this.onEdit,
     this.onTyping,
     this.onAttach,
+    this.onEditLastMessage,
     this.composerState = const ComposerState(),
     this.onCancelAction,
   });
@@ -44,6 +45,7 @@ class MessageComposer extends StatefulWidget {
   final void Function(String text, String eventId)? onEdit;
   final void Function(bool isTyping)? onTyping;
   final VoidCallback? onAttach;
+  final VoidCallback? onEditLastMessage;
   final ComposerState composerState;
   final VoidCallback? onCancelAction;
 
@@ -135,6 +137,14 @@ class _MessageComposerState extends State<MessageComposer> {
         widget.onCancelAction?.call();
         return KeyEventResult.handled;
       }
+    }
+
+    // Up Arrow in empty composer → edit last own message
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp &&
+        _controller.text.isEmpty &&
+        widget.composerState.mode == ComposerMode.normal) {
+      widget.onEditLastMessage?.call();
+      return KeyEventResult.handled;
     }
 
     return KeyEventResult.ignored;

@@ -1,6 +1,7 @@
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -126,6 +127,82 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           }
         }
       }
+    }
+  }
+
+  void _confirmDelete(String eventId) {
+    showDialog(
+      context: context,
+      barrierColor: GloamColors.overlay,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: GloamColors.bgSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: GloamColors.border),
+        ),
+        title: Text(
+          'delete message?',
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: GloamColors.textPrimary,
+          ),
+        ),
+        content: Text(
+          'this can\'t be undone.',
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            color: GloamColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('cancel',
+                style: GoogleFonts.jetBrainsMono(
+                    fontSize: 12, color: GloamColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: GloamColors.danger),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await ref
+                    .read(timelineProvider(widget.roomId).notifier)
+                    .redactMessage(eventId);
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text('delete failed: $e'),
+                        backgroundColor: GloamColors.danger),
+                  );
+                }
+              }
+            },
+            child: Text('delete',
+                style: GoogleFonts.jetBrainsMono(
+                    fontSize: 12, color: GloamColors.textPrimary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editLastMessage() {
+    final messages = ref.read(timelineProvider(widget.roomId));
+    final myUserId =
+        ref.read(matrixServiceProvider).client?.userID;
+    if (myUserId == null) return;
+
+    // Find the most recent own message
+    final lastOwn = messages.reversed.firstWhere(
+      (m) => m.senderId == myUserId && !m.isRedacted,
+      orElse: () => messages.first,
+    );
+    if (lastOwn.senderId == myUserId) {
+      _handleEditAction(lastOwn);
     }
   }
 
@@ -282,9 +359,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           onReply: (text, eventId) => ref
               .read(timelineProvider(widget.roomId).notifier)
               .sendReply(text, eventId),
-          onEdit: (text, eventId) => ref
-              .read(timelineProvider(widget.roomId).notifier)
-              .editMessage(eventId, text),
+          onEdit: (text, eventId) async {
+            try {
+              await ref
+                  .read(timelineProvider(widget.roomId).notifier)
+                  .editMessage(eventId, text);
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text('edit failed: $e'),
+                      backgroundColor: GloamColors.danger),
+                );
+              }
+            }
+          },
+          onEditLastMessage: _editLastMessage,
           onTyping: (isTyping) => ref
               .read(timelineProvider(widget.roomId).notifier)
               .setTyping(isTyping),
@@ -365,7 +455,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               icon: Icons.content_copy,
               label: 'copy text',
               onTap: () {
+                Clipboard.setData(ClipboardData(text: msg.body));
                 Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('copied to clipboard'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
               },
             ),
             if (isOwnMessage)
@@ -375,9 +472,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 color: GloamColors.danger,
                 onTap: () {
                   Navigator.pop(ctx);
-                  ref
-                      .read(timelineProvider(widget.roomId).notifier)
-                      .redactMessage(msg.eventId);
+                  _confirmDelete(msg.eventId);
                 },
               ),
             const SizedBox(height: 8),
