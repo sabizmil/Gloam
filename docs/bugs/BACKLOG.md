@@ -19,6 +19,8 @@
 | [BUG-006](archive/BUG-006-macos-notifications-not-showing.md) | macOS notifications not showing | e4031c7 |
 | [BUG-007](archive/BUG-007-fullscreen-image-no-esc-dismiss.md) | Fullscreen image no Escape dismiss | e4031c7 |
 | [BUG-008](archive/BUG-008-self-dm-wrong-avatar-no-title.md) | Wrong avatar in DMs + self-DM room | e4031c7 |
+| [BUG-013](archive/BUG-013-unread-badge-not-clearing-on-room-open.md) | Unread badge not clearing on room open | 76ca0fd |
+| [BUG-014](archive/BUG-014-macos-notifications-silently-fail.md) | macOS notifications silently fail | — |
 | [BUG-013](archive/BUG-013-unread-badge-not-clearing-on-room-open.md) | Unread badge not clearing on room open | — |
 
 ## Priority Legend
