@@ -184,11 +184,24 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
         type = 'm.text';
     }
 
+    final sender = event.senderFromMemoryOrFallback;
+    Uri? senderAvatarUrl = sender.avatarUrl;
+
+    // In DM rooms, senderFromMemoryOrFallback can return a fallback User
+    // whose avatar inherits the room's DM avatar instead of the sender's own.
+    // When the current user's avatar matches the room avatar, discard it so
+    // the avatar widget falls back to the sender's initial letter.
+    if (event.senderId == _room!.client.userID &&
+        _room!.isDirectChat &&
+        senderAvatarUrl == _room!.avatar) {
+      senderAvatarUrl = null;
+    }
+
     return TimelineMessage(
       eventId: event.eventId,
       senderId: event.senderId,
-      senderName: event.senderFromMemoryOrFallback.calcDisplayname(),
-      senderAvatarUrl: event.senderFromMemoryOrFallback.avatarUrl,
+      senderName: sender.calcDisplayname(),
+      senderAvatarUrl: senderAvatarUrl,
       timestamp: event.originServerTs,
       type: type,
       body: event.body,
