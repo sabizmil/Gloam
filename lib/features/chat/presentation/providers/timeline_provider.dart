@@ -91,6 +91,37 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
       onRemove: (_) => _rebuild(),
     );
     _rebuild();
+
+    // The initial sync page may be mostly redactions/reactions that we
+    // filter out, leaving very few visible messages. Pre-fetch extra
+    // pages so the timeline has enough content to fill the viewport.
+    await _ensureMinimumMessages(30);
+  }
+
+  /// Keep requesting history until we have at least [minVisible] display
+  /// messages or the server says there's no more history.
+  Future<void> _ensureMinimumMessages(int minVisible) async {
+    if (_timeline == null) return;
+    for (var i = 0; i < 5; i++) {
+      // Count how many visible messages we'd show
+      final visibleCount = _timeline!.events.where((e) {
+        final relType = e.content
+            .tryGetMap<String, Object?>('m.relates_to')
+            ?.tryGet<String>('rel_type');
+        if (relType == RelationshipTypes.edit ||
+            relType == RelationshipTypes.reaction) return false;
+        final display = e.getDisplayEvent(_timeline!);
+        return display.type == EventTypes.Message ||
+            display.type == EventTypes.Encrypted ||
+            display.type == EventTypes.Sticker;
+      }).length;
+
+      if (visibleCount >= minVisible) break;
+      if (!_timeline!.canRequestHistory) break;
+
+      await _timeline!.requestHistory();
+      _rebuild();
+    }
   }
 
   void _rebuild() {
