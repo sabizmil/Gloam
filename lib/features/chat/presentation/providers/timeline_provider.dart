@@ -470,3 +470,6 @@ final timelineProvider = StateNotifierProvider.family<TimelineNotifier,
 
 /// Currently selected room ID.
 final selectedRoomProvider = StateProvider<String?>((ref) => null);
+
+/// True while a mobile chat route is pushed on the Navigator stack.
+final mobileChatRouteActiveProvider = StateProvider<bool>((ref) => false);

@@ -31,6 +31,7 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
     // On mobile, push chat screen
     final width = MediaQuery.sizeOf(context).width;
     if (width < GloamSpacing.breakpointTablet) {
+      ref.read(mobileChatRouteActiveProvider.notifier).state = true;
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => Scaffold(
@@ -40,7 +41,11 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
             ),
           ),
         ),
-      );
+      ).then((_) {
+        if (mounted) {
+          ref.read(mobileChatRouteActiveProvider.notifier).state = false;
+        }
+      });
     }
   }
 
@@ -343,13 +348,21 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-/// Mobile chat screen with back navigation.
+/// Mobile chat screen that auto-pops when the viewport widens past mobile.
 class _MobileChatScreen extends StatelessWidget {
   const _MobileChatScreen({required this.roomId});
   final String roomId;
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (width >= GloamSpacing.breakpointPhone) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+      });
+    }
     return ChatScreen(roomId: roomId);
   }
 }
