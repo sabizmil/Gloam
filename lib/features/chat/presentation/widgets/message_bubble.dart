@@ -9,6 +9,7 @@ import 'file_message.dart';
 import 'image_message.dart';
 import 'link_preview.dart';
 import 'markdown_body.dart';
+import 'voice_message.dart';
 
 class MessageBubble extends StatelessWidget {
   const MessageBubble({
@@ -224,7 +225,7 @@ class _MessageContent extends StatelessWidget {
       'm.image' => ImageMessage(message: message),
       'm.video' => VideoMessage(message: message),
       'm.file' => FileMessage(message: message),
-      'm.audio' => FileMessage(message: message), // Voice messages use FileMessage for now
+      'm.audio' => VoiceMessage(message: message),
       _ => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

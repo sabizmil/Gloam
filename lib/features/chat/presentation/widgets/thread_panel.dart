@@ -25,7 +25,7 @@ class ThreadPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final allMessages = ref.watch(timelineProvider(roomId));
 
-    // Filter thread replies — messages that reply to the root
+    // Filter thread replies — messages that reply to the root message
     final threadReplies = allMessages
         .where((m) => m.replyToEventId == rootMessage.eventId)
         .toList();

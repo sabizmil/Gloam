@@ -30,6 +30,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // Mark room as read when opened
+    Future.microtask(() {
+      ref.read(timelineProvider(widget.roomId).notifier).markAsRead();
+    });
   }
 
   @override

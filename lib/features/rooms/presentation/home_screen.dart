@@ -10,6 +10,7 @@ import '../../../app/router.dart';
 import '../../../app/shell/adaptive_shell.dart';
 import '../../../app/shell/quick_switcher.dart';
 import '../../../services/matrix_service.dart';
+import '../../../services/notification_service.dart';
 import '../../../services/verification_service.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
 
@@ -122,6 +123,7 @@ class _AuthenticatedHome extends ConsumerStatefulWidget {
 
 class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
   VerificationService? _verificationService;
+  NotificationService? _notificationService;
 
   @override
   void initState() {
@@ -133,12 +135,18 @@ class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
         navigatorKey: rootNavigatorKey,
       );
       _verificationService!.start();
+
+      _notificationService = NotificationService(client);
+      _notificationService!.initialize().then((_) {
+        _notificationService!.start();
+      });
     }
   }
 
   @override
   void dispose() {
     _verificationService?.dispose();
+    _notificationService?.dispose();
     super.dispose();
   }
 

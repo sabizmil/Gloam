@@ -5,8 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/color_tokens.dart';
 import '../theme/spacing.dart';
 import '../../features/chat/presentation/providers/timeline_provider.dart';
+import '../../features/chat/presentation/screens/chat_screen.dart';
 import '../../features/rooms/presentation/providers/room_list_provider.dart';
+import '../../features/rooms/presentation/widgets/create_room_dialog.dart';
 import '../../features/rooms/presentation/widgets/room_list_tile.dart';
+import '../../services/matrix_service.dart';
 import '../../widgets/section_header.dart';
 import 'space_rail.dart';
 
@@ -127,7 +130,8 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
                 ),
               ),
               data: (rooms) {
-                var filtered = _applyFilters(rooms, _searchQuery, _filter);
+                var filtered = _applyFilters(
+                    rooms, _searchQuery, _filter, selectedSpace, ref);
 
                 if (filtered.isEmpty) {
                   return Center(
@@ -182,8 +186,25 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
     List<RoomListItem> rooms,
     String query,
     _RoomFilter filter,
+    String? spaceId,
+    WidgetRef ref,
   ) {
     var result = rooms;
+
+    // Space filter — show only rooms that are children of the selected space
+    if (spaceId != null) {
+      final client = ref.read(matrixServiceProvider).client;
+      if (client != null) {
+        final space = client.getRoomById(spaceId);
+        if (space != null) {
+          final childIds =
+              space.spaceChildren.map((c) => c.roomId).toSet();
+          result = result
+              .where((r) => childIds.contains(r.roomId))
+              .toList();
+        }
+      }
+    }
 
     // Text search
     if (query.isNotEmpty) {
@@ -216,19 +237,27 @@ enum _RoomFilter {
   final String label;
 }
 
-class _PanelHeader extends StatelessWidget {
+class _PanelHeader extends ConsumerWidget {
   const _PanelHeader({this.selectedSpace});
   final String? selectedSpace;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Resolve space name
+    String title = 'all chats';
+    if (selectedSpace != null) {
+      final client = ref.watch(matrixServiceProvider).client;
+      final space = client?.getRoomById(selectedSpace!);
+      title = space?.getLocalizedDisplayname() ?? 'space';
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       child: Row(
         children: [
           Expanded(
             child: Text(
-              selectedSpace != null ? 'space' : 'matrix.org',
+              title,
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
@@ -237,8 +266,16 @@ class _PanelHeader extends StatelessWidget {
               ),
             ),
           ),
-          const Icon(Icons.tune,
-              size: 16, color: GloamColors.textTertiary),
+          GestureDetector(
+            onTap: () async {
+              final roomId = await showCreateRoomDialog(context);
+              if (roomId != null) {
+                ref.read(selectedRoomProvider.notifier).state = roomId;
+              }
+            },
+            child: const Icon(Icons.add,
+                size: 18, color: GloamColors.textSecondary),
+          ),
         ],
       ),
     );
@@ -306,66 +343,13 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-/// Wrapper for pushing chat screen on mobile with a back button.
+/// Mobile chat screen with back navigation.
 class _MobileChatScreen extends StatelessWidget {
   const _MobileChatScreen({required this.roomId});
   final String roomId;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Back button header
-        Container(
-          height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back,
-                    size: 20, color: GloamColors.accent),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: _ChatScreenImport(roomId: roomId),
-        ),
-      ],
-    );
+    return ChatScreen(roomId: roomId);
   }
-}
-
-/// Avoids circular import by using a lazy reference.
-class _ChatScreenImport extends ConsumerWidget {
-  const _ChatScreenImport({required this.roomId});
-  final String roomId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Imported at top of file via chat screen
-    return _buildChatScreen(roomId);
-  }
-}
-
-Widget _buildChatScreen(String roomId) {
-  // Avoid importing chat_screen here to prevent circular deps.
-  // The AdaptiveShell handles desktop routing; this is mobile-only.
-  // We'll use a simple builder pattern.
-  return Builder(
-    builder: (context) {
-      // Dynamically load — in production this would be a proper import
-      return const Center(
-        child: Text(
-          '// loading chat...',
-          style: TextStyle(
-            fontFamily: 'JetBrains Mono',
-            fontSize: 11,
-            color: GloamColors.textTertiary,
-          ),
-        ),
-      );
-    },
-  );
 }

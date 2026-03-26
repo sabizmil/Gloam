@@ -270,6 +270,17 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     await room.setTyping(isTyping);
   }
 
+  /// Mark the room as read (send read receipt for the latest event).
+  Future<void> markAsRead() async {
+    final room = _room;
+    if (room == null || _timeline == null) return;
+    if (_timeline!.events.isEmpty) return;
+    await room.setReadMarker(
+      _timeline!.events.first.eventId,
+      mRead: _timeline!.events.first.eventId,
+    );
+  }
+
   @override
   void dispose() {
     _sub?.cancel();
