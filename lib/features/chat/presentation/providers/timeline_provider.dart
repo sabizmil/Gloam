@@ -74,6 +74,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
   final String _roomId;
   Timeline? _timeline;
   StreamSubscription? _sub;
+  StreamSubscription? _syncSub;
 
   TimelineNotifier(this._client, this._roomId) : super([]) {
     _init();
@@ -91,6 +92,25 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
       onRemove: (_) => _rebuild(),
     );
     _rebuild();
+
+    // Member state events (avatars, display names) arrive via sync but
+    // don't trigger Timeline callbacks. Listen for syncs that carry
+    // member state for this room and rebuild when they do.
+    _syncSub = _client.onSync.stream.listen((syncUpdate) {
+      final roomUpdate = syncUpdate.rooms?.join?[_roomId];
+      if (roomUpdate == null) return;
+      final hasMemberState = roomUpdate.state
+              ?.any((e) => e.type == EventTypes.RoomMember) ??
+          false;
+      if (hasMemberState) _rebuild();
+    });
+
+    // requestUser() resolves via direct API calls (not sync), so
+    // schedule a deferred rebuild to pick up member data that arrives
+    // shortly after initial load.
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) _rebuild();
+    });
 
     // The initial sync page may be mostly redactions/reactions that we
     // filter out, leaving very few visible messages. Pre-fetch extra
@@ -166,6 +186,9 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
 
     // SDK returns newest first — reverse for display (oldest at top)
     state = messages.reversed.toList();
+
+    // Auto-mark as read when the room is actively viewed
+    if (_isActive) markAsRead();
   }
 
   /// Extract the display body for an event, handling edits correctly.
@@ -251,12 +274,12 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     final sender = event.senderFromMemoryOrFallback;
     Uri? senderAvatarUrl = sender.avatarUrl;
 
-    // In DM rooms, the fallback User may inherit the room's DM avatar
-    // instead of the sender's own. Clear it so the avatar widget uses the
-    // letter fallback, which is more reliable.
-    if (event.senderId == _room!.client.userID &&
-        _room!.isDirectChat &&
-        senderAvatarUrl == _room!.avatar) {
+    // In DM rooms, senderFromMemoryOrFallback for the current user
+    // unreliably inherits the DM partner's avatar from the room state
+    // fallback. Rather than comparing URLs (which races with member state
+    // loading), always clear the avatar for the current user in DMs so
+    // the widget falls back to the sender's initial letter.
+    if (event.senderId == _room!.client.userID && _room!.isDirectChat) {
       senderAvatarUrl = null;
     }
 
@@ -396,20 +419,38 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     await room.setTyping(isTyping);
   }
 
+  String? _lastReadEventId;
+  bool _isActive = false;
+
+  /// Mark this room as actively viewed — will auto-send read receipts.
+  void setActive(bool active) {
+    _isActive = active;
+    if (active) markAsRead();
+  }
+
   /// Mark the room as read (send read receipt for the latest event).
   Future<void> markAsRead() async {
     final room = _room;
     if (room == null || _timeline == null) return;
     if (_timeline!.events.isEmpty) return;
-    await room.setReadMarker(
-      _timeline!.events.first.eventId,
-      mRead: _timeline!.events.first.eventId,
-    );
+
+    final latestEventId = _timeline!.events.first.eventId;
+    // Skip if we already sent a receipt for this event
+    if (latestEventId == _lastReadEventId) return;
+    _lastReadEventId = latestEventId;
+
+    try {
+      await room.setReadMarker(latestEventId, mRead: latestEventId);
+    } catch (_) {
+      // Best-effort — don't crash if receipt fails
+      _lastReadEventId = null;
+    }
   }
 
   @override
   void dispose() {
     _sub?.cancel();
+    _syncSub?.cancel();
     _timeline?.cancelSubscriptions();
     super.dispose();
   }
