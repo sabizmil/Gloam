@@ -8,6 +8,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme/color_tokens.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/matrix_service.dart';
+import '../../data/media_embed_resolver.dart';
+import 'embed_card.dart';
 
 /// Detects the first URL in a message body and renders a link preview card
 /// using the homeserver's /preview_url endpoint.
@@ -63,7 +65,23 @@ class _LinkPreviewState extends ConsumerState<LinkPreview> {
   Widget build(BuildContext context) {
     if (_loading || _url == null) return const SizedBox.shrink();
 
-    // Show a minimal link card even without OG metadata
+    // Check for rich media embed (GIF, image, YouTube, etc.)
+    final embedInfo = MediaEmbedResolver.resolve(_url!);
+    if (embedInfo != null) {
+      return switch (embedInfo.type) {
+        MediaEmbedType.directImage || MediaEmbedType.directGif =>
+          ImageEmbed(info: embedInfo),
+        MediaEmbedType.youtube => YouTubeEmbed(info: embedInfo),
+        MediaEmbedType.directVideo => VideoEmbed(info: embedInfo),
+        _ => _buildPlainPreview(), // Fallback for unsupported types
+      };
+    }
+
+    return _buildPlainPreview();
+  }
+
+  Widget _buildPlainPreview() {
+    // Show a minimal link card for non-media URLs
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
