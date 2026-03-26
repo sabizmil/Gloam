@@ -262,7 +262,13 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
   Future<void> editMessage(String eventId, String newText) async {
     final room = _room;
     if (room == null) return;
-    await room.sendTextEvent(newText, editEventId: eventId);
+    // Disable command parsing for edits — otherwise text starting with
+    // "/" or "*" gets interpreted as slash commands instead of edited content
+    await room.sendTextEvent(
+      newText,
+      editEventId: eventId,
+      parseCommands: false,
+    );
   }
 
   /// Redact (delete) a message.
@@ -272,11 +278,45 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     await room.redactEvent(eventId);
   }
 
-  /// Send a reaction.
+  /// Toggle a reaction — add if not reacted, remove if already reacted.
   Future<void> react(String eventId, String emoji) async {
     final room = _room;
-    if (room == null) return;
-    await room.sendReaction(eventId, emoji);
+    if (room == null || _timeline == null) return;
+
+    // Find the target event in the timeline
+    final targetEvent = _timeline!.events
+        .where((e) => e.eventId == eventId)
+        .firstOrNull;
+    if (targetEvent == null) {
+      await room.sendReaction(eventId, emoji);
+      return;
+    }
+
+    // Check if the current user already reacted with this emoji
+    final myUserId = _client.userID;
+    final existingReactions = targetEvent.aggregatedEvents(
+      _timeline!,
+      RelationshipTypes.reaction,
+    );
+
+    Event? myReaction;
+    for (final reaction in existingReactions) {
+      final key = reaction.content
+          .tryGetMap<String, Object?>('m.relates_to')
+          ?.tryGet<String>('key');
+      if (key == emoji && reaction.senderId == myUserId) {
+        myReaction = reaction;
+        break;
+      }
+    }
+
+    if (myReaction != null) {
+      // Already reacted — remove by redacting the reaction event
+      await room.redactEvent(myReaction.eventId);
+    } else {
+      // Not reacted — add reaction
+      await room.sendReaction(eventId, emoji);
+    }
   }
 
   /// Send a file/image attachment.

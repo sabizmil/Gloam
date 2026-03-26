@@ -6,6 +6,7 @@
 |---------|-------|----------|--------|--------|
 | [FEAT-003](FEAT-003-rich-media-link-embeds.md) | Rich Media Link Embeds (GIF, YouTube, etc.) | P2 | Proposed | Medium (2-3 days) |
 | [FEAT-004](FEAT-004-functional-theming.md) | Functional Theming — Wire Up Appearance Settings | High | Proposed | Medium-High (4-6 days) |
+| [FEAT-006](FEAT-006-test-notification-button.md) | Test Notification Button in Settings | P2 | Proposed | Small (2-3 hours) |
 
 ## Completed
 

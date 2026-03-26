@@ -17,12 +17,15 @@ class HoverToolbar extends StatelessWidget {
     this.onDelete,
     this.onCopy,
     this.onThread,
+    this.myReactions = const {},
   });
 
   final bool isOwnMessage;
   final String messageBody;
   final void Function(String emoji) onReact;
   final VoidCallback onReply;
+  /// Set of emoji that the current user has already reacted with.
+  final Set<String> myReactions;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onCopy;
@@ -47,10 +50,10 @@ class HoverToolbar extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Quick-react emoji
-          _EmojiButton(emoji: '👍', onTap: () => onReact('👍')),
-          _EmojiButton(emoji: '❤️', onTap: () => onReact('❤️')),
-          _EmojiButton(emoji: '😂', onTap: () => onReact('😂')),
+          // Quick-react emoji (highlighted if already reacted)
+          _EmojiButton(emoji: '👍', isActive: myReactions.contains('👍'), onTap: () => onReact('👍')),
+          _EmojiButton(emoji: '❤️', isActive: myReactions.contains('❤️'), onTap: () => onReact('❤️')),
+          _EmojiButton(emoji: '😂', isActive: myReactions.contains('😂'), onTap: () => onReact('😂')),
 
           // Divider
           Container(
@@ -152,18 +155,25 @@ class HoverToolbar extends StatelessWidget {
 }
 
 class _EmojiButton extends StatelessWidget {
-  const _EmojiButton({required this.emoji, required this.onTap});
+  const _EmojiButton({required this.emoji, required this.onTap, this.isActive = false});
   final String emoji;
   final VoidCallback onTap;
+  final bool isActive;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(6),
-      child: SizedBox(
+      child: Container(
         width: 30,
         height: 30,
+        decoration: isActive
+            ? BoxDecoration(
+                color: GloamColors.accentDim.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(6),
+              )
+            : null,
         child: Center(child: Text(emoji, style: const TextStyle(fontSize: 15))),
       ),
     );

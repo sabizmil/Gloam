@@ -215,6 +215,10 @@ class _MessageBubbleState extends State<MessageBubble> {
               child: HoverToolbar(
                 isOwnMessage: widget.isOwnMessage,
                 messageBody: message.body,
+                myReactions: message.reactions.values
+                    .where((r) => r.includesMe)
+                    .map((r) => r.emoji)
+                    .toSet(),
                 onReact: (emoji) => widget.onReact?.call(emoji),
                 onReply: () => widget.onReply?.call(),
                 onEdit: widget.isOwnMessage ? () => widget.onEdit?.call() : null,
