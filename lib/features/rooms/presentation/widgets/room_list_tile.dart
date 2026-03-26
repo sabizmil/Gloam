@@ -31,7 +31,10 @@ class RoomListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    return Semantics(
+      button: true,
+      label: '${room.displayName}. ${room.unreadCount > 0 ? '${room.unreadCount} unread.' : ''} ${room.lastMessagePreview ?? ''}',
+      child: Material(
       color: isActive ? GloamColors.bgElevated : Colors.transparent,
       borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
       child: InkWell(
@@ -135,6 +138,6 @@ class RoomListTile extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ));
   }
 }

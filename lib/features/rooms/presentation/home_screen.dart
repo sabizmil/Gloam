@@ -9,11 +9,16 @@ import '../../../app/theme/spacing.dart';
 import '../../../app/router.dart';
 import '../../../app/shell/adaptive_shell.dart';
 import '../../../app/shell/quick_switcher.dart';
+import '../../../app/shell/right_panel.dart';
+import '../../../app/shell/shortcut_help_overlay.dart';
+import '../../../app/shortcuts.dart';
 import '../../../services/matrix_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/search_service.dart';
 import '../../../services/verification_service.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
+import '../../chat/presentation/providers/timeline_provider.dart';
+import '../../rooms/presentation/widgets/create_room_dialog.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -161,16 +166,51 @@ class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: GloamColors.bg,
-      body: CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
-              () => showQuickSwitcher(context, ref),
-          const SingleActivator(LogicalKeyboardKey.keyK, control: true):
-              () => showQuickSwitcher(context, ref),
-        },
-        child: const Focus(
-          autofocus: true,
-          child: AdaptiveShell(),
+      body: Shortcuts(
+        shortcuts: gloamShortcuts,
+        child: Actions(
+          actions: {
+            QuickSwitcherIntent: CallbackAction<QuickSwitcherIntent>(
+              onInvoke: (_) => showQuickSwitcher(context, ref),
+            ),
+            NewRoomIntent: CallbackAction<NewRoomIntent>(
+              onInvoke: (_) async {
+                final roomId = await showCreateRoomDialog(context);
+                if (roomId != null) {
+                  ref.read(selectedRoomProvider.notifier).state = roomId;
+                }
+                return null;
+              },
+            ),
+            SearchIntent: CallbackAction<SearchIntent>(
+              onInvoke: (_) {
+                ref.read(rightPanelProvider.notifier).state =
+                    const RightPanelState(view: RightPanelView.search);
+                return null;
+              },
+            ),
+            GlobalSearchIntent: CallbackAction<GlobalSearchIntent>(
+              onInvoke: (_) {
+                ref.read(rightPanelProvider.notifier).state =
+                    const RightPanelState(view: RightPanelView.search);
+                return null;
+              },
+            ),
+            ClosePanelIntent: CallbackAction<ClosePanelIntent>(
+              onInvoke: (_) {
+                ref.read(rightPanelProvider.notifier).state =
+                    RightPanelState.closed;
+                return null;
+              },
+            ),
+            ShortcutHelpIntent: CallbackAction<ShortcutHelpIntent>(
+              onInvoke: (_) => showShortcutHelp(context),
+            ),
+          },
+          child: const Focus(
+            autofocus: true,
+            child: AdaptiveShell(),
+          ),
         ),
       ),
     );
