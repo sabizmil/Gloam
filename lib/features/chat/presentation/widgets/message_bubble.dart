@@ -6,25 +6,30 @@ import '../../../../widgets/gloam_avatar.dart';
 import '../providers/timeline_provider.dart';
 import 'delivery_indicator.dart';
 import 'file_message.dart';
+import 'hover_toolbar.dart';
 import 'image_message.dart';
 import 'link_preview.dart';
 import 'markdown_body.dart';
 import 'voice_message.dart';
 
-class MessageBubble extends StatelessWidget {
+class MessageBubble extends StatefulWidget {
   const MessageBubble({
     super.key,
     required this.message,
     required this.isGrouped,
     this.roomId,
+    this.isOwnMessage = false,
     this.onReply,
     this.onEdit,
     this.onReact,
     this.onDelete,
+    this.onThread,
+    this.onCopy,
   });
 
   final TimelineMessage message;
   final String? roomId;
+  final bool isOwnMessage;
 
   /// True if this message is from the same sender as the previous one
   /// within the grouping window (no avatar/name shown).
@@ -33,6 +38,15 @@ class MessageBubble extends StatelessWidget {
   final VoidCallback? onEdit;
   final void Function(String emoji)? onReact;
   final VoidCallback? onDelete;
+  final VoidCallback? onThread;
+  final VoidCallback? onCopy;
+
+  @override
+  State<MessageBubble> createState() => _MessageBubbleState();
+}
+
+class _MessageBubbleState extends State<MessageBubble> {
+  bool _isHovered = false;
 
   String _formatTime(DateTime ts) {
     final h = ts.hour;
@@ -44,15 +58,24 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final message = widget.message;
+    final isGrouped = widget.isGrouped;
+
     if (message.isRedacted) {
       return _RedactedMessage(isGrouped: isGrouped);
     }
 
     final opacity = message.sendState == MessageSendState.sending ? 0.6 : 1.0;
 
-    return Opacity(
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Opacity(
       opacity: opacity,
-      child: Padding(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Padding(
         padding: EdgeInsets.only(
           left: 0,
           right: 0,
@@ -61,7 +84,7 @@ class MessageBubble extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Avatar — Align prevents Row from stretching it vertically
+            // Avatar
             if (!isGrouped)
               Padding(
                 padding: const EdgeInsets.only(right: 12),
@@ -161,7 +184,7 @@ class MessageBubble extends StatelessWidget {
                     ),
 
                   // Message body
-                  _MessageContent(message: message, roomId: roomId),
+                  _MessageContent(message: message, roomId: widget.roomId),
 
                   // Reactions
                   if (message.reactions.isNotEmpty)
@@ -173,7 +196,7 @@ class MessageBubble extends StatelessWidget {
                         children: message.reactions.values
                             .map((r) => _ReactionPill(
                                   reaction: r,
-                                  onTap: () => onReact?.call(r.emoji),
+                                  onTap: () => widget.onReact?.call(r.emoji),
                                 ))
                             .toList(),
                       ),
@@ -183,6 +206,25 @@ class MessageBubble extends StatelessWidget {
             ),
           ],
         ),
+          ),
+          // Hover toolbar — positioned top-right
+          if (_isHovered)
+            Positioned(
+              top: -4,
+              right: 0,
+              child: HoverToolbar(
+                isOwnMessage: widget.isOwnMessage,
+                messageBody: message.body,
+                onReact: (emoji) => widget.onReact?.call(emoji),
+                onReply: () => widget.onReply?.call(),
+                onEdit: widget.isOwnMessage ? () => widget.onEdit?.call() : null,
+                onDelete: widget.isOwnMessage ? () => widget.onDelete?.call() : null,
+                onThread: () => widget.onThread?.call(),
+                onCopy: () => widget.onCopy?.call(),
+              ),
+            ),
+        ],
+      ),
       ),
     );
   }

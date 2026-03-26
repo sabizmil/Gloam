@@ -303,16 +303,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           message: msg,
                           isGrouped: isGrouped,
                           roomId: widget.roomId,
+                          isOwnMessage: msg.senderId == myUserId,
                           onReply: () => _handleReplyAction(msg),
                           onEdit: () => _handleEditAction(msg),
                           onReact: (emoji) => ref
                               .read(
                                   timelineProvider(widget.roomId).notifier)
                               .react(msg.eventId, emoji),
-                          onDelete: () => ref
-                              .read(
-                                  timelineProvider(widget.roomId).notifier)
-                              .redactMessage(msg.eventId),
+                          onDelete: () => _confirmDelete(msg.eventId),
+                          onThread: () {
+                            ref.read(rightPanelProvider.notifier).state =
+                                RightPanelState(
+                              view: RightPanelView.thread,
+                              threadRoot: msg,
+                            );
+                          },
+                          onCopy: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('copied to clipboard'),
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ],

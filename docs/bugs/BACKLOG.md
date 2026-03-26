@@ -2,7 +2,9 @@
 
 | Bug | Title | Priority | Status | Effort |
 |-----|-------|----------|--------|--------|
-| — | No open bugs | — | — | — |
+| [BUG-009](BUG-009-megolm-session-keys-not-restored-from-backup.md) | Megolm session keys not restored from key backup after SSSS unlock | P1 | Open | M |
+| [BUG-010](BUG-010-recovery-key-not-persisted-across-restarts.md) | Recovery key not persisted across app restarts | P1 | Open | M |
+| [BUG-011](BUG-011-mobile-chat-route-stuck-on-resize.md) | Mobile chat route persists when window resized to desktop width | P1 | Open | S |
 
 ## Archived (Fixed)
 
