@@ -99,20 +99,39 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
 
     final messages = <TimelineMessage>[];
     final myUserId = _client.userID;
+    final seenEventIds = <String>{};
+
+    Logs().d('Timeline rebuild: ${timeline.events.length} raw events');
 
     for (final event in timeline.events) {
-      // Use getDisplayEvent to get the decrypted version
+      // Skip edit and reaction relation events — they're aggregated
+      // into their parent events, not displayed standalone
+      final relType = event.content
+          .tryGetMap<String, Object?>('m.relates_to')
+          ?.tryGet<String>('rel_type');
+      if (relType == RelationshipTypes.edit ||
+          relType == RelationshipTypes.reaction) {
+        continue;
+      }
+
+      // Use getDisplayEvent to get the decrypted/replaced version
       final displayEvent = event.getDisplayEvent(timeline);
 
+      // Deduplicate — an edit can cause the same event to appear twice
+      if (!seenEventIds.add(displayEvent.eventId)) continue;
+
+      // Only display actual content events — skip redaction protocol events,
+      // state events, and everything else. Redacted messages are handled by
+      // the `redacted` flag on the original event, not by displaying the
+      // m.room.redaction event itself.
       if (displayEvent.type == EventTypes.Message ||
           displayEvent.type == EventTypes.Encrypted ||
           displayEvent.type == EventTypes.Sticker) {
         messages.add(_mapEvent(displayEvent, myUserId));
-      } else if (displayEvent.type == EventTypes.Redaction) {
-        continue;
       }
-      // Skip state events for now (joins, leaves, etc.)
     }
+
+    Logs().d('Timeline rebuild: ${messages.length} display messages');
 
     // SDK returns newest first — reverse for display (oldest at top)
     state = messages.reversed.toList();
