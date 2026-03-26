@@ -74,7 +74,6 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
   final String _roomId;
   Timeline? _timeline;
   StreamSubscription? _sub;
-  StreamSubscription? _syncSub;
 
   TimelineNotifier(this._client, this._roomId) : super([]) {
     _init();
@@ -91,38 +90,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
       onInsert: (_) => _rebuild(),
       onRemove: (_) => _rebuild(),
     );
-
-    // Listen for sync updates that include member state events for this room.
-    // Member state arrives asynchronously (via requestUser or lazy-loaded sync)
-    // and the Timeline callbacks don't fire for state-only changes. Without
-    // this, sender avatars/names mapped during _rebuild() stay stale until
-    // a timeline event triggers a rebuild (e.g. scrolling to load history).
-    _syncSub = _client.onSync.stream.listen((sync) {
-      final joinRoom = sync.rooms?.join?[_roomId];
-      if (joinRoom == null) return;
-      final hasNewMemberState = joinRoom.state?.any(
-            (e) => e.type == EventTypes.RoomMember,
-          ) ??
-          false;
-      final hasTimelineMemberState = joinRoom.timeline?.events?.any(
-            (e) => e.type == EventTypes.RoomMember,
-          ) ??
-          false;
-      if (hasNewMemberState || hasTimelineMemberState) {
-        _rebuild();
-      }
-    });
-
     _rebuild();
-
-    // unsafeGetUserFromMemoryOrFallback fires off requestUser() for any
-    // members not yet in the room state cache. Those requests resolve via
-    // direct API calls (not through sync), so neither the Timeline callbacks
-    // nor the sync listener above will catch them. Schedule a deferred
-    // rebuild to pick up member data that arrives shortly after initial load.
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) _rebuild();
-    });
   }
 
   void _rebuild() {
@@ -233,25 +201,13 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     final sender = event.senderFromMemoryOrFallback;
     Uri? senderAvatarUrl = sender.avatarUrl;
 
-    // In DM rooms, senderFromMemoryOrFallback can return a fallback User
-    // whose avatar inherits the room's DM avatar instead of the sender's own.
-    // The original BUG-008 fix compared senderAvatarUrl == _room!.avatar, but
-    // that equality check can fail on initial load when _room!.avatar hasn't
-    // resolved yet (race condition). Instead, directly compare against the DM
-    // partner's avatar to catch the contamination regardless of room avatar
-    // resolution timing.
+    // In DM rooms, the fallback User may inherit the room's DM avatar
+    // instead of the sender's own. Clear it so the avatar widget uses the
+    // letter fallback, which is more reliable.
     if (event.senderId == _room!.client.userID &&
         _room!.isDirectChat &&
-        senderAvatarUrl != null) {
-      final dmPartnerId = _room!.directChatMatrixID;
-      if (dmPartnerId != null) {
-        final dmPartner =
-            _room!.unsafeGetUserFromMemoryOrFallback(dmPartnerId);
-        if (senderAvatarUrl == dmPartner.avatarUrl ||
-            senderAvatarUrl == _room!.avatar) {
-          senderAvatarUrl = null;
-        }
-      }
+        senderAvatarUrl == _room!.avatar) {
+      senderAvatarUrl = null;
     }
 
     return TimelineMessage(
@@ -404,7 +360,6 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
   @override
   void dispose() {
     _sub?.cancel();
-    _syncSub?.cancel();
     _timeline?.cancelSubscriptions();
     super.dispose();
   }
