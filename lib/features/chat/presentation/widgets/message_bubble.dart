@@ -10,6 +10,7 @@ import 'hover_toolbar.dart';
 import 'image_message.dart';
 import 'link_preview.dart';
 import 'markdown_body.dart';
+import '../../data/media_embed_resolver.dart';
 import 'voice_message.dart';
 
 class MessageBubble extends StatefulWidget {
@@ -281,10 +282,13 @@ class _MessageContent extends StatelessWidget {
       _ => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            MarkdownBody(
-              text: message.body,
-              formattedBody: message.formattedBody,
-            ),
+            // Hide the body text when the message is just a URL
+            // that resolves to a rich media embed (image, GIF, YouTube, etc.)
+            if (!_isMediaEmbedOnly(message.body))
+              MarkdownBody(
+                text: message.body,
+                formattedBody: message.formattedBody,
+              ),
             if (_hasUrl(message.body))
               LinkPreview(body: message.body),
           ],
@@ -295,6 +299,16 @@ class _MessageContent extends StatelessWidget {
 
 bool _hasUrl(String text) =>
     RegExp(r'https?://[^\s<>\[\]()]+', caseSensitive: false).hasMatch(text);
+
+/// True when the message body is nothing but a single URL that resolves
+/// to a rich media embed (image, GIF, YouTube, etc.).
+bool _isMediaEmbedOnly(String text) {
+  final trimmed = text.trim();
+  final match = RegExp(r'^https?://[^\s<>\[\]()]+$', caseSensitive: false)
+      .firstMatch(trimmed);
+  if (match == null) return false;
+  return MediaEmbedResolver.resolve(trimmed) != null;
+}
 
 class _ReactionPill extends StatelessWidget {
   const _ReactionPill({required this.reaction, this.onTap});
