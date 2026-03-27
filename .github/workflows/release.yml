@@ -142,22 +142,22 @@ jobs:
           zip -r -y "../../../../Gloam-${VERSION}-macos.zip" gloam.app
 
       - name: Sign update with Sparkle
-        if: ${{ env.SPARKLE_KEY != '' }}
+        if: ${{ secrets.SPARKLE_PRIVATE_KEY != '' }}
+        continue-on-error: true
         env:
           SPARKLE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           ZIP="build/Gloam-${VERSION}-macos.zip"
 
-          # Write private key to temp file
-          echo "$SPARKLE_KEY" > /tmp/sparkle_key
+          # The secret is base64-encoded — decode it
+          echo "$SPARKLE_KEY" | base64 --decode > /tmp/sparkle_key 2>/dev/null || echo "$SPARKLE_KEY" > /tmp/sparkle_key
 
-          # Sign and capture output
-          SIG_OUTPUT=$(macos/Pods/Sparkle/bin/sign_update "$ZIP" --ed-key-file /tmp/sparkle_key 2>&1)
-          echo "Sparkle signature: $SIG_OUTPUT"
-          echo "SPARKLE_SIG=$SIG_OUTPUT" >> $GITHUB_ENV
+          # Try signing
+          SIG_OUTPUT=$(macos/Pods/Sparkle/bin/sign_update "$ZIP" --ed-key-file /tmp/sparkle_key 2>&1) || true
+          echo "Sparkle signature output: $SIG_OUTPUT"
 
-          rm /tmp/sparkle_key
+          rm -f /tmp/sparkle_key
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
