@@ -33,8 +33,21 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Generate code (freezed, riverpod, drift)
+        run: dart run build_runner build --delete-conflicting-outputs
+
       - name: Install CocoaPods
         run: cd macos && pod install --repo-update
+
+      - name: Disable Xcode code signing
+        run: |
+          # Patch the Xcode project to skip code signing on CI
+          # (no Apple cert installed on the runner)
+          cd macos
+          sed -i '' 's/CODE_SIGN_IDENTITY = ".*"/CODE_SIGN_IDENTITY = "-"/g' Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/DEVELOPMENT_TEAM = .*;/DEVELOPMENT_TEAM = "";/g' Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' Runner.xcodeproj/project.pbxproj
+          cd ..
 
       - name: Build macOS release
         run: flutter build macos --release
@@ -98,6 +111,9 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Generate code (freezed, riverpod, drift)
+        run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Build Windows release
         run: flutter build windows --release
