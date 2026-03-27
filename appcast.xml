@@ -10,11 +10,11 @@
       <sparkle:version>7</sparkle:version>
       <sparkle:shortVersionString>0.2.6</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
-      <pubDate>Fri, 27 Mar 2026 21:26:59 +0000</pubDate>
+      <pubDate>Thu, 27 Mar 2026 21:30:00 +0000</pubDate>
       <enclosure
         url="https://github.com/sabizmil/Gloam/releases/download/v0.2.6/Gloam-0.2.6-macos.zip"
-        sparkle:edSignature=""
-        length="0"
+        sparkle:edSignature="NwD7KQHE4WcqnWhfpx/Ti6KclsJ8xAogfg8dxe6wJrHWvs45LJGSJxvwC2AflvJIpjkWPw8wsguAWJQgZiU0Dg=="
+        length="46399780"
         type="application/octet-stream" />
     </item>
   </channel>
