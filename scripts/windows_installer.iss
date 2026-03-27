@@ -15,7 +15,6 @@ DefaultGroupName=Gloam
 OutputBaseFilename=Gloam-{#AppVersion}-windows-setup
 Compression=lzma2
 SolidCompression=yes
-SetupIconFile=..\..\windows\runner\resources\app_icon.ico
 UninstallDisplayIcon={app}\gloam.exe
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
