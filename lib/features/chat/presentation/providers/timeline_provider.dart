@@ -126,9 +126,14 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
 
   /// Keep requesting history until we have at least [minVisible] display
   /// messages or the server says there's no more history.
+  ///
+  /// For newly-joined federated rooms, the timeline may be empty and
+  /// canRequestHistory may be false initially. We retry with a delay
+  /// to catch messages as the federation bootstrap completes.
   Future<void> _ensureMinimumMessages(int minVisible) async {
     if (_timeline == null) return;
-    for (var i = 0; i < 5; i++) {
+
+    for (var attempt = 0; attempt < 10; attempt++) {
       // Count how many visible messages we'd show
       final visibleCount = _timeline!.events.where((e) {
         final relType = e.content
@@ -143,10 +148,24 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
       }).length;
 
       if (visibleCount >= minVisible) break;
-      if (!_timeline!.canRequestHistory) break;
 
-      await _timeline!.requestHistory();
-      _rebuild();
+      if (_timeline!.canRequestHistory) {
+        await _timeline!.requestHistory();
+        _rebuild();
+      } else if (attempt < 5 && visibleCount == 0) {
+        // Room might still be bootstrapping — wait and retry
+        await Future.delayed(const Duration(seconds: 3));
+        if (!mounted) return;
+        // Try requesting again in case the room state has caught up
+        try {
+          await _timeline!.requestHistory();
+          _rebuild();
+        } catch (_) {
+          // Server may not be ready yet — keep retrying
+        }
+      } else {
+        break;
+      }
     }
   }
 
@@ -419,9 +438,27 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
   }
 
   /// Redact (delete) a message.
+  ///
+  /// For local echoes (failed sends, pending uploads), removes the event
+  /// locally. For server-confirmed events, sends a redaction to the server.
   Future<void> redactMessage(String eventId) async {
     final room = _room;
     if (room == null) return;
+
+    // Local echoes have transaction IDs that don't start with '$'.
+    // The server will reject redaction requests for these.
+    if (!eventId.startsWith('\$')) {
+      // Remove the local echo from the timeline
+      final event = _timeline?.events
+          .where((e) => e.eventId == eventId)
+          .firstOrNull;
+      if (event != null) {
+        await event.remove();
+        _rebuild();
+      }
+      return;
+    }
+
     await room.redactEvent(eventId);
   }
 

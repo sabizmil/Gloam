@@ -35,13 +35,20 @@ class VoiceService extends StateNotifier<VoiceState> {
   /// Convenience: the current local media controls (null if disconnected).
   VoiceLocalMedia? get localMedia => _adapter?.localMedia;
 
+  bool _joining = false;
+
   /// Join a voice channel.
   ///
   /// If already connected to a different channel, disconnects first.
+  /// Ignores duplicate calls while a join is in progress.
   Future<void> joinChannel({
     required VoiceProtocolAdapter adapter,
     required String channelId,
   }) async {
+    // Prevent duplicate join attempts (e.g., double-clicking Join)
+    if (_joining) return;
+    _joining = true;
+
     // Disconnect from current channel if any
     if (_adapter != null) {
       await disconnect();
@@ -56,7 +63,18 @@ class VoiceService extends StateNotifier<VoiceState> {
       // Subscribe to connection state changes
       _connectionSub = adapter.connectionState.listen((connState) {
         _log('[VoiceService] Connection state changed: $connState');
-        if (connState == VoiceConnectionState.reconnecting) {
+        if (connState == VoiceConnectionState.connected &&
+            state is! VoiceStateConnected) {
+          // LiveKit connected (possibly after retry) — update UI
+          state = VoiceState.connected(
+            channelId: channelId,
+            channelName: channelId, // will be updated by channel stream
+            protocolName: adapter.protocolName,
+            participants: [],
+            permissions: const VoicePermissions(),
+            connectedAt: DateTime.now(),
+          );
+        } else if (connState == VoiceConnectionState.reconnecting) {
           state = VoiceState.reconnecting(channelId: channelId);
         } else if (connState == VoiceConnectionState.error) {
           state = VoiceState.error(
@@ -96,6 +114,7 @@ class VoiceService extends StateNotifier<VoiceState> {
         permissions: const VoicePermissions(),
         connectedAt: DateTime.now(),
       );
+      _log('[VoiceService] Connected to $channelId');
     } on VoiceError catch (e) {
       _log('[VoiceService] VoiceError: ${e.message}');
       state = VoiceState.error(message: e.message, channelId: channelId);
@@ -105,6 +124,8 @@ class VoiceService extends StateNotifier<VoiceState> {
       _log('[VoiceService] Stack: $st');
       state = VoiceState.error(message: '$e', channelId: channelId);
       await _cleanup();
+    } finally {
+      _joining = false;
     }
   }
 

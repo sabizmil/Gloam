@@ -100,9 +100,15 @@ class SfuDiscoveryService {
     );
 
     // Step 3: Exchange for LiveKit JWT at the lk-jwt-service
+    // The lk-jwt-service endpoint is at /sfu/get under the base URL.
+    // Strip trailing slash and append the path.
+    final jwtUrl = livekitServiceUrl.endsWith('/')
+        ? '${livekitServiceUrl}sfu/get'
+        : '$livekitServiceUrl/sfu/get';
+
     try {
       final response = await _dio.post(
-        livekitServiceUrl,
+        jwtUrl,
         data: {
           'openid_token': {
             'access_token': openIdToken.accessToken,
@@ -110,7 +116,7 @@ class SfuDiscoveryService {
             'matrix_server_name': openIdToken.matrixServerName,
             'expires_in': openIdToken.expiresIn,
           },
-          'room_id': roomId,
+          'room': roomId,
           'device_id': _client.deviceID,
         },
         options: Options(
@@ -134,8 +140,9 @@ class SfuDiscoveryService {
 
       return SfuCredentials(jwt: jwt, sfuUrl: sfuUrl);
     } on DioException catch (e) {
+      final responseBody = e.response?.data;
       throw VoiceConnectionError(
-        'Failed to exchange OpenID token for LiveKit JWT: ${e.message}',
+        'JWT exchange failed: ${responseBody ?? e.message}',
       );
     }
   }
