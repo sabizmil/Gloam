@@ -58,4 +58,4 @@ Gloam works with any Matrix homeserver — [matrix.org](https://matrix.org), you
 
 ---
 
-Gloam is a [Liminal Studio](https://liminal.studio) product.
+Gloam is a [Liminal Studio](https://liminalstudio.io/gloam) product.
