@@ -7,10 +7,10 @@
     <language>en</language>
     <item>
       <title>Version 0.2.3</title>
-      <sparkle:version>0.2.3</sparkle:version>
+      <sparkle:version>4</sparkle:version>
       <sparkle:shortVersionString>0.2.3</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
-      <pubDate>Fri, 27 Mar 2026 19:32:41 +0000</pubDate>
+      <pubDate>Thu, 27 Mar 2026 19:45:00 +0000</pubDate>
       <enclosure
         url="https://github.com/sabizmil/Gloam/releases/download/v0.2.3/Gloam-0.2.3-macos.zip"
         sparkle:edSignature=""

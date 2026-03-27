@@ -260,6 +260,11 @@ jobs:
           MAC_URL="https://github.com/sabizmil/Gloam/releases/download/${TAG}/Gloam-${VERSION}-macos.zip"
           WIN_URL="https://github.com/sabizmil/Gloam/releases/download/${TAG}/Gloam-${VERSION}-windows.zip"
 
+          # Extract build number from pubspec.yaml (the +N part)
+          # Sparkle compares sparkle:version against CFBundleVersion (build number)
+          BUILD_NUM=$(grep 'version:' pubspec.yaml | head -1 | sed 's/.*+//')
+          echo "Version: $VERSION, Build: $BUILD_NUM"
+
           cat > appcast.xml << APPCAST_EOF
           <?xml version="1.0" encoding="utf-8"?>
           <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
@@ -270,7 +275,7 @@ jobs:
               <language>en</language>
               <item>
                 <title>Version ${VERSION}</title>
-                <sparkle:version>${VERSION}</sparkle:version>
+                <sparkle:version>${BUILD_NUM}</sparkle:version>
                 <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
                 <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
                 <pubDate>${DATE}</pubDate>
@@ -294,7 +299,7 @@ jobs:
               <language>en</language>
               <item>
                 <title>Version ${VERSION}</title>
-                <sparkle:version>${VERSION}</sparkle:version>
+                <sparkle:version>${BUILD_NUM}</sparkle:version>
                 <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
                 <pubDate>${DATE}</pubDate>
                 <enclosure
