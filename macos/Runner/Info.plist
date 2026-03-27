@@ -34,6 +34,8 @@
 	<string>Gloam needs camera access for video calls</string>
 	<key>SUFeedURL</key>
 	<string>https://raw.githubusercontent.com/sabizmil/Gloam/main/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>ksUDv+5FXx6+hGCWsU+CyfAz3G+H4cempRXikh/GtJw=</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUScheduledCheckInterval</key>
