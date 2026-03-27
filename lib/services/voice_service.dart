@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'debug_server.dart';
+import 'matrix_service.dart';
 
 import '../features/calls/domain/domain.dart';
 
@@ -60,6 +61,15 @@ class VoiceService extends StateNotifier<VoiceState> {
     try {
       _log('[VoiceService] Starting join for channel: $channelId');
 
+      // Resolve room name up front so all state transitions use it
+      String resolvedName = channelId;
+      try {
+        // Try to get the name from the channel manager before connecting
+        final channelList = await adapter.channels.channels.first;
+        final match = channelList.where((c) => c.id == channelId).firstOrNull;
+        if (match != null) resolvedName = match.name;
+      } catch (_) {}
+
       // Subscribe to connection state changes
       _connectionSub = adapter.connectionState.listen((connState) {
         _log('[VoiceService] Connection state changed: $connState');
@@ -68,7 +78,7 @@ class VoiceService extends StateNotifier<VoiceState> {
           // LiveKit connected (possibly after retry) — update UI
           state = VoiceState.connected(
             channelId: channelId,
-            channelName: channelId, // will be updated by channel stream
+            channelName: resolvedName,
             protocolName: adapter.protocolName,
             participants: [],
             permissions: const VoicePermissions(),
@@ -103,12 +113,12 @@ class VoiceService extends StateNotifier<VoiceState> {
       // Join the channel
       await adapter.channels.joinChannel(channelId);
 
-      // Get channel info
+      // Get channel info (may already be set by connection state listener)
       final channel = await adapter.channels.currentChannel.first;
 
       state = VoiceState.connected(
         channelId: channelId,
-        channelName: channel?.name ?? '',
+        channelName: channel?.name ?? resolvedName,
         protocolName: adapter.protocolName,
         participants: [],
         permissions: const VoicePermissions(),

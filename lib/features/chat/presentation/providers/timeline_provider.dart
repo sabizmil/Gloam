@@ -352,13 +352,18 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     final sender = event.senderFromMemoryOrFallback;
     Uri? senderAvatarUrl = sender.avatarUrl;
 
-    // In DM rooms, senderFromMemoryOrFallback for the current user
-    // unreliably inherits the DM partner's avatar from the room state
-    // fallback. Rather than comparing URLs (which races with member state
-    // loading), always clear the avatar for the current user in DMs so
-    // the widget falls back to the sender's initial letter.
+    // In DM rooms, senderFromMemoryOrFallback for the current user can
+    // inherit the DM partner's avatar from the room state fallback.
+    // Only clear it if it actually matches the partner's avatar.
     if (event.senderId == _room!.client.userID && _room!.isDirectChat) {
-      senderAvatarUrl = null;
+      final partnerId = _room!.directChatMatrixID;
+      if (partnerId != null && senderAvatarUrl != null) {
+        final partner = _room!.unsafeGetUserFromMemoryOrFallback(partnerId);
+        if (partner.avatarUrl != null &&
+            senderAvatarUrl.toString() == partner.avatarUrl.toString()) {
+          senderAvatarUrl = null; // Inherited partner's avatar — clear it
+        }
+      }
     }
 
     return TimelineMessage(

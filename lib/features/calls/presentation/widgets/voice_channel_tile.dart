@@ -72,7 +72,7 @@ class VoiceChannelTile extends StatelessWidget {
                 const SizedBox(height: 4),
                 Padding(
                   padding: const EdgeInsets.only(left: 24),
-                  child: _ParticipantAvatarRow(
+                  child: _ParticipantList(
                     participants: channel.connectedParticipants,
                   ),
                 ),
@@ -85,8 +85,8 @@ class VoiceChannelTile extends StatelessWidget {
   }
 }
 
-class _ParticipantAvatarRow extends StatelessWidget {
-  const _ParticipantAvatarRow({required this.participants});
+class _ParticipantList extends StatelessWidget {
+  const _ParticipantList({required this.participants});
 
   final List<VoiceChannelParticipantSummary> participants;
 
@@ -95,19 +95,49 @@ class _ParticipantAvatarRow extends StatelessWidget {
     final visible = participants.take(5).toList();
     final overflow = participants.length - 5;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ...visible.map((p) => Padding(
-              padding: const EdgeInsets.only(right: 3),
-              child: _MiniAvatar(participant: p),
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Row(
+                children: [
+                  _MiniAvatar(participant: p),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      p.displayName,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: p.isSpeaking
+                            ? GloamColors.accent
+                            : GloamColors.textSecondary,
+                        fontWeight: p.isSpeaking
+                            ? FontWeight.w500
+                            : FontWeight.w400,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (p.isMuted)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Icon(Icons.mic_off,
+                          size: 10, color: GloamColors.textTertiary),
+                    ),
+                ],
+              ),
             )),
         if (overflow > 0)
-          Text(
-            '+$overflow',
-            style: GoogleFonts.jetBrainsMono(
-              fontSize: 9,
-              color: GloamColors.textTertiary,
+          Padding(
+            padding: const EdgeInsets.only(left: 24),
+            child: Text(
+              '+$overflow more',
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 9,
+                color: GloamColors.textTertiary,
+              ),
             ),
           ),
       ],

@@ -20,6 +20,7 @@ class MessageBubble extends StatefulWidget {
     required this.isGrouped,
     this.roomId,
     this.isOwnMessage = false,
+    this.onAvatarTap,
     this.onReply,
     this.onEdit,
     this.onReact,
@@ -31,6 +32,7 @@ class MessageBubble extends StatefulWidget {
   final TimelineMessage message;
   final String? roomId;
   final bool isOwnMessage;
+  final VoidCallback? onAvatarTap;
 
   /// True if this message is from the same sender as the previous one
   /// within the grouping window (no avatar/name shown).
@@ -87,15 +89,19 @@ class _MessageBubbleState extends State<MessageBubble> {
           children: [
             // Avatar
             if (!isGrouped)
-              Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: GloamAvatar(
-                    displayName: message.senderName,
-                    mxcUrl: message.senderAvatarUrl,
-                    size: 36,
+              MouseRegion(
+                cursor: widget.onAvatarTap != null
+                    ? SystemMouseCursors.click
+                    : SystemMouseCursors.basic,
+                child: GestureDetector(
+                  onTap: widget.onAvatarTap,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: _HoverableAvatar(
+                      displayName: message.senderName,
+                      mxcUrl: message.senderAvatarUrl,
+                      size: 36,
+                    ),
                   ),
                 ),
               )
@@ -113,12 +119,20 @@ class _MessageBubbleState extends State<MessageBubble> {
                       padding: const EdgeInsets.only(bottom: 2),
                       child: Row(
                         children: [
-                          Text(
-                            message.senderName,
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: _senderColor(message.senderName),
+                          MouseRegion(
+                            cursor: widget.onAvatarTap != null
+                                ? SystemMouseCursors.click
+                                : SystemMouseCursors.basic,
+                            child: GestureDetector(
+                              onTap: widget.onAvatarTap,
+                              child: Text(
+                                message.senderName,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: _senderColor(message.senderName),
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -383,6 +397,56 @@ class _RedactedMessage extends StatelessWidget {
           fontSize: 13,
           fontStyle: FontStyle.italic,
           color: GloamColors.textTertiary,
+        ),
+      ),
+    );
+  }
+}
+
+/// Avatar with a subtle glow on hover.
+class _HoverableAvatar extends StatefulWidget {
+  const _HoverableAvatar({
+    required this.displayName,
+    this.mxcUrl,
+    this.size = 36,
+  });
+
+  final String displayName;
+  final Uri? mxcUrl;
+  final double size;
+
+  @override
+  State<_HoverableAvatar> createState() => _HoverableAvatarState();
+}
+
+class _HoverableAvatarState extends State<_HoverableAvatar> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        width: widget.size,
+        height: widget.size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: _hovered
+              ? [
+                  BoxShadow(
+                    color: GloamColors.accent.withAlpha(40),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
+        ),
+        child: GloamAvatar(
+          displayName: widget.displayName,
+          mxcUrl: widget.mxcUrl,
+          size: widget.size,
         ),
       ),
     );

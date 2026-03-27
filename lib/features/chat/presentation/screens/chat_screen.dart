@@ -19,6 +19,7 @@ import '../widgets/typing_indicator.dart';
 import '../../../../app/shell/right_panel.dart';
 import '../../../calls/presentation/providers/call_provider.dart';
 import '../../../calls/presentation/screens/outgoing_call_screen.dart';
+import '../../../profile/presentation/user_profile_modal.dart';
 import '../../../settings/presentation/recovery_key_dialog.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -330,6 +331,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           isGrouped: isGrouped,
                           roomId: widget.roomId,
                           isOwnMessage: msg.senderId == myUserId,
+                          onAvatarTap: () => showUserProfile(
+                            context, ref,
+                            userId: msg.senderId,
+                            roomId: widget.roomId,
+                          ),
                           onReply: () => _handleReplyAction(msg),
                           onEdit: () => _handleEditAction(msg),
                           onReact: (emoji) => ref

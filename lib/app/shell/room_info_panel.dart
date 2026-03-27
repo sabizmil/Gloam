@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:matrix/matrix.dart' show PushRuleState;
 
 import '../theme/color_tokens.dart';
 import '../theme/spacing.dart';
+import '../../features/profile/presentation/user_profile_modal.dart';
 import '../../services/matrix_service.dart';
 import '../../widgets/gloam_avatar.dart';
 
@@ -126,10 +128,7 @@ class RoomInfoPanel extends ConsumerWidget {
                   icon: room.encrypted ? Icons.lock : Icons.lock_open,
                 ),
                 const SizedBox(height: 8),
-                _DetailRow(
-                  label: 'notifications',
-                  value: 'mentions only',
-                ),
+                _NotificationSettingRow(room: room),
                 const SizedBox(height: 24),
 
                 // Members section
@@ -144,10 +143,16 @@ class RoomInfoPanel extends ConsumerWidget {
                 const SizedBox(height: 12),
                 ...members.take(20).map((m) => Padding(
                       padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: () => showUserProfile(context, ref,
+                              userId: m.id, roomId: roomId),
+                          child: Row(
                         children: [
                           GloamAvatar(
                             displayName: m.calcDisplayname(),
+                            mxcUrl: m.avatarUrl,
                             size: 28,
                           ),
                           const SizedBox(width: 10),
@@ -183,11 +188,60 @@ class RoomInfoPanel extends ConsumerWidget {
                           ),
                         ],
                       ),
-                    )),
+                    )))),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _NotificationSettingRow extends StatefulWidget {
+  const _NotificationSettingRow({required this.room});
+  final dynamic room; // Room from matrix SDK
+
+  @override
+  State<_NotificationSettingRow> createState() =>
+      _NotificationSettingRowState();
+}
+
+class _NotificationSettingRowState extends State<_NotificationSettingRow> {
+  PushRuleState _pushRule = PushRuleState.mentionsOnly;
+
+  @override
+  void initState() {
+    super.initState();
+    _pushRule = widget.room.pushRuleState;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = switch (_pushRule) {
+      PushRuleState.notify => 'all messages',
+      PushRuleState.mentionsOnly => 'mentions only',
+      PushRuleState.dontNotify => 'muted',
+    };
+    final icon = switch (_pushRule) {
+      PushRuleState.notify => Icons.notifications_active_outlined,
+      PushRuleState.mentionsOnly => Icons.alternate_email,
+      PushRuleState.dontNotify => Icons.notifications_off_outlined,
+    };
+
+    return GestureDetector(
+      onTap: () async {
+        final picked = await _showNotificationPicker(context, widget.room);
+        if (mounted && picked != null) {
+          setState(() => _pushRule = picked);
+        }
+      },
+      child: _DetailRow(
+        label: 'notifications',
+        value: label,
+        icon: icon,
+        trailing: const Icon(Icons.chevron_right,
+            size: 14, color: GloamColors.textTertiary),
       ),
     );
   }
@@ -199,12 +253,14 @@ class _DetailRow extends StatelessWidget {
     required this.value,
     this.valueColor,
     this.icon,
+    this.trailing,
   });
 
   final String label;
   final String value;
   final Color? valueColor;
   final IconData? icon;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -232,9 +288,143 @@ class _DetailRow extends StatelessWidget {
                 color: valueColor ?? GloamColors.textSecondary,
               ),
             ),
+            if (trailing != null) ...[
+              const SizedBox(width: 4),
+              trailing!,
+            ],
           ],
         ),
       ],
+    );
+  }
+}
+
+Future<PushRuleState?> _showNotificationPicker(BuildContext context, dynamic room) {
+  return showModalBottomSheet<PushRuleState>(
+    context: context,
+    backgroundColor: GloamColors.bgSurface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+          top: Radius.circular(GloamSpacing.radiusLg)),
+    ),
+    builder: (_) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              child: Text(
+                '// notification settings',
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 10,
+                  color: GloamColors.textTertiary,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+            _PushRuleOption(
+              icon: Icons.notifications_active_outlined,
+              label: 'All messages',
+              subtitle: 'Notify for every new message',
+              isSelected: room.pushRuleState == PushRuleState.notify,
+              onTap: () {
+                Navigator.pop(context, PushRuleState.notify);
+                room.setPushRuleState(PushRuleState.notify);
+              },
+            ),
+            _PushRuleOption(
+              icon: Icons.alternate_email,
+              label: 'Mentions only',
+              subtitle: 'Only when you\'re @mentioned',
+              isSelected: room.pushRuleState == PushRuleState.mentionsOnly,
+              onTap: () {
+                Navigator.pop(context, PushRuleState.mentionsOnly);
+                room.setPushRuleState(PushRuleState.mentionsOnly);
+              },
+            ),
+            _PushRuleOption(
+              icon: Icons.notifications_off_outlined,
+              label: 'Mute',
+              subtitle: 'No notifications from this room',
+              isSelected: room.pushRuleState == PushRuleState.dontNotify,
+              onTap: () {
+                Navigator.pop(context, PushRuleState.dontNotify);
+                room.setPushRuleState(PushRuleState.dontNotify);
+              },
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _PushRuleOption extends StatelessWidget {
+  const _PushRuleOption({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: isSelected
+                    ? GloamColors.accent
+                    : GloamColors.textSecondary,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight:
+                            isSelected ? FontWeight.w500 : FontWeight.w400,
+                        color: isSelected
+                            ? GloamColors.accent
+                            : GloamColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: GloamColors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                const Icon(Icons.check, size: 18, color: GloamColors.accent),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

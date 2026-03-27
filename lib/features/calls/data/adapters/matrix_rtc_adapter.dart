@@ -113,12 +113,47 @@ class MatrixRTCAdapter implements VoiceProtocolAdapter {
   void _mergeParticipants(List<VoiceParticipant> lkParticipants) {
     final enriched = lkParticipants.map((p) {
       // Try to get Matrix profile info for this participant
-      final user = _activeRoom?.unsafeGetUserFromMemoryOrFallback(p.id);
-      if (user != null) {
+      // LiveKit identity may be the full Matrix user ID or just a local part
+      var userId = p.id;
+
+      // If the identity doesn't start with @, try prefixing it
+      if (!userId.startsWith('@') && _activeRoom != null) {
+        // Check if there's a member whose ID contains this identity
+        final members = _activeRoom!.states['m.room.member'];
+        if (members != null) {
+          final match = members.keys
+              .where((k) => k == userId || k.startsWith('@$userId:'))
+              .firstOrNull;
+          if (match != null) userId = match;
+        }
+      }
+
+      final user = _activeRoom?.unsafeGetUserFromMemoryOrFallback(userId);
+      if (user != null && user.avatarUrl != null) {
         return p.copyWith(
           displayName: user.calcDisplayname(),
           avatarUrl: user.avatarUrl,
         );
+      }
+
+      // Fallback: for the local user, use the client's own profile
+      if (p.isSelf) {
+        final ownProfile = _client.rooms
+            .where((r) => r.isDirectChat == false)
+            .map((r) => r.unsafeGetUserFromMemoryOrFallback(_client.userID!))
+            .where((u) => u.avatarUrl != null)
+            .firstOrNull;
+        if (ownProfile != null) {
+          return p.copyWith(
+            displayName: ownProfile.calcDisplayname(),
+            avatarUrl: ownProfile.avatarUrl,
+          );
+        }
+      }
+
+      // At minimum, set the display name if we got it from the room
+      if (user != null) {
+        return p.copyWith(displayName: user.calcDisplayname());
       }
       return p;
     }).toList();

@@ -93,27 +93,40 @@ class RoomListTile extends StatelessWidget {
               ),
               const SizedBox(width: 8),
 
-              // Timestamp + badge
+              // Timestamp + badge + muted indicator
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    _formatTimestamp(room.lastMessageTimestamp),
-                    style: GoogleFonts.jetBrainsMono(
-                      fontSize: 10,
-                      color: room.unreadCount > 0
-                          ? GloamColors.accent
-                          : GloamColors.textTertiary,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (room.isMuted)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 4),
+                          child: Icon(Icons.notifications_off,
+                              size: 11, color: GloamColors.textTertiary),
+                        ),
+                      Text(
+                        _formatTimestamp(room.lastMessageTimestamp),
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 10,
+                          color: room.unreadCount > 0 && !room.isMuted
+                              ? GloamColors.accent
+                              : GloamColors.textTertiary,
+                        ),
+                      ),
+                    ],
                   ),
-                  if (room.unreadCount > 0) ...[
+                  if (room.unreadCount > 0 && !room.isMuted) ...[
                     const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 5, vertical: 1),
                       decoration: BoxDecoration(
-                        color: GloamColors.accent,
+                        color: room.mentionCount > 0
+                            ? GloamColors.accent
+                            : GloamColors.accentDim,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -123,7 +136,9 @@ class RoomListTile extends StatelessWidget {
                         style: GoogleFonts.jetBrainsMono(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
-                          color: GloamColors.bg,
+                          color: room.mentionCount > 0
+                              ? GloamColors.bg
+                              : GloamColors.accent,
                         ),
                       ),
                     ),

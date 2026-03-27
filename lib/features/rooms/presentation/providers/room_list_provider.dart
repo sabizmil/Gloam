@@ -18,6 +18,7 @@ class RoomListItem {
   final bool isInvite;
   final String? inviterId;
   final String? inviterName;
+  final String pushRuleState; // 'notify', 'mentionsOnly', 'dontNotify'
 
   const RoomListItem({
     required this.roomId,
@@ -33,7 +34,11 @@ class RoomListItem {
     this.isInvite = false,
     this.inviterId,
     this.inviterName,
+    this.pushRuleState = 'mentionsOnly',
   });
+
+  bool get isMuted => pushRuleState == 'dontNotify';
+  bool get isNotifyAll => pushRuleState == 'notify';
 }
 
 /// Transforms SDK rooms into [RoomListItem]s, sorted by recent activity.
@@ -124,6 +129,7 @@ List<RoomListItem> _buildRoomList(Client client) {
       isInvite: isInvite,
       inviterId: inviterId,
       inviterName: inviterName,
+      pushRuleState: isInvite ? 'notify' : room.pushRuleState.name,
     );
   }).toList();
 }
