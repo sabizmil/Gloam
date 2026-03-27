@@ -21,12 +21,18 @@ SIGN_IDENTITY="Apple Development: Simon Abizmil (57B64F2V6Q)"
 
 mkdir -p "$DEST"
 
+FRAMEWORKS="$APP/Contents/Frameworks"
+mkdir -p "$FRAMEWORKS"
+
 LIBOLM="/opt/homebrew/lib/libolm.3.dylib"
 if [ -f "$LIBOLM" ]; then
-  rm -f "$DEST/libolm.3.dylib"
+  rm -f "$DEST/libolm.3.dylib" "$FRAMEWORKS/libolm.3.dylib"
   cp "$LIBOLM" "$DEST/libolm.3.dylib"
-  install_name_tool -id "@executable_path/libolm.3.dylib" "$DEST/libolm.3.dylib"
+  cp "$LIBOLM" "$FRAMEWORKS/libolm.3.dylib"
+  install_name_tool -id "@rpath/libolm.3.dylib" "$DEST/libolm.3.dylib"
+  install_name_tool -id "@rpath/libolm.3.dylib" "$FRAMEWORKS/libolm.3.dylib"
   codesign --force --sign "$SIGN_IDENTITY" "$DEST/libolm.3.dylib"
+  codesign --force --sign "$SIGN_IDENTITY" "$FRAMEWORKS/libolm.3.dylib"
 fi
 
 LIBCRYPTO="/opt/homebrew/lib/libcrypto.3.dylib"

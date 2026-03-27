@@ -88,18 +88,30 @@ jobs:
           # Install and bundle native libs
           brew install libolm openssl@3
 
+          FRAMEWORKS="$APP/Contents/Frameworks"
+          mkdir -p "$FRAMEWORKS"
+
           LIBOLM="$(brew --prefix libolm)/lib/libolm.3.dylib"
           if [ -f "$LIBOLM" ]; then
+            # Bundle in BOTH MacOS/ and Frameworks/ — hardened runtime
+            # only allows dlopen from specific rpaths, and Frameworks/ is
+            # in the default search path for hardened apps
             cp "$LIBOLM" "$DEST/libolm.3.dylib"
-            install_name_tool -id "@executable_path/libolm.3.dylib" "$DEST/libolm.3.dylib"
+            cp "$LIBOLM" "$FRAMEWORKS/libolm.3.dylib"
+            install_name_tool -id "@rpath/libolm.3.dylib" "$DEST/libolm.3.dylib"
+            install_name_tool -id "@rpath/libolm.3.dylib" "$FRAMEWORKS/libolm.3.dylib"
             codesign --force --sign "$SIGN_ID" "$DEST/libolm.3.dylib"
+            codesign --force --sign "$SIGN_ID" "$FRAMEWORKS/libolm.3.dylib"
           fi
 
           LIBCRYPTO="$(brew --prefix openssl@3)/lib/libcrypto.3.dylib"
           if [ -f "$LIBCRYPTO" ]; then
             cp "$LIBCRYPTO" "$DEST/libcrypto.3.dylib"
-            install_name_tool -id "@executable_path/libcrypto.3.dylib" "$DEST/libcrypto.3.dylib"
+            cp "$LIBCRYPTO" "$FRAMEWORKS/libcrypto.3.dylib"
+            install_name_tool -id "@rpath/libcrypto.3.dylib" "$DEST/libcrypto.3.dylib"
+            install_name_tool -id "@rpath/libcrypto.3.dylib" "$FRAMEWORKS/libcrypto.3.dylib"
             codesign --force --sign "$SIGN_ID" "$DEST/libcrypto.3.dylib"
+            codesign --force --sign "$SIGN_ID" "$FRAMEWORKS/libcrypto.3.dylib"
           fi
 
           # Sign the app with hardened runtime
