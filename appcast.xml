@@ -13,8 +13,13 @@
       <pubDate>Fri, 27 Mar 2026 20:48:36 +0000</pubDate>
       <enclosure
         url="https://github.com/sabizmil/Gloam/releases/download/v0.2.5/Gloam-0.2.5-macos.zip"
+<<<<<<< Updated upstream
         sparkle:edSignature=""
         length="0"
+=======
+        sparkle:edSignature="EQsWJB8BSt6acrvOIGybpT3VQoGmgDdzbhkLC1Wtv8LplIkBaX0KBgQYDBnhrZu346XAT7q4/twexPQUowTWDQ=="
+        length="46399278"
+>>>>>>> Stashed changes
         type="application/octet-stream" />
     </item>
   </channel>
