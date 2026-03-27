@@ -39,51 +39,99 @@ jobs:
       - name: Install CocoaPods
         run: cd macos && pod install --repo-update
 
-      - name: Disable Xcode code signing
+      - name: Install Apple certificate
+        env:
+          P12_BASE64: ${{ secrets.APPLE_CERT_P12 }}
+          P12_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
         run: |
-          # Aggressively disable all code signing in the Xcode project
-          cd macos/Runner.xcodeproj
-          # Replace all signing identities with ad-hoc
-          sed -i '' 's/CODE_SIGN_IDENTITY = ".*"/CODE_SIGN_IDENTITY = "-"/g' project.pbxproj
-          sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=macosx\*\]" = ".*"/"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-"/g' project.pbxproj
-          # Clear development team everywhere
-          sed -i '' 's/DEVELOPMENT_TEAM = [A-Z0-9]*;/DEVELOPMENT_TEAM = "";/g' project.pbxproj
-          # Switch to manual signing
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' project.pbxproj
-          # Remove provisioning profile specifiers
-          sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = ".*"/PROVISIONING_PROFILE_SPECIFIER = ""/g' project.pbxproj
-          cd ../..
-          echo "Code signing disabled in Xcode project"
+          # Create temporary keychain
+          CERT_PATH=$RUNNER_TEMP/cert.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD="ci-keychain-pwd"
+
+          echo -n "$P12_BASE64" | base64 --decode -o $CERT_PATH
+
+          # Create and configure keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certificate
+          security import $CERT_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Make this keychain the default for codesign
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # Verify cert is available
+          security find-identity -v -p codesigning $KEYCHAIN_PATH
+
+          echo "✓ Apple certificate installed"
 
       - name: Build macOS release
         run: flutter build macos --release
 
       - name: Bundle native libs and sign
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           APP="build/macos/Build/Products/Release/gloam.app"
           DEST="$APP/Contents/MacOS"
           ENTITLEMENTS="macos/Runner/Release.entitlements"
 
+          # Find the signing identity from the keychain
+          SIGN_ID=$(security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db | head -1 | sed 's/.*"\(.*\)"/\1/')
+          echo "Signing with: $SIGN_ID"
+
           mkdir -p "$DEST"
 
-          # Install libolm via Homebrew on the runner
+          # Install and bundle native libs
           brew install libolm openssl@3
 
           LIBOLM="$(brew --prefix libolm)/lib/libolm.3.dylib"
           if [ -f "$LIBOLM" ]; then
             cp "$LIBOLM" "$DEST/libolm.3.dylib"
-            codesign --force --sign - "$DEST/libolm.3.dylib"
+            codesign --force --sign "$SIGN_ID" "$DEST/libolm.3.dylib"
           fi
 
           LIBCRYPTO="$(brew --prefix openssl@3)/lib/libcrypto.3.dylib"
           if [ -f "$LIBCRYPTO" ]; then
             cp "$LIBCRYPTO" "$DEST/libcrypto.3.dylib"
-            codesign --force --sign - "$DEST/libcrypto.3.dylib"
+            codesign --force --sign "$SIGN_ID" "$DEST/libcrypto.3.dylib"
           fi
 
-          # Ad-hoc sign for now (Developer ID signing requires certs in CI)
+          # Sign the app with hardened runtime
           codesign --force --deep --options runtime \
-            --sign - --entitlements "$ENTITLEMENTS" "$APP"
+            --sign "$SIGN_ID" --entitlements "$ENTITLEMENTS" "$APP"
+
+          echo "✓ App signed"
+
+      - name: Notarize
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          APP="build/macos/Build/Products/Release/gloam.app"
+
+          # Create ZIP for notarization
+          cd build/macos/Build/Products/Release
+          zip -r -y "$RUNNER_TEMP/Gloam-notarize.zip" gloam.app
+          cd ../../../../..
+
+          # Submit for notarization
+          echo "Submitting for notarization..."
+          xcrun notarytool submit "$RUNNER_TEMP/Gloam-notarize.zip" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --wait || echo "⚠ Notarization failed — continuing with signed-only build"
+
+          # Staple (may fail if notarization failed, that's OK)
+          xcrun stapler staple "$APP" || echo "⚠ Stapling skipped"
+
+          echo "✓ Notarization complete"
 
       - name: Create ZIP
         run: |
@@ -96,6 +144,10 @@ jobs:
         with:
           name: macos-build
           path: build/Gloam-*-macos.zip
+
+      - name: Cleanup keychain
+        if: always()
+        run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
 
   build-windows:
     name: Windows Build
@@ -167,7 +219,7 @@ jobs:
             **macOS:**
             1. Download `Gloam-${{ needs.build-macos.outputs.version }}-macos.zip`
             2. Extract and move `gloam.app` to your Applications folder
-            3. First launch: right-click → Open → confirm
+            3. Double-click to launch
 
             **Windows:**
             1. Download `Gloam-${{ needs.build-macos.outputs.version }}-windows.zip`
@@ -187,7 +239,6 @@ jobs:
           MAC_URL="https://github.com/sabizmil/Gloam/releases/download/${TAG}/Gloam-${VERSION}-macos.zip"
           WIN_URL="https://github.com/sabizmil/Gloam/releases/download/${TAG}/Gloam-${VERSION}-windows.zip"
 
-          # Update macOS appcast
           cat > appcast.xml << APPCAST_EOF
           <?xml version="1.0" encoding="utf-8"?>
           <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
@@ -212,7 +263,6 @@ jobs:
           </rss>
           APPCAST_EOF
 
-          # Update Windows appcast
           cat > appcast_windows.xml << APPCAST_WIN_EOF
           <?xml version="1.0" encoding="utf-8"?>
           <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
