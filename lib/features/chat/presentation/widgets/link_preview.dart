@@ -36,6 +36,16 @@ class _LinkPreviewState extends ConsumerState<LinkPreview> {
     _fetchPreview();
   }
 
+  @override
+  void didUpdateWidget(LinkPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.body != widget.body) {
+      _loading = true;
+      _url = null;
+      _fetchPreview();
+    }
+  }
+
   Future<void> _fetchPreview() async {
     final match = _urlRegex.firstMatch(widget.body);
     if (match == null) {

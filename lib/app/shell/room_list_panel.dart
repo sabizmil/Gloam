@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:matrix/matrix.dart' show EventTypes;
 
 import '../theme/color_tokens.dart';
 import '../theme/spacing.dart';
+import '../../features/calls/data/adapters/matrix_rtc_adapter.dart';
+import '../../features/calls/domain/voice_channel.dart';
+import '../../features/calls/presentation/widgets/voice_channel_tile.dart';
 import '../../features/chat/presentation/providers/timeline_provider.dart';
 import '../../features/chat/presentation/screens/chat_screen.dart';
 import '../../features/rooms/presentation/providers/room_list_provider.dart';
 import '../../features/rooms/presentation/widgets/create_room_dialog.dart';
 import '../../features/rooms/presentation/widgets/room_list_tile.dart';
 import '../../services/matrix_service.dart';
+import '../../services/voice_service.dart';
 import '../../widgets/section_header.dart';
 import 'space_rail.dart';
 
@@ -154,8 +159,15 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
                 }
 
                 final dms = filtered.where((r) => r.isDirect).toList();
-                final channels =
-                    filtered.where((r) => !r.isDirect).toList();
+                final channels = filtered
+                    .where((r) =>
+                        !r.isDirect && !_isVoiceChannel(r.roomId, ref))
+                    .toList();
+                final voiceChannels = _getVoiceChannels(ref);
+                final voiceState = ref.watch(voiceServiceProvider);
+                final connectedChannelId = voiceState is VoiceStateConnected
+                    ? voiceState.channelId
+                    : null;
 
                 return ListView(
                   padding: const EdgeInsets.symmetric(
@@ -175,6 +187,14 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
                             room: room,
                             isActive: room.roomId == selectedRoom,
                             onTap: () => _selectRoom(room.roomId),
+                          )),
+                    ],
+                    if (voiceChannels.isNotEmpty) ...[
+                      const SectionHeader('voice channels'),
+                      ...voiceChannels.map((vc) => VoiceChannelTile(
+                            channel: vc,
+                            isConnected: vc.id == connectedChannelId,
+                            onTap: () => _handleVoiceChannelTap(vc),
                           )),
                     ],
                   ],
@@ -230,6 +250,98 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
     }
 
     return result;
+  }
+
+  /// Check if a room is a voice channel by inspecting its create event.
+  bool _isVoiceChannel(String roomId, WidgetRef ref) {
+    final client = ref.read(matrixServiceProvider).client;
+    if (client == null) return false;
+    final room = client.getRoomById(roomId);
+    if (room == null) return false;
+
+    final createEvent = room.getState(EventTypes.RoomCreate);
+    if (createEvent != null) {
+      final roomType = createEvent.content['type'];
+      if (roomType == 'im.gloam.voice_channel') return true;
+      if (roomType == 'org.matrix.msc3417.call') return true;
+    }
+    return room.tags.containsKey('im.gloam.voice_channel');
+  }
+
+  /// Build voice channel list from Matrix rooms.
+  List<VoiceChannel> _getVoiceChannels(WidgetRef ref) {
+    final client = ref.read(matrixServiceProvider).client;
+    if (client == null) return [];
+
+    final selectedSpace = ref.watch(selectedSpaceProvider);
+
+    var rooms = client.rooms.where((r) {
+      final createEvent = r.getState(EventTypes.RoomCreate);
+      final roomType = createEvent?.content['type'];
+      if (roomType == 'im.gloam.voice_channel') return true;
+      if (roomType == 'org.matrix.msc3417.call') return true;
+      return r.tags.containsKey('im.gloam.voice_channel');
+    }).toList();
+
+    // Filter by selected space
+    if (selectedSpace != null) {
+      final space = client.getRoomById(selectedSpace);
+      if (space != null) {
+        final childIds = space.spaceChildren.map((c) => c.roomId).toSet();
+        rooms = rooms.where((r) => childIds.contains(r.id)).toList();
+      }
+    }
+
+    return rooms.map((room) {
+      final memberStates =
+          room.states['org.matrix.msc3401.call.member'] ?? {};
+      final participants = <VoiceChannelParticipantSummary>[];
+
+      for (final entry in memberStates.entries) {
+        final userId = entry.key;
+        final event = entry.value;
+        final memberships = event.content['memberships'];
+        if (memberships is! List || memberships.isEmpty) continue;
+
+        final user = room.unsafeGetUserFromMemoryOrFallback(userId);
+        participants.add(VoiceChannelParticipantSummary(
+          userId: userId,
+          displayName: user.calcDisplayname(),
+          avatarUrl: user.avatarUrl,
+        ));
+      }
+
+      return VoiceChannel(
+        id: room.id,
+        name: room.getLocalizedDisplayname(),
+        description: room.topic,
+        currentParticipantCount: participants.length,
+        connectedParticipants: participants,
+      );
+    }).toList()
+      // Sort: channels with participants first
+      ..sort((a, b) =>
+          b.currentParticipantCount.compareTo(a.currentParticipantCount));
+  }
+
+  void _handleVoiceChannelTap(VoiceChannel channel) {
+    // Select the room first (shows the voice channel screen)
+    _selectRoom(channel.id);
+
+    // If not already connected to this channel, join it
+    final voiceState = ref.read(voiceServiceProvider);
+    final alreadyConnected = voiceState is VoiceStateConnected &&
+        voiceState.channelId == channel.id;
+    if (!alreadyConnected) {
+      final client = ref.read(matrixServiceProvider).client;
+      if (client != null) {
+        final adapter = MatrixRTCAdapter(client: client);
+        ref.read(voiceServiceProvider.notifier).joinChannel(
+              adapter: adapter,
+              channelId: channel.id,
+            );
+      }
+    }
   }
 }
 

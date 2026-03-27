@@ -10,10 +10,12 @@ import 'sections/encryption_section.dart';
 import 'sections/server_section.dart';
 import 'sections/about_section.dart';
 import 'sections/notification_section.dart';
+import '../../calls/presentation/screens/voice_settings_screen.dart';
 
 enum _SettingsSection {
   account('account', Icons.person_outline),
   appearance('appearance', Icons.palette_outlined),
+  voiceAudio('voice & audio', Icons.headphones_outlined),
   notifications('notifications', Icons.notifications_outlined),
   encryption('security & keys', Icons.shield_outlined),
   server('server', Icons.dns_outlined),
@@ -196,6 +198,7 @@ class _SettingsModalState extends ConsumerState<SettingsModal> {
     return switch (_selected) {
       _SettingsSection.account => const AccountSection(),
       _SettingsSection.appearance => const AppearanceSection(),
+      _SettingsSection.voiceAudio => const VoiceSettingsScreen(),
       _SettingsSection.notifications => const NotificationSection(),
       _SettingsSection.encryption => const EncryptionSection(),
       _SettingsSection.server => const ServerSection(),

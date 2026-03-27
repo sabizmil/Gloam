@@ -16,11 +16,16 @@ import '../widgets/message_bubble.dart';
 import '../widgets/message_composer.dart';
 import '../widgets/typing_indicator.dart';
 import '../../../../app/shell/right_panel.dart';
+import '../../../calls/presentation/providers/call_provider.dart';
+import '../../../calls/presentation/screens/outgoing_call_screen.dart';
 import '../../../settings/presentation/recovery_key_dialog.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
-  const ChatScreen({super.key, required this.roomId});
+  const ChatScreen({super.key, required this.roomId, this.compact = false});
   final String roomId;
+
+  /// Compact mode for text-in-voice: hides the header, reduces padding.
+  final bool compact;
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -245,11 +250,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       child: Column(
       children: [
         // Header
-        _ChatHeader(
+        if (!widget.compact) _ChatHeader(
           roomName: roomName,
           topic: topic,
           memberCount: memberCount,
           isEncrypted: room?.encrypted ?? false,
+          isDirect: room?.isDirectChat ?? false,
+          roomId: widget.roomId,
           hasUndecryptable: messages.any((m) =>
               m.body.contains('sender has not sent us the session key') ||
               m.body == 'Encrypted message'),
@@ -498,12 +505,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 }
 
-class _ChatHeader extends StatelessWidget {
+class _ChatHeader extends ConsumerWidget {
   const _ChatHeader({
     required this.roomName,
     required this.topic,
     required this.memberCount,
     required this.isEncrypted,
+    this.isDirect = false,
+    this.roomId,
     this.onInfoTap,
     this.onMembersTap,
     this.onSearchTap,
@@ -514,13 +523,15 @@ class _ChatHeader extends StatelessWidget {
   final String topic;
   final int memberCount;
   final bool isEncrypted;
+  final bool isDirect;
+  final String? roomId;
   final VoidCallback? onInfoTap;
   final VoidCallback? onMembersTap;
   final VoidCallback? onSearchTap;
   final bool hasUndecryptable;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       height: GloamSpacing.headerHeight,
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -539,7 +550,7 @@ class _ChatHeader extends StatelessWidget {
                   Icon(Icons.lock, size: 14, color: GloamColors.accent),
             ),
           Text(
-            '#',
+            isDirect ? '@' : '#',
             style: GoogleFonts.jetBrainsMono(
                 fontSize: 18, color: GloamColors.accent),
           ),
@@ -571,6 +582,18 @@ class _ChatHeader extends StatelessWidget {
             ),
           ),
 
+          // Call buttons for DMs
+          if (isDirect && roomId != null) ...[
+            _HeaderAction(
+              icon: Icons.call_outlined,
+              onTap: () => _startCall(context, ref, roomId!, false),
+            ),
+            _HeaderAction(
+              icon: Icons.videocam_outlined,
+              onTap: () => _startCall(context, ref, roomId!, true),
+            ),
+          ],
+
           // Key icon — only show if there are undecryptable messages
           if (hasUndecryptable)
             Builder(
@@ -586,6 +609,20 @@ class _ChatHeader extends StatelessWidget {
           _HeaderAction(
               icon: Icons.people_outline, onTap: onMembersTap ?? () {}),
         ],
+      ),
+    );
+  }
+
+  void _startCall(BuildContext context, WidgetRef ref, String roomId, bool isVideo) {
+    ref.read(callServiceProvider.notifier).startCall(
+      roomId: roomId,
+      isVideo: isVideo,
+    );
+    // Show outgoing call screen
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const OutgoingCallScreen(),
+        fullscreenDialog: true,
       ),
     );
   }

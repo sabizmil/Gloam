@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/color_tokens.dart';
+import '../../features/calls/presentation/widgets/persistent_voice_bar.dart';
+import '../../services/voice_service.dart';
 import 'room_list_panel.dart';
 
 /// Mobile tab bar layout — Chats, Spaces, Calls, Settings.
-class MobileTabs extends StatefulWidget {
+class MobileTabs extends ConsumerStatefulWidget {
   const MobileTabs({super.key});
 
   @override
-  State<MobileTabs> createState() => _MobileTabsState();
+  ConsumerState<MobileTabs> createState() => _MobileTabsState();
 }
 
-class _MobileTabsState extends State<MobileTabs> {
+class _MobileTabsState extends ConsumerState<MobileTabs> {
   int _currentTab = 0;
 
   static const _tabs = [
@@ -52,7 +55,19 @@ class _MobileTabsState extends State<MobileTabs> {
           ],
         ),
       ),
-      bottomNavigationBar: Container(
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Voice bar (when connected)
+          Builder(builder: (context) {
+            final voiceState = ref.watch(voiceServiceProvider);
+            if (voiceState is VoiceStateConnected) {
+              return PersistentVoiceBar(state: voiceState, compact: true);
+            }
+            return const SizedBox.shrink();
+          }),
+          // Tab bar
+          Container(
         decoration: const BoxDecoration(
           color: GloamColors.bg,
           border: Border(
@@ -101,6 +116,8 @@ class _MobileTabsState extends State<MobileTabs> {
           ),
         ),
       ),
+        ], // Column children
+      ), // Column (bottomNavigationBar)
     );
   }
 }

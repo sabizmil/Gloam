@@ -13,11 +13,14 @@ import '../../../app/shell/right_panel.dart';
 import '../../../app/shell/shortcut_help_overlay.dart';
 import '../../../app/shortcuts.dart';
 import '../../../features/settings/presentation/settings_modal.dart';
+import '../../../services/debug_server.dart';
 import '../../../services/matrix_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/search_service.dart';
 import '../../../services/verification_service.dart';
+import '../../../services/voice_service.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
+import '../../calls/presentation/widgets/persistent_voice_bar.dart';
 import '../../chat/presentation/providers/timeline_provider.dart';
 import '../../rooms/presentation/widgets/create_room_dialog.dart';
 
@@ -131,6 +134,7 @@ class _AuthenticatedHome extends ConsumerStatefulWidget {
 class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
   VerificationService? _verificationService;
   NotificationService? _notificationService;
+  DebugServer? _debugServer;
 
   @override
   void initState() {
@@ -153,6 +157,10 @@ class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
       searchService.initialize().then((_) {
         searchService.startLiveIndexing();
       });
+
+      // Debug server (localhost:9999, debug mode only)
+      _debugServer = DebugServer(client: client);
+      _debugServer!.start();
     }
   }
 
@@ -160,11 +168,14 @@ class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
   void dispose() {
     _verificationService?.dispose();
     _notificationService?.dispose();
+    _debugServer?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final voiceState = ref.watch(voiceServiceProvider);
+
     return Scaffold(
       backgroundColor: GloamColors.bg,
       body: Shortcuts(
@@ -214,9 +225,15 @@ class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
               },
             ),
           },
-          child: const Focus(
+          child: Focus(
             autofocus: true,
-            child: AdaptiveShell(),
+            child: Column(
+              children: [
+                const Expanded(child: AdaptiveShell()),
+                if (voiceState is VoiceStateConnected)
+                  PersistentVoiceBar(state: voiceState),
+              ],
+            ),
           ),
         ),
       ),

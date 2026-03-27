@@ -28,5 +28,9 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Gloam needs microphone access for voice channels and calls</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Gloam needs camera access for video calls</string>
 </dict>
 </plist>

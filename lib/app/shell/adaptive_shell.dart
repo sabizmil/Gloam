@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:matrix/matrix.dart' show EventTypes;
 
 import '../theme/color_tokens.dart';
 import '../theme/spacing.dart';
+import '../../features/calls/presentation/screens/voice_channel_screen.dart';
 import '../../features/chat/presentation/providers/timeline_provider.dart';
 import '../../features/chat/presentation/screens/chat_screen.dart';
+import '../../services/matrix_service.dart';
 import 'space_rail.dart';
 import 'room_list_panel.dart';
 import 'mobile_tabs.dart';
@@ -47,7 +50,7 @@ class _DesktopShell extends ConsumerWidget {
         const RoomListPanel(),
         Expanded(
           child: selectedRoom != null
-              ? ChatScreen(roomId: selectedRoom)
+              ? _buildContentArea(selectedRoom, ref)
               : const _EmptyState(),
         ),
         if (showPanel && selectedRoom != null)
@@ -55,6 +58,24 @@ class _DesktopShell extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// Returns either a VoiceChannelScreen or ChatScreen based on room type.
+Widget _buildContentArea(String roomId, WidgetRef ref) {
+  final client = ref.read(matrixServiceProvider).client;
+  if (client != null) {
+    final room = client.getRoomById(roomId);
+    if (room != null) {
+      final createEvent = room.getState(EventTypes.RoomCreate);
+      final roomType = createEvent?.content['type'];
+      if (roomType == 'im.gloam.voice_channel' ||
+          roomType == 'org.matrix.msc3417.call' ||
+          room.tags.containsKey('im.gloam.voice_channel')) {
+        return VoiceChannelScreen(key: ValueKey('vc_$roomId'), roomId: roomId);
+      }
+    }
+  }
+  return ChatScreen(key: ValueKey(roomId), roomId: roomId);
 }
 
 /// Tablet: room list + chat area (space rail in drawer).
@@ -70,7 +91,7 @@ class _TabletShell extends ConsumerWidget {
         const SizedBox(width: 280, child: RoomListPanel()),
         Expanded(
           child: selectedRoom != null
-              ? ChatScreen(roomId: selectedRoom)
+              ? _buildContentArea(selectedRoom, ref)
               : const _EmptyState(),
         ),
       ],

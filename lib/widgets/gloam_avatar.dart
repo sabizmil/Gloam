@@ -64,7 +64,9 @@ class _GloamAvatarState extends ConsumerState<GloamAvatar> {
   @override
   void didUpdateWidget(GloamAvatar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.mxcUrl != widget.mxcUrl) {
+    if (oldWidget.mxcUrl != widget.mxcUrl ||
+        oldWidget.displayName != widget.displayName) {
+      _resolvedUrl = null;
       _resolved = false;
       _resolveUrl();
     }
