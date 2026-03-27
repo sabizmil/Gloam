@@ -219,7 +219,9 @@ jobs:
           cmake -B build -DCMAKE_BUILD_TYPE=Release -A x64
           cmake --build build --config Release
           cp build/Release/olm.dll "$GITHUB_WORKSPACE/$DEST/olm.dll" || true
-          cp build/Release/libolm.dll "$GITHUB_WORKSPACE/$DEST/libolm.dll" || true
+          # The Dart olm package loads "libolm.dll" — CMake produces "olm.dll"
+          # Copy it with both names so DynamicLibrary.open finds it
+          cp build/Release/olm.dll "$GITHUB_WORKSPACE/$DEST/libolm.dll" || true
           cd "$GITHUB_WORKSPACE"
 
           # Also copy OpenSSL DLLs if needed (usually available on Windows)
@@ -232,11 +234,25 @@ jobs:
           $version = "${{ steps.version.outputs.version }}"
           Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "build\Gloam-${version}-windows.zip"
 
+      - name: Create installer
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          choco install innosetup -y --no-progress
+          "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" \
+            "/DAppVersion=$VERSION" \
+            scripts/windows_installer.iss
+          # Inno outputs to scripts/Output/ by default
+          mv scripts/Output/Gloam-*-windows-setup.exe build/ || true
+          ls -la build/Gloam-*-windows* 2>/dev/null
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: build/Gloam-*-windows.zip
+          path: |
+            build/Gloam-*-windows.zip
+            build/Gloam-*-windows-setup.exe
 
   create-release:
     name: Create GitHub Release
@@ -272,9 +288,8 @@ jobs:
             3. Double-click to launch
 
             **Windows:**
-            1. Download `Gloam-${{ needs.build-macos.outputs.version }}-windows.zip`
-            2. Extract to a folder of your choice
-            3. Run `gloam.exe`
+            - **Installer (recommended):** Download `Gloam-${{ needs.build-macos.outputs.version }}-windows-setup.exe` and run it
+            - **Portable:** Download `Gloam-${{ needs.build-macos.outputs.version }}-windows.zip`, extract, and run `gloam.exe`
 
             Future updates will be delivered automatically.
           files: artifacts/*
@@ -287,7 +302,7 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           DATE=$(date -u '+%a, %d %b %Y %H:%M:%S +0000')
           MAC_URL="https://github.com/sabizmil/Gloam/releases/download/${TAG}/Gloam-${VERSION}-macos.zip"
-          WIN_URL="https://github.com/sabizmil/Gloam/releases/download/${TAG}/Gloam-${VERSION}-windows.zip"
+          WIN_URL="https://github.com/sabizmil/Gloam/releases/download/${TAG}/Gloam-${VERSION}-windows-setup.exe"
 
           # Extract build number from pubspec.yaml (the +N part)
           # Sparkle compares sparkle:version against CFBundleVersion (build number)
