@@ -23,7 +23,7 @@ DisableProgramGroupPage=yes
 WizardStyle=modern
 
 [Files]
-Source: "..\..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+Source: "..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 
 [Icons]
 Name: "{group}\Gloam"; Filename: "{app}\gloam.exe"
