@@ -55,3 +55,10 @@ macos/Runner/lib/
 .env
 *.jks
 *.keystore
+
+# Internal docs (not public)
+docs/
+doc/
+
+# Pencil editor generated assets
+images/
