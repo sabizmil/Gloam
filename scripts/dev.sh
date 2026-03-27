@@ -1,11 +1,15 @@
 #!/bin/bash
 set -e
 
-# Kill any running Gloam instance
+# Kill any running Gloam instance (SIGTERM to allow DB flush, then SIGKILL fallback)
+pkill -f "gloam" 2>/dev/null || true
+sleep 2
 pkill -9 -f "gloam" 2>/dev/null || true
-sleep 1
 
-# Build
+# Clean build to avoid stale Dart cache
+echo "Cleaning..."
+fvm flutter clean 2>&1 | tail -1
+
 echo "Building Gloam..."
 fvm flutter build macos --debug 2>&1 | tail -2
 
@@ -14,6 +18,8 @@ APP="build/macos/Build/Products/Debug/gloam.app"
 DEST="$APP/Contents/MacOS"
 ENTITLEMENTS="macos/Runner/DebugProfile.entitlements"
 SIGN_IDENTITY="Apple Development: Simon Abizmil (57B64F2V6Q)"
+
+mkdir -p "$DEST"
 
 LIBOLM="/opt/homebrew/lib/libolm.3.dylib"
 if [ -f "$LIBOLM" ]; then
