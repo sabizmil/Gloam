@@ -63,7 +63,7 @@ class AboutSection extends StatelessWidget {
         const SizedBox(height: 24),
 
         const SettingsSectionHeader('app info'),
-        const SettingsTile(icon: Icons.tag, label: 'version', value: '0.2.1'),
+        const SettingsTile(icon: Icons.tag, label: 'version', value: '0.2.2'),
         if (Platform.isMacOS || Platform.isWindows)
           SettingsTile(
             icon: Icons.system_update,
