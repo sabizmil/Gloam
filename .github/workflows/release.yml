@@ -41,13 +41,19 @@ jobs:
 
       - name: Disable Xcode code signing
         run: |
-          # Patch the Xcode project to skip code signing on CI
-          # (no Apple cert installed on the runner)
-          cd macos
-          sed -i '' 's/CODE_SIGN_IDENTITY = ".*"/CODE_SIGN_IDENTITY = "-"/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/DEVELOPMENT_TEAM = .*;/DEVELOPMENT_TEAM = "";/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' Runner.xcodeproj/project.pbxproj
-          cd ..
+          # Aggressively disable all code signing in the Xcode project
+          cd macos/Runner.xcodeproj
+          # Replace all signing identities with ad-hoc
+          sed -i '' 's/CODE_SIGN_IDENTITY = ".*"/CODE_SIGN_IDENTITY = "-"/g' project.pbxproj
+          sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=macosx\*\]" = ".*"/"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-"/g' project.pbxproj
+          # Clear development team everywhere
+          sed -i '' 's/DEVELOPMENT_TEAM = [A-Z0-9]*;/DEVELOPMENT_TEAM = "";/g' project.pbxproj
+          # Switch to manual signing
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' project.pbxproj
+          # Remove provisioning profile specifiers
+          sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = ".*"/PROVISIONING_PROFILE_SPECIFIER = ""/g' project.pbxproj
+          cd ../..
+          echo "Code signing disabled in Xcode project"
 
       - name: Build macOS release
         run: flutter build macos --release
