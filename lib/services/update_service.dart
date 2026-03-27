@@ -40,11 +40,15 @@ class UpdateService {
   }
 
   /// Manually trigger an update check (e.g., from Settings).
+  /// Works in both debug and release mode.
   static Future<void> checkNow() async {
     if (!Platform.isMacOS && !Platform.isWindows) return;
 
     try {
-      await AutoUpdater.instance.checkForUpdates(inBackground: false);
+      final autoUpdater = AutoUpdater.instance;
+      final feedUrl = Platform.isMacOS ? _macFeedUrl : _winFeedUrl;
+      await autoUpdater.setFeedURL(feedUrl);
+      await autoUpdater.checkForUpdates(inBackground: false);
     } catch (e) {
       debugPrint('[UpdateService] Manual check failed: $e');
     }

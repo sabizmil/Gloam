@@ -32,5 +32,11 @@
 	<string>Gloam needs microphone access for voice channels and calls</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Gloam needs camera access for video calls</string>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/sabizmil/Gloam/main/appcast.xml</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>14400</integer>
 </dict>
 </plist>
