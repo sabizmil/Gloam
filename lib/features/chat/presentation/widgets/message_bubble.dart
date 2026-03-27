@@ -279,6 +279,22 @@ class _MessageContent extends StatelessWidget {
       'm.video' => VideoMessage(message: message),
       'm.file' => FileMessage(message: message),
       'm.audio' => VoiceMessage(message: message),
+      'm.bad_encrypted' => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.lock_outline,
+                size: 14, color: GloamColors.textTertiary),
+            const SizedBox(width: 6),
+            Text(
+              'Unable to decrypt',
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: GloamColors.textTertiary,
+              ),
+            ),
+          ],
+        ),
       _ => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

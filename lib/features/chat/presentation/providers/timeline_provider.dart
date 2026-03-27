@@ -93,6 +93,10 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     );
     _rebuild();
 
+    // Request missing Megolm session keys for any undecryptable events.
+    // Keys can be lost if the app is killed mid-sync before flushing to DB.
+    _timeline!.requestKeys(onlineKeyBackupOnly: false);
+
     // Member state events (avatars, display names) arrive via sync but
     // don't trigger Timeline callbacks. Listen for syncs that carry
     // member state for this room and rebuild when they do.
@@ -144,15 +148,65 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     }
   }
 
+  bool _decrypting = false;
+
   void _rebuild() {
+    // Synchronous pass first — show what we have now
+    _buildMessages();
+
+    // Then attempt async decryption if there are encrypted events
+    if (!_decrypting) {
+      _tryDecryptAndRebuild();
+    }
+  }
+
+  Future<void> _tryDecryptAndRebuild() async {
+    final timeline = _timeline;
+    final encryption = _client.encryption;
+    if (timeline == null || encryption == null || _room?.encrypted != true) {
+      return;
+    }
+
+    final encrypted = <int>[];
+    for (var i = 0; i < timeline.events.length; i++) {
+      if (timeline.events[i].type == EventTypes.Encrypted) {
+        encrypted.add(i);
+      }
+    }
+    if (encrypted.isEmpty) return;
+
+    _decrypting = true;
+    var decryptedCount = 0;
+
+    for (final i in encrypted) {
+      final event = timeline.events[i];
+      try {
+        final decrypted = await encryption.decryptRoomEvent(
+          event,
+          store: true,
+          updateType: EventUpdateType.history,
+        );
+        if (decrypted.type != EventTypes.Encrypted) {
+          timeline.events[i] = decrypted;
+          decryptedCount++;
+        }
+      } catch (_) {
+        // Decryption failed — leave event as-is
+      }
+    }
+
+    _decrypting = false;
+
+    if (decryptedCount > 0) _buildMessages();
+  }
+
+  void _buildMessages() {
     final timeline = _timeline;
     if (timeline == null) return;
 
     final messages = <TimelineMessage>[];
     final myUserId = _client.userID;
     final seenEventIds = <String>{};
-
-    Logs().d('Timeline rebuild: ${timeline.events.length} raw events');
 
     for (final event in timeline.events) {
       // Skip edit and reaction relation events — they're aggregated
@@ -181,8 +235,6 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
         messages.add(_mapEvent(displayEvent, myUserId));
       }
     }
-
-    Logs().d('Timeline rebuild: ${messages.length} display messages');
 
     // SDK returns newest first — reverse for display (oldest at top)
     state = messages.reversed.toList();
@@ -251,24 +303,29 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
       sendState = MessageSendState.error;
     }
 
-    // Determine message type
+    // Determine message type — if the event is still encrypted
+    // (decryption failed), show as undecryptable rather than raw text.
     String type;
-    final msgType = event.messageType;
-    switch (msgType) {
-      case MessageTypes.Image:
-        type = 'm.image';
-      case MessageTypes.File:
-        type = 'm.file';
-      case MessageTypes.Audio:
-        type = 'm.audio';
-      case MessageTypes.Video:
-        type = 'm.video';
-      case MessageTypes.Emote:
-        type = 'm.emote';
-      case MessageTypes.Notice:
-        type = 'm.notice';
-      default:
-        type = 'm.text';
+    if (event.type == EventTypes.Encrypted) {
+      type = 'm.bad_encrypted';
+    } else {
+      final msgType = event.messageType;
+      switch (msgType) {
+        case MessageTypes.Image:
+          type = 'm.image';
+        case MessageTypes.File:
+          type = 'm.file';
+        case MessageTypes.Audio:
+          type = 'm.audio';
+        case MessageTypes.Video:
+          type = 'm.video';
+        case MessageTypes.Emote:
+          type = 'm.emote';
+        case MessageTypes.Notice:
+          type = 'm.notice';
+        default:
+          type = 'm.text';
+      }
     }
 
     final sender = event.senderFromMemoryOrFallback;

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:matrix/matrix.dart';
 
 import '../../../app/theme/color_tokens.dart';
 import '../../../app/theme/spacing.dart';
 import '../../../services/matrix_service.dart';
+import '../../chat/presentation/providers/timeline_provider.dart';
 
 /// Dialog to enter recovery key / passphrase to unlock key backup
 /// and decrypt historical messages.
@@ -19,6 +21,7 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
   final _controller = TextEditingController();
   bool _loading = false;
   String? _error;
+  String? _status;
   bool _success = false;
 
   @override
@@ -34,6 +37,7 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
     setState(() {
       _loading = true;
       _error = null;
+      _status = 'unlocking secrets...';
     });
 
     try {
@@ -55,15 +59,102 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
         return;
       }
 
+      // Step 1: Unlock SSSS (caches secrets including backup decryption key)
       final keyInfo = ssss.open();
       await keyInfo.unlock(keyOrPassphrase: input);
 
+      if (!mounted) return;
+      setState(() => _status = 'downloading keys from backup...');
+
+      // Step 2: Check key backup status and cache state
+      final keyManager = client.encryption!.keyManager;
+      final isCached = await keyManager.isCached();
+
+      if (!isCached) {
+        // Manually cache the megolm backup key from SSSS
+        await keyInfo.maybeCacheAll();
+      }
+
+      // Step 3: Download and import keys from backup
+      try {
+        await keyManager.loadAllKeys();
+      } catch (_) {
+        // Best-effort — continue even if backup import fails
+      }
+
+      // Step 4: Re-decrypt still-encrypted events in all encrypted rooms
+      if (!mounted) return;
+      setState(() => _status = 'decrypting messages...');
+
+      var totalDecrypted = 0;
+      var totalFailed = 0;
+      for (final room in client.rooms) {
+        if (!room.encrypted) continue;
+        final timeline = await room.getTimeline();
+        for (var i = 0; i < timeline.events.length; i++) {
+          if (timeline.events[i].type == EventTypes.Encrypted) {
+            try {
+              final decrypted = await client.encryption!.decryptRoomEvent(
+                timeline.events[i],
+                store: true,
+                updateType: EventUpdateType.history,
+              );
+              if (decrypted.type != EventTypes.Encrypted) {
+                timeline.events[i] = decrypted;
+                totalDecrypted++;
+              } else {
+                totalFailed++;
+              }
+            } catch (e) {
+              totalFailed++;
+            }
+          }
+        }
+        if (totalDecrypted > 0) {
+          timeline.onUpdate?.call();
+        }
+      }
+      // Continue to key requests if some events are still encrypted
+
+      // Step 5: For sessions still missing, request keys from other devices
+      if (totalFailed > 0) {
+        if (!mounted) return;
+        setState(() => _status = 'requesting missing keys from other devices...');
+
+        final missingSessionIds = <String>{};
+        for (final room in client.rooms) {
+          if (!room.encrypted) continue;
+          final timeline = await room.getTimeline();
+          for (final event in timeline.events) {
+            if (event.type == EventTypes.Encrypted) {
+              final sid = event.content.tryGet<String>('session_id');
+              final senderKey = event.content.tryGet<String>('sender_key');
+              if (sid != null && senderKey != null && missingSessionIds.add(sid)) {
+                client.encryption!.keyManager.maybeAutoRequest(
+                  room.id,
+                  sid,
+                  senderKey,
+                  tryOnlineBackup: false,
+                  onlineKeyBackupOnly: false,
+                );
+              }
+            }
+          }
+        }
+      }
+
+      // Invalidate all active timeline providers so they reload from DB
+      for (final room in client.rooms) {
+        ref.invalidate(timelineProvider(room.id));
+      }
+
+      if (!mounted) return;
       setState(() {
         _success = true;
         _loading = false;
+        _status = null;
       });
 
-      // Wait a moment for keys to restore, then close
       await Future.delayed(const Duration(seconds: 2));
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -72,6 +163,7 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
             ? 'invalid recovery key or passphrase'
             : e.toString();
         _loading = false;
+        _status = null;
       });
     }
   }
@@ -144,6 +236,30 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
                     fontSize: 12,
                     color: GloamColors.danger,
                   ),
+                ),
+              ],
+
+              if (_status != null && !_success) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: GloamColors.accentDim,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _status!,
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 11,
+                        color: GloamColors.textTertiary,
+                      ),
+                    ),
+                  ],
                 ),
               ],
 
