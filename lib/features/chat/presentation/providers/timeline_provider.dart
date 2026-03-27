@@ -27,6 +27,7 @@ class TimelineMessage {
   final int? mediaSizeBytes;
   final int? imageWidth;
   final int? imageHeight;
+  final String? fileSendingStatus; // generatingThumbnail, encrypting, uploading
 
   const TimelineMessage({
     required this.eventId,
@@ -49,6 +50,7 @@ class TimelineMessage {
     this.mediaSizeBytes,
     this.imageWidth,
     this.imageHeight,
+    this.fileSendingStatus,
   });
 
   bool get isLocalEcho => eventId.startsWith('~');
@@ -367,6 +369,8 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
           event.content.tryGetMap<String, Object?>('info')?.tryGet<int>('w'),
       imageHeight:
           event.content.tryGetMap<String, Object?>('info')?.tryGet<int>('h'),
+      fileSendingStatus:
+          event.unsigned?[fileSendingStatusKey] as String?,
     );
   }
 

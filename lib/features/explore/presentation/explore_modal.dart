@@ -358,16 +358,50 @@ class _BrowseTab extends StatelessWidget {
       );
     }
 
+    // +1 for footer, +1 for error banner if present
+    final hasError = state.error != null;
+    final extraItems = 1 + (hasError ? 1 : 0);
+
     return ListView.builder(
       controller: scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      itemCount: state.rooms.length + 1, // +1 for footer
+      itemCount: state.rooms.length + extraItems,
       itemBuilder: (context, index) {
-        if (index == state.rooms.length) {
+        // Error banner at top
+        if (hasError && index == 0) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3A1A1A),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: GloamColors.danger.withAlpha(80)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.error_outline,
+                    size: 16, color: GloamColors.danger),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    state.error!,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: GloamColors.danger,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final roomIndex = hasError ? index - 1 : index;
+        if (roomIndex >= state.rooms.length) {
           return _buildFooter();
         }
 
-        final room = state.rooms[index];
+        final room = state.rooms[roomIndex];
         return PublicRoomTile(
           room: room,
           isJoined: state.joinedRoomIds.contains(room.roomId),

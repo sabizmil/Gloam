@@ -12,6 +12,7 @@ import '../../features/chat/presentation/providers/timeline_provider.dart';
 import '../../features/chat/presentation/screens/chat_screen.dart';
 import '../../features/rooms/presentation/providers/room_list_provider.dart';
 import '../../features/rooms/presentation/widgets/create_room_dialog.dart';
+import '../../features/rooms/presentation/widgets/invite_tile.dart';
 import '../../features/rooms/presentation/widgets/room_list_tile.dart';
 import '../../services/matrix_service.dart';
 import '../../services/voice_service.dart';
@@ -158,10 +159,11 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
                   );
                 }
 
-                final dms = filtered.where((r) => r.isDirect).toList();
+                final invites = filtered.where((r) => r.isInvite).toList();
+                final dms = filtered.where((r) => r.isDirect && !r.isInvite).toList();
                 final channels = filtered
                     .where((r) =>
-                        !r.isDirect && !_isVoiceChannel(r.roomId, ref))
+                        !r.isDirect && !r.isInvite && !_isVoiceChannel(r.roomId, ref))
                     .toList();
                 final voiceChannels = _getVoiceChannels(ref);
                 final voiceState = ref.watch(voiceServiceProvider);
@@ -173,6 +175,11 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 4),
                   children: [
+                    if (invites.isNotEmpty) ...[
+                      SectionHeader('invites (${invites.length})',
+                          color: GloamColors.accent),
+                      ...invites.map((room) => InviteTile(invite: room)),
+                    ],
                     if (dms.isNotEmpty) ...[
                       const SectionHeader('direct messages'),
                       ...dms.map((room) => RoomListTile(

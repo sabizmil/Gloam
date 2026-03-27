@@ -6,6 +6,7 @@ import 'package:matrix/matrix.dart';
 import '../theme/color_tokens.dart';
 import '../theme/spacing.dart';
 import '../../features/explore/presentation/explore_modal.dart';
+import '../../features/rooms/presentation/providers/room_list_provider.dart';
 import '../../features/settings/presentation/settings_modal.dart';
 import '../../services/matrix_service.dart';
 import '../../widgets/gloam_avatar.dart';
@@ -70,15 +71,46 @@ class SpaceRail extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
 
-          // DMs / Home button
-          _SpaceIcon(
-            child: const Icon(Icons.chat_bubble_outline,
-                size: 20, color: GloamColors.textSecondary),
-            isActive: selectedSpace == null,
-            tooltip: 'Direct Messages',
-            onTap: () =>
-                ref.read(selectedSpaceProvider.notifier).state = null,
-          ),
+          // DMs / Home button (with invite badge)
+          Consumer(builder: (context, ref, _) {
+            final inviteCount = ref.watch(inviteCountProvider);
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                _SpaceIcon(
+                  child: const Icon(Icons.chat_bubble_outline,
+                      size: 20, color: GloamColors.textSecondary),
+                  isActive: selectedSpace == null,
+                  tooltip: 'Direct Messages',
+                  onTap: () =>
+                      ref.read(selectedSpaceProvider.notifier).state = null,
+                ),
+                if (inviteCount > 0)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      decoration: const BoxDecoration(
+                        color: GloamColors.accent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$inviteCount',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: GloamColors.bg,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          }),
 
           // Divider
           Padding(

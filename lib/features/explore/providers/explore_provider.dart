@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:matrix/matrix.dart';
 
+import '../../../services/debug_server.dart';
 import '../../../services/matrix_service.dart';
 
 /// State for the Explore modal — room search, pagination, join actions.
@@ -127,8 +128,11 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
         roomTypes: state.spacesOnly ? ['m.space'] : null,
       );
 
+      // Don't pass server param when browsing the user's own homeserver —
+      // it triggers a federation self-request that fails with 403.
+      final isHomeServer = state.server == client.homeserver?.host;
       final result = await client.queryPublicRooms(
-        server: state.server.isNotEmpty ? state.server : null,
+        server: (!isHomeServer && state.server.isNotEmpty) ? state.server : null,
         limit: 20,
         filter: filter,
       );
@@ -167,8 +171,9 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
         roomTypes: state.spacesOnly ? ['m.space'] : null,
       );
 
+      final isHomeServer = state.server == client.homeserver?.host;
       final result = await client.queryPublicRooms(
-        server: state.server.isNotEmpty ? state.server : null,
+        server: (!isHomeServer && state.server.isNotEmpty) ? state.server : null,
         limit: 20,
         since: state.nextBatch,
         filter: filter,
@@ -194,15 +199,25 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
     final client = _client;
     if (client == null) return;
 
+    _log('[Explore] Joining room $roomId via server ${state.server}');
+
     state = state.copyWith(
       joiningRoomIds: {...state.joiningRoomIds, roomId},
+      error: () => null,
     );
 
     try {
       await client.joinRoom(
         roomId,
         serverName: state.server.isNotEmpty ? [state.server] : null,
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => throw TimeoutException(
+          'Join timed out after 30s — the server may be slow to federate',
+        ),
       );
+
+      _log('[Explore] Joined $roomId successfully');
 
       if (mounted) {
         state = state.copyWith(
@@ -213,16 +228,21 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
         );
       }
     } catch (e) {
-      debugPrint('[Explore] join error: $e');
+      _log('[Explore] Join error for $roomId: $e');
       if (mounted) {
         state = state.copyWith(
           joiningRoomIds: state.joiningRoomIds
               .where((id) => id != roomId)
               .toSet(),
-          error: () => 'Failed to join room: $e',
+          error: () => 'Failed to join: $e',
         );
       }
     }
+  }
+
+  void _log(String msg) {
+    debugPrint(msg);
+    DebugServer.logs.add('${DateTime.now().toIso8601String()} $msg');
   }
 
   /// Join a room by alias or ID (for the "Join by Address" tab).

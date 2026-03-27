@@ -14,6 +14,7 @@ import '../widgets/date_separator.dart';
 import '../widgets/drop_overlay.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/message_composer.dart';
+import '../widgets/syncing_zero_state.dart';
 import '../widgets/typing_indicator.dart';
 import '../../../../app/shell/right_panel.dart';
 import '../../../calls/presentation/providers/call_provider.dart';
@@ -268,6 +269,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               const RightPanelState(view: RightPanelView.members),
         ),
 
+        // Syncing zero state: joined but no messages yet
+        if (messages.isEmpty && room?.lastEvent == null && !widget.compact)
+          Expanded(
+            child: SyncingZeroState(
+              roomName: roomName,
+              serverName: _extractServer(room?.id ?? ''),
+              memberCount: memberCount,
+              onLeave: () async {
+                await room?.leave();
+                if (context.mounted) {
+                  ref.read(selectedRoomProvider.notifier).state = null;
+                }
+              },
+            ),
+          )
+        else ...[
         // Timeline
         Expanded(
           child: Stack(
@@ -404,8 +421,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           onCancelAction: () =>
               setState(() => _composerState = ComposerState.normal),
         ),
+        ], // end else (has messages)
       ],
     ));
+  }
+
+  String _extractServer(String roomId) {
+    final colonIndex = roomId.indexOf(':');
+    if (colonIndex >= 0 && colonIndex < roomId.length - 1) {
+      return roomId.substring(colonIndex + 1);
+    }
+    return '';
   }
 
   void _showMessageActions(
@@ -604,8 +630,6 @@ class _ChatHeader extends ConsumerWidget {
             ),
           _HeaderAction(
               icon: Icons.search, onTap: onSearchTap ?? () {}),
-          _HeaderAction(
-              icon: Icons.push_pin_outlined, onTap: onInfoTap ?? () {}),
           _HeaderAction(
               icon: Icons.people_outline, onTap: onMembersTap ?? () {}),
         ],

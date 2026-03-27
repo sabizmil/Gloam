@@ -8,8 +8,9 @@ import 'package:matrix/matrix.dart';
 
 import '../../../../app/theme/color_tokens.dart';
 import '../../../../app/theme/spacing.dart';
+import '../../../../services/debug_server.dart';
 import '../../../../services/matrix_service.dart';
-import '../providers/timeline_provider.dart';
+import '../providers/timeline_provider.dart';  // TimelineMessage, MessageSendState
 
 /// Cache decrypted image bytes to avoid re-downloading.
 final _imageCache = <String, Uint8List>{};
@@ -34,7 +35,31 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
   @override
   void initState() {
     super.initState();
+    DebugServer.logs.add('[ImageMessage] init: id=${widget.message.eventId} '
+        'send=${widget.message.sendState} local=${widget.message.isLocalEcho} '
+        'fileStatus=${widget.message.fileSendingStatus} '
+        'url=${widget.message.mediaUrl} type=${widget.message.type}');
     _loadImage();
+  }
+
+  @override
+  void didUpdateWidget(ImageMessage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reload when the event updates (e.g., local echo replaced by server echo
+    // with a real MXC URL after upload completes)
+    DebugServer.logs.add('[ImageMessage] didUpdate: id=${widget.message.eventId} '
+        'send=${widget.message.sendState} local=${widget.message.isLocalEcho} '
+        'fileStatus=${widget.message.fileSendingStatus} '
+        'url=${widget.message.mediaUrl}');
+    if (oldWidget.message.eventId != widget.message.eventId ||
+        oldWidget.message.mediaUrl != widget.message.mediaUrl ||
+        oldWidget.message.sendState != widget.message.sendState) {
+      _imageBytes = null;
+      _httpUrl = null;
+      _loading = true;
+      _error = false;
+      _loadImage();
+    }
   }
 
   Future<void> _loadImage() async {
@@ -105,6 +130,46 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
   }
 
   Widget _buildContent() {
+    // Uploading state — show progress with stage label
+    final sendState = widget.message.sendState;
+    final fileSendingStatus = widget.message.fileSendingStatus;
+    if (sendState == MessageSendState.sending && widget.message.mediaUrl == null) {
+      final label = switch (fileSendingStatus) {
+        'generatingThumbnail' => 'Generating thumbnail...',
+        'encrypting' => 'Encrypting...',
+        'uploading' => 'Uploading...',
+        _ => 'Sending...',
+      };
+      return SizedBox(
+        width: 240,
+        height: 160,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: GloamColors.accent.withAlpha(180),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                label,
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 11,
+                  color: GloamColors.textTertiary,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (_loading) {
       return const SizedBox(
         width: 240, height: 160,

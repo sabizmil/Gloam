@@ -177,7 +177,7 @@ class _MessageComposerState extends State<MessageComposer> {
               vertical: 8,
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // Attachment button
                 IconButton(
