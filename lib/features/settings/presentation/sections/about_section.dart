@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/theme/color_tokens.dart';
+import '../../../../services/update_service.dart';
 import '../widgets/settings_tile.dart';
 
 class AboutSection extends StatelessWidget {
@@ -60,7 +63,13 @@ class AboutSection extends StatelessWidget {
         const SizedBox(height: 24),
 
         const SettingsSectionHeader('app info'),
-        const SettingsTile(icon: Icons.tag, label: 'version', value: '0.1.0'),
+        const SettingsTile(icon: Icons.tag, label: 'version', value: '0.2.0'),
+        if (Platform.isMacOS || Platform.isWindows)
+          SettingsTile(
+            icon: Icons.system_update,
+            label: 'check for updates',
+            onTap: () => UpdateService.checkNow(),
+          ),
         const SettingsTile(icon: Icons.flutter_dash, label: 'framework', value: 'Flutter'),
         const SettingsTile(icon: Icons.code, label: 'matrix SDK', value: 'matrix_dart_sdk'),
 

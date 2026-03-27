@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Gloam Updates</title>
+    <link>https://github.com/sabizmil/Gloam/releases</link>
+    <description>Most recent updates for Gloam</description>
+    <language>en</language>
+    <item>
+      <title>Version 0.2.0</title>
+      <sparkle:version>1</sparkle:version>
+      <sparkle:shortVersionString>0.2.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>Gloam 0.2.0</h2>
+        <ul>
+          <li>Voice channels with LiveKit integration</li>
+          <li>Explore room browser with server switching</li>
+          <li>User profile modals with DM initiation</li>
+          <li>Self-profile editing with avatar upload</li>
+          <li>Room invite flow with accept/decline</li>
+          <li>Per-room notification settings</li>
+          <li>15 keyboard shortcuts with platform-aware help</li>
+          <li>Debug server for development</li>
+        </ul>
+      ]]></description>
+      <pubDate>Thu, 27 Mar 2026 12:00:00 +0000</pubDate>
+      <enclosure
+        url="https://github.com/sabizmil/Gloam/releases/download/v0.2.0/Gloam-0.2.0-macos.zip"
+        sparkle:edSignature=""
+        length="0"
+        type="application/octet-stream" />
+    </item>
+  </channel>
+</rss>

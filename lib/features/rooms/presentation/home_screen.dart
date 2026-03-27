@@ -15,6 +15,7 @@ import '../../../app/shortcuts.dart';
 import '../../../features/settings/presentation/settings_modal.dart';
 import '../../../services/debug_server.dart';
 import '../../../services/matrix_service.dart';
+import '../../../services/update_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/search_service.dart';
 import '../../../services/verification_service.dart';
@@ -22,6 +23,7 @@ import '../../../services/voice_service.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
 import '../../calls/presentation/widgets/persistent_voice_bar.dart';
 import '../../chat/presentation/providers/timeline_provider.dart';
+import '../../explore/presentation/explore_modal.dart';
 import '../../rooms/presentation/widgets/create_room_dialog.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -161,6 +163,9 @@ class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
       // Debug server (localhost:9999, debug mode only)
       _debugServer = DebugServer(client: client);
       _debugServer!.start();
+
+      // Auto-update check (release mode only, desktop)
+      UpdateService.init();
     }
   }
 
@@ -221,6 +226,44 @@ class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
             PreferencesIntent: CallbackAction<PreferencesIntent>(
               onInvoke: (_) {
                 showSettingsModal(context);
+                return null;
+              },
+            ),
+            ToggleMuteIntent: CallbackAction<ToggleMuteIntent>(
+              onInvoke: (_) {
+                ref.read(voiceServiceProvider.notifier).toggleMute();
+                return null;
+              },
+            ),
+            ToggleDeafenIntent: CallbackAction<ToggleDeafenIntent>(
+              onInvoke: (_) {
+                ref.read(voiceServiceProvider.notifier).toggleDeafen();
+                return null;
+              },
+            ),
+            DisconnectVoiceIntent: CallbackAction<DisconnectVoiceIntent>(
+              onInvoke: (_) {
+                ref.read(voiceServiceProvider.notifier).disconnect();
+                return null;
+              },
+            ),
+            MarkReadIntent: CallbackAction<MarkReadIntent>(
+              onInvoke: (_) {
+                final roomId = ref.read(selectedRoomProvider);
+                if (roomId != null) {
+                  final client = ref.read(matrixServiceProvider).client;
+                  final room = client?.getRoomById(roomId);
+                  final lastEvent = room?.lastEvent;
+                  if (room != null && lastEvent != null) {
+                    room.setReadMarker(lastEvent.eventId);
+                  }
+                }
+                return null;
+              },
+            ),
+            ExploreIntent: CallbackAction<ExploreIntent>(
+              onInvoke: (_) {
+                showExploreModal(context);
                 return null;
               },
             ),

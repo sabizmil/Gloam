@@ -1,0 +1,222 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: '3.41.5'
+
+jobs:
+  build-macos:
+    name: macOS Build
+    runs-on: macos-14  # Apple Silicon
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Install CocoaPods
+        run: cd macos && pod install --repo-update
+
+      - name: Build macOS release
+        run: flutter build macos --release
+
+      - name: Bundle native libs and sign
+        run: |
+          APP="build/macos/Build/Products/Release/gloam.app"
+          DEST="$APP/Contents/MacOS"
+          ENTITLEMENTS="macos/Runner/Release.entitlements"
+
+          mkdir -p "$DEST"
+
+          # Install libolm via Homebrew on the runner
+          brew install libolm openssl@3
+
+          LIBOLM="$(brew --prefix libolm)/lib/libolm.3.dylib"
+          if [ -f "$LIBOLM" ]; then
+            cp "$LIBOLM" "$DEST/libolm.3.dylib"
+            codesign --force --sign - "$DEST/libolm.3.dylib"
+          fi
+
+          LIBCRYPTO="$(brew --prefix openssl@3)/lib/libcrypto.3.dylib"
+          if [ -f "$LIBCRYPTO" ]; then
+            cp "$LIBCRYPTO" "$DEST/libcrypto.3.dylib"
+            codesign --force --sign - "$DEST/libcrypto.3.dylib"
+          fi
+
+          # Ad-hoc sign for now (Developer ID signing requires certs in CI)
+          codesign --force --deep --options runtime \
+            --sign - --entitlements "$ENTITLEMENTS" "$APP"
+
+      - name: Create ZIP
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          cd build/macos/Build/Products/Release
+          zip -r -y "../../../../Gloam-${VERSION}-macos.zip" gloam.app
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: build/Gloam-*-macos.zip
+
+  build-windows:
+    name: Windows Build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "build\Gloam-${version}-windows.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: build/Gloam-*-windows.zip
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download macOS build
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-build
+          path: artifacts/
+
+      - name: Download Windows build
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-build
+          path: artifacts/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Gloam ${{ needs.build-macos.outputs.version }}
+          body: |
+            ## Gloam ${{ needs.build-macos.outputs.version }}
+
+            ### Installation
+
+            **macOS:**
+            1. Download `Gloam-${{ needs.build-macos.outputs.version }}-macos.zip`
+            2. Extract and move `gloam.app` to your Applications folder
+            3. First launch: right-click → Open → confirm
+
+            **Windows:**
+            1. Download `Gloam-${{ needs.build-macos.outputs.version }}-windows.zip`
+            2. Extract to a folder of your choice
+            3. Run `gloam.exe`
+
+            Future updates will be delivered automatically.
+          files: artifacts/*
+          draft: false
+          prerelease: false
+
+      - name: Update appcast files
+        run: |
+          VERSION="${{ needs.build-macos.outputs.version }}"
+          TAG="${GITHUB_REF_NAME}"
+          DATE=$(date -u '+%a, %d %b %Y %H:%M:%S +0000')
+          MAC_URL="https://github.com/sabizmil/Gloam/releases/download/${TAG}/Gloam-${VERSION}-macos.zip"
+          WIN_URL="https://github.com/sabizmil/Gloam/releases/download/${TAG}/Gloam-${VERSION}-windows.zip"
+
+          # Update macOS appcast
+          cat > appcast.xml << APPCAST_EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>Gloam Updates</title>
+              <link>https://github.com/sabizmil/Gloam/releases</link>
+              <description>Most recent updates for Gloam</description>
+              <language>en</language>
+              <item>
+                <title>Version ${VERSION}</title>
+                <sparkle:version>${VERSION}</sparkle:version>
+                <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
+                <pubDate>${DATE}</pubDate>
+                <enclosure
+                  url="${MAC_URL}"
+                  sparkle:edSignature=""
+                  length="0"
+                  type="application/octet-stream" />
+              </item>
+            </channel>
+          </rss>
+          APPCAST_EOF
+
+          # Update Windows appcast
+          cat > appcast_windows.xml << APPCAST_WIN_EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>Gloam Updates (Windows)</title>
+              <link>https://github.com/sabizmil/Gloam/releases</link>
+              <description>Most recent updates for Gloam on Windows</description>
+              <language>en</language>
+              <item>
+                <title>Version ${VERSION}</title>
+                <sparkle:version>${VERSION}</sparkle:version>
+                <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+                <pubDate>${DATE}</pubDate>
+                <enclosure
+                  url="${WIN_URL}"
+                  length="0"
+                  type="application/octet-stream" />
+              </item>
+            </channel>
+          </rss>
+          APPCAST_WIN_EOF
+
+      - name: Commit updated appcast
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add appcast.xml appcast_windows.xml
+          git diff --cached --quiet || git commit -m "Update appcast for ${{ github.ref_name }}"
+          git push || echo "Push failed — appcast update skipped"
