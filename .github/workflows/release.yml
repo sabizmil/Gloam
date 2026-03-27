@@ -141,6 +141,24 @@ jobs:
           cd build/macos/Build/Products/Release
           zip -r -y "../../../../Gloam-${VERSION}-macos.zip" gloam.app
 
+      - name: Sign update with Sparkle
+        if: ${{ env.SPARKLE_KEY != '' }}
+        env:
+          SPARKLE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          ZIP="build/Gloam-${VERSION}-macos.zip"
+
+          # Write private key to temp file
+          echo "$SPARKLE_KEY" > /tmp/sparkle_key
+
+          # Sign and capture output
+          SIG_OUTPUT=$(macos/Pods/Sparkle/bin/sign_update "$ZIP" --ed-key-file /tmp/sparkle_key 2>&1)
+          echo "Sparkle signature: $SIG_OUTPUT"
+          echo "SPARKLE_SIG=$SIG_OUTPUT" >> $GITHUB_ENV
+
+          rm /tmp/sparkle_key
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
