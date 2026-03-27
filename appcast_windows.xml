@@ -6,24 +6,19 @@
     <description>Most recent updates for Gloam on Windows</description>
     <language>en</language>
     <item>
-      <title>Version 0.2.0</title>
-      <sparkle:version>0.2.0</sparkle:version>
-      <sparkle:shortVersionString>0.2.0</sparkle:shortVersionString>
+      <title>Version 0.2.1</title>
+      <sparkle:version>0.2.1</sparkle:version>
+      <sparkle:shortVersionString>0.2.1</sparkle:shortVersionString>
       <description><![CDATA[
-        <h2>Gloam 0.2.0</h2>
+        <h2>Gloam 0.2.1</h2>
         <ul>
-          <li>Voice channels with LiveKit integration</li>
-          <li>Explore room browser with server switching</li>
-          <li>User profile modals with DM initiation</li>
-          <li>Self-profile editing with avatar upload</li>
-          <li>Room invite flow with accept/decline</li>
-          <li>Per-room notification settings</li>
-          <li>15 keyboard shortcuts with platform-aware help</li>
+          <li>Bundled libolm for Windows encryption support</li>
+          <li>Fixed auto-update crash on first launch</li>
         </ul>
       ]]></description>
-      <pubDate>Thu, 27 Mar 2026 12:00:00 +0000</pubDate>
+      <pubDate>Thu, 27 Mar 2026 18:56:00 +0000</pubDate>
       <enclosure
-        url="https://github.com/sabizmil/Gloam/releases/download/v0.2.0/Gloam-0.2.0-windows-setup.exe"
+        url="https://github.com/sabizmil/Gloam/releases/download/v0.2.1/Gloam-0.2.1-windows.zip"
         length="0"
         type="application/octet-stream" />
     </item>

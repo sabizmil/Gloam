@@ -310,6 +310,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Checkout main branch (tag checkout leaves us in detached HEAD)
+          git fetch origin main
+          git checkout main
           git add appcast.xml appcast_windows.xml
           git diff --cached --quiet || git commit -m "Update appcast for ${{ github.ref_name }}"
-          git push || echo "Push failed — appcast update skipped"
+          git push origin main || echo "Push failed — appcast update skipped"
