@@ -142,7 +142,6 @@ jobs:
           zip -r -y "../../../../Gloam-${VERSION}-macos.zip" gloam.app
 
       - name: Sign update with Sparkle
-        if: ${{ secrets.SPARKLE_PRIVATE_KEY != '' }}
         continue-on-error: true
         env:
           SPARKLE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
