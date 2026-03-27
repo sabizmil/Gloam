@@ -235,16 +235,12 @@ jobs:
           Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "build\Gloam-${version}-windows.zip"
 
       - name: Create installer
-        shell: bash
+        shell: pwsh
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          choco install innosetup -y --no-progress
-          "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" \
-            "/DAppVersion=$VERSION" \
-            scripts/windows_installer.iss
-          # Inno outputs to scripts/Output/ by default
-          mv scripts/Output/Gloam-*-windows-setup.exe build/ || true
-          ls -la build/Gloam-*-windows* 2>/dev/null
+          $version = "${{ steps.version.outputs.version }}"
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=$version scripts\windows_installer.iss
+          Move-Item scripts\Output\Gloam-*-windows-setup.exe build\ -ErrorAction SilentlyContinue
+          Get-ChildItem build\Gloam-*-windows*
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
