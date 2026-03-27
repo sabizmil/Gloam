@@ -64,16 +64,29 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
       await keyInfo.unlock(keyOrPassphrase: input);
 
       if (!mounted) return;
+      setState(() => _status = 'verifying this device...');
+
+      // Step 1b: Cache all SSSS secrets (cross-signing keys, key backup key)
+      await keyInfo.maybeCacheAll();
+
+      // Step 1c: Self-sign this device with cross-signing keys.
+      // This is critical — without this, other users' clients don't trust
+      // our Megolm session keys and show "Unable to decrypt".
+      try {
+        if (client.encryption!.crossSigning.enabled) {
+          await client.encryption!.crossSigning.selfSign(openSsss: keyInfo);
+        }
+      } catch (e) {
+        // Log but continue — key backup restore is more important
+        Logs().e('[Recovery] Cross-signing self-sign failed', e);
+      }
+
+      if (!mounted) return;
       setState(() => _status = 'downloading keys from backup...');
 
       // Step 2: Check key backup status and cache state
       final keyManager = client.encryption!.keyManager;
       final isCached = await keyManager.isCached();
-
-      if (!isCached) {
-        // Manually cache the megolm backup key from SSSS
-        await keyInfo.maybeCacheAll();
-      }
 
       // Step 3: Download and import keys from backup
       try {

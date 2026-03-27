@@ -43,7 +43,33 @@ class EncryptionSection extends ConsumerWidget {
         SettingsTile(
           icon: Icons.security,
           label: 'verify this device',
-          onTap: () {},
+          onTap: () async {
+            // Try to self-sign using cached SSSS secrets
+            final encryption = client?.encryption;
+            if (encryption == null) return;
+
+            try {
+              if (encryption.crossSigning.enabled) {
+                final ssss = encryption.ssss;
+                final keyInfo = ssss.open();
+                await encryption.crossSigning.selfSign(openSsss: keyInfo);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Device verified successfully')),
+                  );
+                }
+              } else {
+                // Cross-signing not set up — need recovery key first
+                showRecoveryKeyDialog(context);
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Verification failed: $e. Try entering your recovery key first.')),
+                );
+              }
+            }
+          },
         ),
 
         SettingsSectionHeader('devices — ${devices.length}'),
