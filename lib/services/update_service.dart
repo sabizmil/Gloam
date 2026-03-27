@@ -25,10 +25,17 @@ class UpdateService {
       final feedUrl = Platform.isMacOS ? _macFeedUrl : _winFeedUrl;
       await autoUpdater.setFeedURL(feedUrl);
 
-      // Check for updates silently on launch
-      await autoUpdater.checkForUpdates(inBackground: true);
+      // Delay the first check to let the app finish loading
+      await Future.delayed(const Duration(seconds: 10));
+
+      // Check silently — swallow any errors (first launch, no network, etc.)
+      try {
+        await autoUpdater.checkForUpdates(inBackground: true);
+      } catch (_) {
+        // Update check is best-effort — never crash the app for this
+      }
     } catch (e) {
-      debugPrint('[UpdateService] Failed to check for updates: $e');
+      debugPrint('[UpdateService] Failed to init auto-updater: $e');
     }
   }
 

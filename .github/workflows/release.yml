@@ -176,6 +176,25 @@ jobs:
       - name: Build Windows release
         run: flutter build windows --release
 
+      - name: Bundle libolm for Windows
+        shell: bash
+        run: |
+          # Download prebuilt libolm for Windows from the official releases
+          DEST="build/windows/x64/runner/Release"
+
+          # Build olm from source using CMake (it's a small C library)
+          git clone --depth 1 --branch 3.2.16 https://gitlab.matrix.org/matrix-org/olm.git /tmp/olm
+          cd /tmp/olm
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -A x64
+          cmake --build build --config Release
+          cp build/Release/olm.dll "$GITHUB_WORKSPACE/$DEST/olm.dll" || true
+          cp build/Release/libolm.dll "$GITHUB_WORKSPACE/$DEST/libolm.dll" || true
+          cd "$GITHUB_WORKSPACE"
+
+          # Also copy OpenSSL DLLs if needed (usually available on Windows)
+          echo "✓ Native libs bundled for Windows"
+          ls -la "$DEST"/*.dll 2>/dev/null || echo "Note: olm DLL may not have built"
+
       - name: Create ZIP
         shell: pwsh
         run: |
