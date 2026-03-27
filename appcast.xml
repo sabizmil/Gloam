@@ -6,21 +6,13 @@
     <description>Most recent updates for Gloam</description>
     <language>en</language>
     <item>
-      <title>Version 0.2.1</title>
-      <sparkle:version>2</sparkle:version>
-      <sparkle:shortVersionString>0.2.1</sparkle:shortVersionString>
+      <title>Version 0.2.2</title>
+      <sparkle:version>0.2.2</sparkle:version>
+      <sparkle:shortVersionString>0.2.2</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[
-        <h2>Gloam 0.2.1</h2>
-        <ul>
-          <li>Fixed encryption initialization in release builds</li>
-          <li>Fixed libolm loading in sandboxed macOS apps</li>
-          <li>Improved auto-update reliability</li>
-        </ul>
-      ]]></description>
-      <pubDate>Thu, 27 Mar 2026 18:56:00 +0000</pubDate>
+      <pubDate>Fri, 27 Mar 2026 19:13:03 +0000</pubDate>
       <enclosure
-        url="https://github.com/sabizmil/Gloam/releases/download/v0.2.1/Gloam-0.2.1-macos.zip"
+        url="https://github.com/sabizmil/Gloam/releases/download/v0.2.2/Gloam-0.2.2-macos.zip"
         sparkle:edSignature=""
         length="0"
         type="application/octet-stream" />
