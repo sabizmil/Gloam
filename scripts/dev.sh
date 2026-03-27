@@ -25,6 +25,7 @@ LIBOLM="/opt/homebrew/lib/libolm.3.dylib"
 if [ -f "$LIBOLM" ]; then
   rm -f "$DEST/libolm.3.dylib"
   cp "$LIBOLM" "$DEST/libolm.3.dylib"
+  install_name_tool -id "@executable_path/libolm.3.dylib" "$DEST/libolm.3.dylib"
   codesign --force --sign "$SIGN_IDENTITY" "$DEST/libolm.3.dylib"
 fi
 

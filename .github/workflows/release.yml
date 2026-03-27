@@ -91,12 +91,14 @@ jobs:
           LIBOLM="$(brew --prefix libolm)/lib/libolm.3.dylib"
           if [ -f "$LIBOLM" ]; then
             cp "$LIBOLM" "$DEST/libolm.3.dylib"
+            install_name_tool -id "@executable_path/libolm.3.dylib" "$DEST/libolm.3.dylib"
             codesign --force --sign "$SIGN_ID" "$DEST/libolm.3.dylib"
           fi
 
           LIBCRYPTO="$(brew --prefix openssl@3)/lib/libcrypto.3.dylib"
           if [ -f "$LIBCRYPTO" ]; then
             cp "$LIBCRYPTO" "$DEST/libcrypto.3.dylib"
+            install_name_tool -id "@executable_path/libcrypto.3.dylib" "$DEST/libcrypto.3.dylib"
             codesign --force --sign "$SIGN_ID" "$DEST/libcrypto.3.dylib"
           fi
 
