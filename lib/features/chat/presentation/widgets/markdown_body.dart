@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_color_extension.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 
 /// Renders message text with basic inline formatting.
@@ -24,22 +25,23 @@ class MarkdownBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     // Check for code blocks first
     if (text.contains('```')) {
-      return _buildWithCodeBlocks(text);
+      return _buildWithCodeBlocks(colors, text);
     }
 
     return SelectableText.rich(
-      _parseInline(text),
+      _parseInline(colors, text),
       style: GoogleFonts.inter(
         fontSize: 14,
-        color: GloamColors.textPrimary,
+        color: colors.textPrimary,
         height: 1.5,
       ),
     );
   }
 
-  Widget _buildWithCodeBlocks(String input) {
+  Widget _buildWithCodeBlocks(GloamColorExtension colors, String input) {
     final parts = <Widget>[];
     final codeBlockRegex = RegExp(r'```(\w*)\n?([\s\S]*?)```');
     var lastEnd = 0;
@@ -50,10 +52,10 @@ class MarkdownBody extends StatelessWidget {
         final before = input.substring(lastEnd, match.start).trim();
         if (before.isNotEmpty) {
           parts.add(SelectableText.rich(
-            _parseInline(before),
+            _parseInline(colors, before),
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: GloamColors.textPrimary,
+              color: colors.textPrimary,
               height: 1.5,
             ),
           ));
@@ -67,15 +69,15 @@ class MarkdownBody extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: GloamColors.bg,
+          color: colors.bg,
           borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
-          border: Border.all(color: GloamColors.borderSubtle),
+          border: Border.all(color: colors.borderSubtle),
         ),
         child: SelectableText(
           code.trim(),
           style: GoogleFonts.jetBrainsMono(
             fontSize: 13,
-            color: GloamColors.textPrimary,
+            color: colors.textPrimary,
             height: 1.5,
           ),
         ),
@@ -89,10 +91,10 @@ class MarkdownBody extends StatelessWidget {
       final after = input.substring(lastEnd).trim();
       if (after.isNotEmpty) {
         parts.add(SelectableText.rich(
-          _parseInline(after),
+          _parseInline(colors, after),
           style: GoogleFonts.inter(
             fontSize: 14,
-            color: GloamColors.textPrimary,
+            color: colors.textPrimary,
             height: 1.5,
           ),
         ));
@@ -105,7 +107,7 @@ class MarkdownBody extends StatelessWidget {
     );
   }
 
-  TextSpan _parseInline(String input) {
+  TextSpan _parseInline(GloamColorExtension colors, String input) {
     final spans = <InlineSpan>[];
     final regex = RegExp(
       r'(\*\*(.+?)\*\*)'       // **bold**
@@ -148,15 +150,15 @@ class MarkdownBody extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
             decoration: BoxDecoration(
-              color: GloamColors.bg,
+              color: colors.bg,
               borderRadius: BorderRadius.circular(3),
-              border: Border.all(color: GloamColors.borderSubtle),
+              border: Border.all(color: colors.borderSubtle),
             ),
             child: Text(
               match.group(8)!,
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 13,
-                color: GloamColors.accentBright,
+                color: colors.accentBright,
               ),
             ),
           ),
@@ -165,10 +167,10 @@ class MarkdownBody extends StatelessWidget {
         // Link
         spans.add(TextSpan(
           text: match.group(10),
-          style: const TextStyle(
-            color: GloamColors.accent,
+          style: TextStyle(
+            color: colors.accent,
             decoration: TextDecoration.underline,
-            decorationColor: GloamColors.accentDim,
+            decorationColor: colors.accentDim,
           ),
         ));
       }

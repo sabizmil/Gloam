@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../app/theme/color_tokens.dart';
+import '../../../app/theme/gloam_theme_ext.dart';
 import '../../../app/theme/spacing.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
 
@@ -55,7 +55,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: GloamColors.bg,
+      backgroundColor: context.gloam.bg,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(GloamSpacing.xxl),
@@ -64,9 +64,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             child: Container(
               padding: const EdgeInsets.all(40),
               decoration: BoxDecoration(
-                color: GloamColors.bgSurface,
+                color: context.gloam.bgSurface,
                 borderRadius: BorderRadius.circular(GloamSpacing.radiusLg),
-                border: Border.all(color: GloamColors.border),
+                border: Border.all(color: context.gloam.border),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -76,7 +76,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: GloamColors.accentDim,
+                      color: context.gloam.accentDim,
                       borderRadius:
                           BorderRadius.circular(GloamSpacing.radiusLg),
                     ),
@@ -87,7 +87,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           fontSize: 28,
                           fontWeight: FontWeight.w300,
                           fontStyle: FontStyle.italic,
-                          color: GloamColors.accentBright,
+                          color: context.gloam.accentBright,
                         ),
                       ),
                     ),
@@ -99,7 +99,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       fontSize: 32,
                       fontWeight: FontWeight.w300,
                       fontStyle: FontStyle.italic,
-                      color: GloamColors.accent,
+                      color: context.gloam.accent,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -107,7 +107,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     'tune in to the conversation',
                     style: GoogleFonts.jetBrainsMono(
                       fontSize: 11,
-                      color: GloamColors.textTertiary,
+                      color: context.gloam.textTertiary,
                       letterSpacing: 1,
                     ),
                   ),
@@ -124,21 +124,21 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   // Divider
                   Row(
                     children: [
-                      const Expanded(
-                          child: Divider(color: GloamColors.border)),
+                      Expanded(
+                          child: Divider(color: context.gloam.border)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
                           'or',
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 10,
-                            color: GloamColors.textTertiary,
+                            color: context.gloam.textTertiary,
                             letterSpacing: 1,
                           ),
                         ),
                       ),
-                      const Expanded(
-                          child: Divider(color: GloamColors.border)),
+                      Expanded(
+                          child: Divider(color: context.gloam.border)),
                     ],
                   ),
                   const SizedBox(height: 32),
@@ -173,13 +173,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   TextField(
                     controller: _passwordController,
                     obscureText: true,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText:
                           '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022',
                       suffixIcon: Icon(
                         Icons.visibility_off_outlined,
                         size: 16,
-                        color: GloamColors.textTertiary,
+                        color: context.gloam.textTertiary,
                       ),
                     ),
                     onSubmitted: (_) => _handleSignIn(),
@@ -194,7 +194,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         _error!,
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: GloamColors.danger,
+                          color: context.gloam.danger,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -209,12 +209,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _handleSignIn,
                       child: _isLoading
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: GloamColors.bg,
+                                color: context.gloam.bg,
                               ),
                             )
                           : const Text('sign in'),
@@ -230,7 +230,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         'no account? ',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: GloamColors.textTertiary,
+                          color: context.gloam.textTertiary,
                         ),
                       ),
                       GestureDetector(
@@ -240,7 +240,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: GloamColors.accent,
+                            color: context.gloam.accent,
                           ),
                         ),
                       ),
@@ -256,7 +256,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           : 'advanced: use your own server \u2192',
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 10,
-                        color: GloamColors.textTertiary,
+                        color: context.gloam.textTertiary,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -284,8 +284,8 @@ class _SsoButton extends StatelessWidget {
       child: OutlinedButton(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
-          backgroundColor: GloamColors.bgElevated,
-          side: const BorderSide(color: GloamColors.border),
+          backgroundColor: context.gloam.bgElevated,
+          side: BorderSide(color: context.gloam.border),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
           ),
@@ -295,7 +295,7 @@ class _SsoButton extends StatelessWidget {
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: GloamColors.textPrimary,
+            color: context.gloam.textPrimary,
           ),
         ),
       ),
@@ -315,7 +315,7 @@ class _FieldLabel extends StatelessWidget {
         text,
         style: GoogleFonts.jetBrainsMono(
           fontSize: 10,
-          color: GloamColors.textTertiary,
+          color: context.gloam.textTertiary,
           letterSpacing: 1,
         ),
       ),

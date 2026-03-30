@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/matrix_service.dart';
 import '../../data/media_embed_resolver.dart';
@@ -91,6 +91,7 @@ class _LinkPreviewState extends ConsumerState<LinkPreview> {
   }
 
   Widget _buildPlainPreview() {
+    final colors = context.gloam;
     // Show a minimal link card for non-media URLs
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -101,9 +102,9 @@ class _LinkPreviewState extends ConsumerState<LinkPreview> {
       constraints: const BoxConstraints(maxWidth: 400),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: GloamColors.bg,
+        color: colors.bg,
         borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-        border: Border.all(color: GloamColors.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
       ),
       child: Row(
         children: [
@@ -111,7 +112,7 @@ class _LinkPreviewState extends ConsumerState<LinkPreview> {
             width: 4,
             height: 36,
             decoration: BoxDecoration(
-              color: GloamColors.accentDim,
+              color: colors.accentDim,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -124,7 +125,7 @@ class _LinkPreviewState extends ConsumerState<LinkPreview> {
                   _extractDomain(_url!),
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 10,
-                    color: GloamColors.textTertiary,
+                    color: colors.textTertiary,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -133,9 +134,9 @@ class _LinkPreviewState extends ConsumerState<LinkPreview> {
                   _url!,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: GloamColors.accent,
+                    color: colors.accent,
                     decoration: TextDecoration.underline,
-                    decorationColor: GloamColors.accentDim,
+                    decorationColor: colors.accentDim,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -143,10 +144,10 @@ class _LinkPreviewState extends ConsumerState<LinkPreview> {
               ],
             ),
           ),
-          const Icon(
+          Icon(
             Icons.open_in_new,
             size: 14,
-            color: GloamColors.textTertiary,
+            color: colors.textTertiary,
           ),
         ],
       ),

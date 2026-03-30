@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:matrix/matrix.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/matrix_service.dart';
 
@@ -71,7 +71,7 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to create room: $e'),
-            backgroundColor: GloamColors.danger,
+            backgroundColor: context.gloam.danger,
           ),
         );
         setState(() => _creating = false);
@@ -82,10 +82,10 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: GloamColors.bgSurface,
+      backgroundColor: context.gloam.bgSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(GloamSpacing.radiusLg),
-        side: const BorderSide(color: GloamColors.border),
+        side: BorderSide(color: context.gloam.border),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
@@ -96,9 +96,9 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
             Container(
               height: 56,
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(
-                  bottom: BorderSide(color: GloamColors.border),
+                  bottom: BorderSide(color: context.gloam.border),
                 ),
               ),
               child: Row(
@@ -108,15 +108,15 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
                     style: GoogleFonts.jetBrainsMono(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: GloamColors.textPrimary,
+                      color: context.gloam.textPrimary,
                       letterSpacing: 0.5,
                     ),
                   ),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.close,
-                        size: 18, color: GloamColors.textTertiary),
+                    child: Icon(Icons.close,
+                        size: 18, color: context.gloam.textTertiary),
                   ),
                 ],
               ),
@@ -133,7 +133,7 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
                     '// room type',
                     style: GoogleFonts.jetBrainsMono(
                       fontSize: 10,
-                      color: GloamColors.textTertiary,
+                      color: context.gloam.textTertiary,
                       letterSpacing: 1,
                     ),
                   ),
@@ -171,7 +171,7 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
                     '// room name',
                     style: GoogleFonts.jetBrainsMono(
                       fontSize: 10,
-                      color: GloamColors.textTertiary,
+                      color: context.gloam.textTertiary,
                       letterSpacing: 1,
                     ),
                   ),
@@ -186,7 +186,7 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
                           '#',
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 16,
-                            color: GloamColors.textTertiary,
+                            color: context.gloam.textTertiary,
                           ),
                         ),
                       ),
@@ -201,7 +201,7 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
                     '// topic (optional)',
                     style: GoogleFonts.jetBrainsMono(
                       fontSize: 10,
-                      color: GloamColors.textTertiary,
+                      color: context.gloam.textTertiary,
                       letterSpacing: 1,
                     ),
                   ),
@@ -217,24 +217,24 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
                   // Encryption toggle
                   Row(
                     children: [
-                      const Icon(Icons.shield_outlined,
-                          size: 16, color: GloamColors.accent),
+                      Icon(Icons.shield_outlined,
+                          size: 16, color: context.gloam.accent),
                       const SizedBox(width: 8),
                       Text(
                         'enable encryption',
                         style: GoogleFonts.inter(
                           fontSize: 13,
-                          color: GloamColors.textPrimary,
+                          color: context.gloam.textPrimary,
                         ),
                       ),
                       const Spacer(),
                       Switch(
                         value: _encrypted,
                         onChanged: (v) => setState(() => _encrypted = v),
-                        activeThumbColor: GloamColors.accent,
-                        activeTrackColor: GloamColors.accentDim,
-                        inactiveThumbColor: GloamColors.textTertiary,
-                        inactiveTrackColor: GloamColors.bgElevated,
+                        activeThumbColor: context.gloam.accent,
+                        activeTrackColor: context.gloam.accentDim,
+                        inactiveThumbColor: context.gloam.textTertiary,
+                        inactiveTrackColor: context.gloam.bgElevated,
                       ),
                     ],
                   ),
@@ -246,9 +246,9 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
             Container(
               height: 64,
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(
-                  top: BorderSide(color: GloamColors.border),
+                  top: BorderSide(color: context.gloam.border),
                 ),
               ),
               child: Row(
@@ -262,12 +262,12 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
                   ElevatedButton(
                     onPressed: _creating ? null : _create,
                     child: _creating
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: GloamColors.bg,
+                              color: context.gloam.bg,
                             ),
                           )
                         : const Text('create room'),
@@ -303,10 +303,10 @@ class _TypeCard extends StatelessWidget {
         child: Container(
           height: 80,
           decoration: BoxDecoration(
-            color: isSelected ? GloamColors.accentDim : Colors.transparent,
+            color: isSelected ? context.gloam.accentDim : Colors.transparent,
             borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
             border: Border.all(
-              color: isSelected ? GloamColors.accent : GloamColors.border,
+              color: isSelected ? context.gloam.accent : context.gloam.border,
             ),
           ),
           child: Column(
@@ -316,8 +316,8 @@ class _TypeCard extends StatelessWidget {
                 icon,
                 size: 18,
                 color: isSelected
-                    ? GloamColors.accent
-                    : GloamColors.textTertiary,
+                    ? context.gloam.accent
+                    : context.gloam.textTertiary,
               ),
               const SizedBox(height: 6),
               Text(
@@ -325,8 +325,8 @@ class _TypeCard extends StatelessWidget {
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 11,
                   color: isSelected
-                      ? GloamColors.accent
-                      : GloamColors.textSecondary,
+                      ? context.gloam.accent
+                      : context.gloam.textSecondary,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -342,7 +342,7 @@ class _TypeCard extends StatelessWidget {
 Future<String?> showCreateRoomDialog(BuildContext context) {
   return showDialog<String>(
     context: context,
-    barrierColor: GloamColors.overlay,
+    barrierColor: context.gloam.overlay,
     builder: (_) => const CreateRoomDialog(),
   );
 }

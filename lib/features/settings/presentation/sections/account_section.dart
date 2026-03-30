@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../services/matrix_service.dart';
 import '../../../../widgets/gloam_avatar.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -41,7 +41,7 @@ class AccountSection extends ConsumerWidget {
                 style: GoogleFonts.inter(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: GloamColors.textPrimary,
+                  color: context.gloam.textPrimary,
                 ),
               ),
               const SizedBox(height: 4),
@@ -49,7 +49,7 @@ class AccountSection extends ConsumerWidget {
                 userId,
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 12,
-                  color: GloamColors.textTertiary,
+                  color: context.gloam.textTertiary,
                 ),
               ),
             ],
@@ -96,26 +96,26 @@ class AccountSection extends ConsumerWidget {
   void _confirmLogout(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
-      barrierColor: GloamColors.overlay,
+      barrierColor: context.gloam.overlay,
       builder: (ctx) => AlertDialog(
-        backgroundColor: GloamColors.bgSurface,
+        backgroundColor: ctx.gloam.bgSurface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: GloamColors.border),
+          side: BorderSide(color: ctx.gloam.border),
         ),
         title: Text(
           'sign out?',
           style: GoogleFonts.jetBrainsMono(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: GloamColors.textPrimary,
+            color: ctx.gloam.textPrimary,
           ),
         ),
         content: Text(
           'you\'ll need your recovery key to access message history on a new session.',
           style: GoogleFonts.inter(
             fontSize: 13,
-            color: GloamColors.textSecondary,
+            color: ctx.gloam.textSecondary,
             height: 1.5,
           ),
         ),
@@ -124,11 +124,11 @@ class AccountSection extends ConsumerWidget {
             onPressed: () => Navigator.pop(ctx),
             child: Text('cancel',
                 style: GoogleFonts.jetBrainsMono(
-                    fontSize: 12, color: GloamColors.textSecondary)),
+                    fontSize: 12, color: ctx.gloam.textSecondary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: GloamColors.danger,
+              backgroundColor: ctx.gloam.danger,
             ),
             onPressed: () async {
               Navigator.pop(ctx); // close dialog
@@ -138,7 +138,7 @@ class AccountSection extends ConsumerWidget {
             },
             child: Text('sign out',
                 style: GoogleFonts.jetBrainsMono(
-                    fontSize: 12, color: GloamColors.textPrimary)),
+                    fontSize: 12, color: ctx.gloam.textPrimary)),
           ),
         ],
       ),

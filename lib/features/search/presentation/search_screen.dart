@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../app/theme/color_tokens.dart';
+import '../../../app/theme/gloam_theme_ext.dart';
 import '../../../app/theme/spacing.dart';
 import '../../../services/search_service.dart';
 import '../../../widgets/gloam_avatar.dart';
@@ -109,15 +109,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: GloamColors.bg,
+      color: context.gloam.bg,
       child: Column(
         children: [
           // Header
           Container(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: GloamColors.border),
+                bottom: BorderSide(color: context.gloam.border),
               ),
             ),
             child: Column(
@@ -127,15 +127,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 Container(
                   height: 44,
                   decoration: BoxDecoration(
-                    color: GloamColors.bgSurface,
+                    color: context.gloam.bgSurface,
                     borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-                    border: Border.all(color: GloamColors.border),
+                    border: Border.all(color: context.gloam.border),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   child: Row(
                     children: [
-                      const Icon(Icons.search,
-                          size: 18, color: GloamColors.textTertiary),
+                      Icon(Icons.search,
+                          size: 18, color: context.gloam.textTertiary),
                       const SizedBox(width: 10),
                       Expanded(
                         child: TextField(
@@ -144,13 +144,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           onChanged: _onQueryChanged,
                           style: GoogleFonts.inter(
                             fontSize: 15,
-                            color: GloamColors.textPrimary,
+                            color: context.gloam.textPrimary,
                           ),
                           decoration: InputDecoration(
                             hintText: 'search messages...',
                             hintStyle: GoogleFonts.inter(
                               fontSize: 15,
-                              color: GloamColors.textTertiary,
+                              color: context.gloam.textTertiary,
                             ),
                             border: InputBorder.none,
                             contentPadding: EdgeInsets.zero,
@@ -164,8 +164,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             _controller.clear();
                             _onQueryChanged('');
                           },
-                          child: const Icon(Icons.close,
-                              size: 16, color: GloamColors.textTertiary),
+                          child: Icon(Icons.close,
+                              size: 16, color: context.gloam.textTertiary),
                         ),
                     ],
                   ),
@@ -204,10 +204,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: _controller.text.isEmpty
                 ? _buildHistory()
                 : _searching
-                    ? const Center(
+                    ? Center(
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: GloamColors.accent,
+                          color: context.gloam.accent,
                         ),
                       )
                     : _buildResults(),
@@ -224,7 +224,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           '// search across all your messages',
           style: GoogleFonts.jetBrainsMono(
             fontSize: 11,
-            color: GloamColors.textTertiary,
+            color: context.gloam.textTertiary,
             letterSpacing: 1,
           ),
         ),
@@ -238,20 +238,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           '// recent searches',
           style: GoogleFonts.jetBrainsMono(
             fontSize: 10,
-            color: GloamColors.textTertiary,
+            color: context.gloam.textTertiary,
             letterSpacing: 1,
           ),
         ),
         const SizedBox(height: 8),
         ..._history.map((q) => ListTile(
               dense: true,
-              leading: const Icon(Icons.history,
-                  size: 16, color: GloamColors.textTertiary),
+              leading: Icon(Icons.history,
+                  size: 16, color: context.gloam.textTertiary),
               title: Text(
                 q,
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: GloamColors.textSecondary,
+                  color: context.gloam.textSecondary,
                 ),
               ),
               onTap: () {
@@ -270,7 +270,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           '// no messages found',
           style: GoogleFonts.jetBrainsMono(
             fontSize: 11,
-            color: GloamColors.textTertiary,
+            color: context.gloam.textTertiary,
             letterSpacing: 1,
           ),
         ),
@@ -288,7 +288,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               '${_results.length} result${_results.length == 1 ? '' : 's'}',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 11,
-                color: GloamColors.textTertiary,
+                color: context.gloam.textTertiary,
                 letterSpacing: 0.5,
               ),
             ),
@@ -322,13 +322,13 @@ class _FilterChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: GloamColors.border),
+          border: Border.all(color: context.gloam.border),
         ),
         child: Text(
           label,
           style: GoogleFonts.jetBrainsMono(
             fontSize: 10,
-            color: GloamColors.textTertiary,
+            color: context.gloam.textTertiary,
           ),
         ),
       ),
@@ -373,7 +373,7 @@ class _SearchResultTile extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-              border: Border.all(color: GloamColors.borderSubtle),
+              border: Border.all(color: context.gloam.borderSubtle),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -388,7 +388,7 @@ class _SearchResultTile extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: GloamColors.textPrimary,
+                        color: context.gloam.textPrimary,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -396,7 +396,7 @@ class _SearchResultTile extends StatelessWidget {
                       'in ${result.roomName}',
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 10,
-                        color: GloamColors.textTertiary,
+                        color: context.gloam.textTertiary,
                       ),
                     ),
                     const Spacer(),
@@ -404,7 +404,7 @@ class _SearchResultTile extends StatelessWidget {
                       _formatTime(result.timestamp),
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 10,
-                        color: GloamColors.textTertiary,
+                        color: context.gloam.textTertiary,
                       ),
                     ),
                   ],
@@ -414,7 +414,7 @@ class _SearchResultTile extends StatelessWidget {
                   result.body,
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: GloamColors.textSecondary,
+                    color: context.gloam.textSecondary,
                     height: 1.4,
                   ),
                   maxLines: 3,

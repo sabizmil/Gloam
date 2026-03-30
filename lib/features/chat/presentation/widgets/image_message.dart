@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:matrix/matrix.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/debug_server.dart';
 import '../../../../services/matrix_service.dart';
@@ -114,14 +114,15 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return GestureDetector(
       onTap: (_imageBytes != null || _httpUrl != null) ? () => _openFullscreen(context) : null,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 400, maxHeight: 300),
         decoration: BoxDecoration(
-          color: GloamColors.bgElevated,
+          color: colors.bgElevated,
           borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-          border: Border.all(color: GloamColors.borderSubtle),
+          border: Border.all(color: colors.borderSubtle),
         ),
         clipBehavior: Clip.antiAlias,
         child: _buildContent(),
@@ -130,6 +131,7 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
   }
 
   Widget _buildContent() {
+    final colors = context.gloam;
     // Uploading state — show progress with stage label
     final sendState = widget.message.sendState;
     final fileSendingStatus = widget.message.fileSendingStatus;
@@ -152,7 +154,7 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
                 height: 32,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: GloamColors.accent.withAlpha(180),
+                  color: colors.accent.withAlpha(180),
                 ),
               ),
               const SizedBox(height: 10),
@@ -160,7 +162,7 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
                 label,
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 11,
-                  color: GloamColors.textTertiary,
+                  color: colors.textTertiary,
                   letterSpacing: 0.3,
                 ),
               ),
@@ -171,11 +173,11 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
     }
 
     if (_loading) {
-      return const SizedBox(
+      return SizedBox(
         width: 240, height: 160,
         child: Center(
           child: SizedBox(width: 20, height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2, color: GloamColors.accentDim),
+            child: CircularProgressIndicator(strokeWidth: 2, color: colors.accentDim),
           ),
         ),
       );
@@ -204,7 +206,7 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
             width: 240, height: 160,
             child: Center(
               child: CircularProgressIndicator(
-                strokeWidth: 2, color: GloamColors.accentDim,
+                strokeWidth: 2, color: colors.accentDim,
                 value: progress.expectedTotalBytes != null
                     ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
                     : null,
@@ -220,16 +222,17 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
   }
 
   Widget _errorWidget() {
+    final colors = context.gloam;
     return SizedBox(
       width: 200, height: 80,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.broken_image_outlined, size: 24, color: GloamColors.textTertiary),
+            Icon(Icons.broken_image_outlined, size: 24, color: colors.textTertiary),
             const SizedBox(height: 4),
             Text(widget.message.body,
-              style: GoogleFonts.inter(fontSize: 11, color: GloamColors.textTertiary),
+              style: GoogleFonts.inter(fontSize: 11, color: colors.textTertiary),
               maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
         ),
@@ -270,6 +273,7 @@ class _FullscreenImageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.escape): () =>
@@ -283,11 +287,11 @@ class _FullscreenImageView extends StatelessWidget {
             backgroundColor: Colors.transparent,
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.close, color: GloamColors.textPrimary),
+              icon: Icon(Icons.close, color: colors.textPrimary),
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(filename,
-              style: GoogleFonts.inter(fontSize: 13, color: GloamColors.textSecondary)),
+              style: GoogleFonts.inter(fontSize: 13, color: colors.textSecondary)),
           ),
           body: Center(
             child: InteractiveViewer(

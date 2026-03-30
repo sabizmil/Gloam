@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 
 /// Date separator pill between message groups — "Today", "Yesterday", "Mar 20".
 class DateSeparator extends StatelessWidget {
@@ -37,19 +37,19 @@ class DateSeparator extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         children: [
-          const Expanded(child: Divider(color: GloamColors.borderSubtle)),
+          Expanded(child: Divider(color: context.gloam.borderSubtle)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
               _format(date),
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 10,
-                color: GloamColors.textTertiary,
+                color: context.gloam.textTertiary,
                 letterSpacing: 1,
               ),
             ),
           ),
-          const Expanded(child: Divider(color: GloamColors.borderSubtle)),
+          Expanded(child: Divider(color: context.gloam.borderSubtle)),
         ],
       ),
     );

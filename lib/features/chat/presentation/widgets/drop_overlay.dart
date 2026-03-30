@@ -2,7 +2,7 @@ import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 
 /// Wraps a child in a drag-and-drop zone that accepts files from the OS.
 /// Shows a visual overlay when files are hovering.
@@ -38,19 +38,19 @@ class _FileDropZoneState extends State<FileDropZone> {
           if (_isDragging)
             Positioned.fill(
               child: Container(
-                color: GloamColors.accentDim.withValues(alpha: 0.3),
+                color: context.gloam.accentDim.withValues(alpha: 0.3),
                 child: Center(
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 32, vertical: 24),
                     decoration: BoxDecoration(
-                      color: GloamColors.bgSurface,
+                      color: context.gloam.bgSurface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: GloamColors.accent, width: 2),
+                          color: context.gloam.accent, width: 2),
                       boxShadow: [
                         BoxShadow(
-                          color: GloamColors.accentDim.withValues(alpha: 0.4),
+                          color: context.gloam.accentDim.withValues(alpha: 0.4),
                           blurRadius: 40,
                         ),
                       ],
@@ -58,15 +58,15 @@ class _FileDropZoneState extends State<FileDropZone> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.cloud_upload_outlined,
-                            size: 36, color: GloamColors.accent),
+                        Icon(Icons.cloud_upload_outlined,
+                            size: 36, color: context.gloam.accent),
                         const SizedBox(height: 12),
                         Text(
                           'drop files to upload',
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: GloamColors.accent,
+                            color: context.gloam.accent,
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -75,7 +75,7 @@ class _FileDropZoneState extends State<FileDropZone> {
                           'images, videos, and files',
                           style: GoogleFonts.inter(
                             fontSize: 12,
-                            color: GloamColors.textTertiary,
+                            color: context.gloam.textTertiary,
                           ),
                         ),
                       ],

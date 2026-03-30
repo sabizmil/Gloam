@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/clipboard_paste_service.dart';
 import '../../../../services/matrix_service.dart';
@@ -119,7 +119,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final sizeError = UploadService.validateFileSize(picked.size);
       if (sizeError != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(sizeError), backgroundColor: GloamColors.danger),
+          SnackBar(content: Text(sizeError), backgroundColor: context.gloam.danger),
         );
         return;
       }
@@ -129,7 +129,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('upload failed: $e'), backgroundColor: GloamColors.danger),
+          SnackBar(content: Text('upload failed: $e'), backgroundColor: context.gloam.danger),
         );
       }
     }
@@ -144,7 +144,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           final sizeError = UploadService.validateFileSize(bytes.length);
           if (sizeError != null && mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(sizeError), backgroundColor: GloamColors.danger),
+              SnackBar(content: Text(sizeError), backgroundColor: context.gloam.danger),
             );
             continue;
           }
@@ -157,7 +157,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('upload failed: $e'), backgroundColor: GloamColors.danger),
+              SnackBar(content: Text('upload failed: $e'), backgroundColor: context.gloam.danger),
             );
           }
         }
@@ -196,7 +196,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         final sizeError = UploadService.validateFileSize(imageFile.bytes.length);
         if (sizeError != null && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(sizeError), backgroundColor: GloamColors.danger),
+            SnackBar(content: Text(sizeError), backgroundColor: context.gloam.danger),
           );
           return;
         }
@@ -211,7 +211,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('paste failed: $e'), backgroundColor: GloamColors.danger),
+          SnackBar(content: Text('paste failed: $e'), backgroundColor: context.gloam.danger),
         );
       }
     }
@@ -220,26 +220,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void _confirmDelete(String eventId) {
     showDialog(
       context: context,
-      barrierColor: GloamColors.overlay,
+      barrierColor: context.gloam.overlay,
       builder: (ctx) => AlertDialog(
-        backgroundColor: GloamColors.bgSurface,
+        backgroundColor: context.gloam.bgSurface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: GloamColors.border),
+          side: BorderSide(color: context.gloam.border),
         ),
         title: Text(
           'delete message?',
           style: GoogleFonts.jetBrainsMono(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: GloamColors.textPrimary,
+            color: context.gloam.textPrimary,
           ),
         ),
         content: Text(
           'this can\'t be undone.',
           style: GoogleFonts.inter(
             fontSize: 13,
-            color: GloamColors.textSecondary,
+            color: context.gloam.textSecondary,
           ),
         ),
         actions: [
@@ -247,11 +247,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: Text('cancel',
                 style: GoogleFonts.jetBrainsMono(
-                    fontSize: 12, color: GloamColors.textSecondary)),
+                    fontSize: 12, color: context.gloam.textSecondary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: GloamColors.danger),
+                backgroundColor: context.gloam.danger),
             onPressed: () async {
               Navigator.pop(ctx);
               try {
@@ -263,14 +263,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                         content: Text('delete failed: $e'),
-                        backgroundColor: GloamColors.danger),
+                        backgroundColor: context.gloam.danger),
                   );
                 }
               }
             },
             child: Text('delete',
                 style: GoogleFonts.jetBrainsMono(
-                    fontSize: 12, color: GloamColors.textPrimary)),
+                    fontSize: 12, color: context.gloam.textPrimary)),
           ),
         ],
       ),
@@ -455,7 +455,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           duration: const Duration(milliseconds: 500),
                           decoration: BoxDecoration(
                             color: _highlightEventId == msg.eventId
-                                ? GloamColors.bgElevated
+                                ? context.gloam.bgElevated
                                 : null,
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -520,18 +520,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   right: 20,
                   bottom: 12,
                   child: Material(
-                    color: GloamColors.bgElevated,
-                    shape: const CircleBorder(
-                      side: BorderSide(color: GloamColors.border),
+                    color: context.gloam.bgElevated,
+                    shape: CircleBorder(
+                      side: BorderSide(color: context.gloam.border),
                     ),
                     elevation: 0,
                     child: InkWell(
                       onTap: _scrollToBottom,
                       customBorder: const CircleBorder(),
-                      child: const Padding(
-                        padding: EdgeInsets.all(10),
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
                         child: Icon(Icons.keyboard_arrow_down,
-                            size: 20, color: GloamColors.textSecondary),
+                            size: 20, color: context.gloam.textSecondary),
                       ),
                     ),
                   ),
@@ -564,7 +564,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                       content: Text('edit failed: $e'),
-                      backgroundColor: GloamColors.danger),
+                      backgroundColor: context.gloam.danger),
                 );
               }
             }
@@ -597,7 +597,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: GloamColors.bgSurface,
+      backgroundColor: context.gloam.bgSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
             top: Radius.circular(GloamSpacing.radiusLg)),
@@ -625,7 +625,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     .toList(),
               ),
             ),
-            const Divider(color: GloamColors.border, height: 1),
+            Divider(color: context.gloam.border, height: 1),
             _ActionTile(
               icon: Icons.reply,
               label: 'reply',
@@ -673,7 +673,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               _ActionTile(
                 icon: Icons.delete_outline,
                 label: 'delete',
-                color: GloamColors.danger,
+                color: context.gloam.danger,
                 onTap: () {
                   Navigator.pop(ctx);
                   _confirmDelete(msg.eventId);
@@ -717,24 +717,24 @@ class _ChatHeader extends ConsumerWidget {
     return Container(
       height: GloamSpacing.headerHeight,
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: GloamColors.border),
+          bottom: BorderSide(color: context.gloam.border),
         ),
       ),
       child: Row(
         children: [
           // Room info
           if (isEncrypted)
-            const Padding(
-              padding: EdgeInsets.only(right: 6),
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
               child:
-                  Icon(Icons.lock, size: 14, color: GloamColors.accent),
+                  Icon(Icons.lock, size: 14, color: context.gloam.accent),
             ),
           Text(
             isDirect ? '@' : '#',
             style: GoogleFonts.jetBrainsMono(
-                fontSize: 18, color: GloamColors.accent),
+                fontSize: 18, color: context.gloam.accent),
           ),
           const SizedBox(width: 6),
           Expanded(
@@ -747,7 +747,7 @@ class _ChatHeader extends ConsumerWidget {
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: GloamColors.textPrimary,
+                    color: context.gloam.textPrimary,
                   ),
                 ),
                 if (topic.isNotEmpty)
@@ -755,7 +755,7 @@ class _ChatHeader extends ConsumerWidget {
                     topic,
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: GloamColors.textTertiary,
+                      color: context.gloam.textTertiary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -817,7 +817,7 @@ class _HeaderAction extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: onTap,
-      icon: Icon(icon, size: 18, color: GloamColors.textTertiary),
+      icon: Icon(icon, size: 18, color: context.gloam.textTertiary),
       padding: const EdgeInsets.all(8),
       constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
     );
@@ -839,7 +839,7 @@ class _ActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? GloamColors.textPrimary;
+    final c = color ?? context.gloam.textPrimary;
     return ListTile(
       leading: Icon(icon, size: 20, color: c),
       title: Text(
@@ -909,7 +909,7 @@ class _ThreadIndicator extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: GloamColors.bg,
+                            color: context.gloam.bg,
                             width: 2,
                           ),
                         ),
@@ -929,7 +929,7 @@ class _ThreadIndicator extends StatelessWidget {
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: GloamColors.accent,
+                color: context.gloam.accent,
               ),
             ),
             if (data.lastReplyTime != null) ...[
@@ -938,7 +938,7 @@ class _ThreadIndicator extends StatelessWidget {
                 'last reply ${_formatTime(data.lastReplyTime!)}',
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 10,
-                  color: GloamColors.textTertiary,
+                  color: context.gloam.textTertiary,
                 ),
               ),
             ],

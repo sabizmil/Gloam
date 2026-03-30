@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../theme/color_tokens.dart';
+import '../theme/gloam_theme_ext.dart';
 import '../theme/spacing.dart';
 import '../shortcuts.dart';
 
@@ -9,7 +9,7 @@ import '../shortcuts.dart';
 Future<void> showShortcutHelp(BuildContext context) {
   return showDialog(
     context: context,
-    barrierColor: GloamColors.overlay,
+    barrierColor: context.gloam.overlay,
     builder: (ctx) => Center(
       child: Material(
         color: Colors.transparent,
@@ -17,9 +17,9 @@ Future<void> showShortcutHelp(BuildContext context) {
           width: 420,
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: GloamColors.bgSurface,
+            color: context.gloam.bgSurface,
             borderRadius: BorderRadius.circular(GloamSpacing.radiusLg),
-            border: Border.all(color: GloamColors.border),
+            border: Border.all(color: context.gloam.border),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF0A1A0E).withAlpha(128),
@@ -37,7 +37,7 @@ Future<void> showShortcutHelp(BuildContext context) {
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: GloamColors.textPrimary,
+                  color: context.gloam.textPrimary,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -59,7 +59,7 @@ Future<void> showShortcutHelp(BuildContext context) {
                           '// $category',
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 9,
-                            color: GloamColors.textTertiary,
+                            color: context.gloam.textTertiary,
                             letterSpacing: 1,
                           ),
                         ),
@@ -74,7 +74,7 @@ Future<void> showShortcutHelp(BuildContext context) {
                               label,
                               style: GoogleFonts.inter(
                                 fontSize: 13,
-                                color: GloamColors.textSecondary,
+                                color: context.gloam.textSecondary,
                               ),
                             ),
                           ),
@@ -82,15 +82,15 @@ Future<void> showShortcutHelp(BuildContext context) {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: GloamColors.bgElevated,
+                              color: context.gloam.bgElevated,
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: GloamColors.border),
+                              border: Border.all(color: context.gloam.border),
                             ),
                             child: Text(
                               keys,
                               style: GoogleFonts.jetBrainsMono(
                                 fontSize: 11,
-                                color: GloamColors.textTertiary,
+                                color: context.gloam.textTertiary,
                               ),
                             ),
                           ),
@@ -106,7 +106,7 @@ Future<void> showShortcutHelp(BuildContext context) {
                   'press esc to close',
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 10,
-                    color: GloamColors.textTertiary,
+                    color: context.gloam.textTertiary,
                   ),
                 ),
               ),

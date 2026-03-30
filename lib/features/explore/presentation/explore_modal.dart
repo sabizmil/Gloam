@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../app/theme/color_tokens.dart';
+import '../../../app/theme/gloam_theme_ext.dart';
 import '../../../app/theme/spacing.dart';
 import '../../../services/matrix_service.dart';
 import '../../chat/presentation/providers/timeline_provider.dart';
@@ -77,11 +77,11 @@ class _ExploreModalState extends ConsumerState<_ExploreModal>
         ref.read(matrixServiceProvider).client?.homeserver?.host ?? '';
 
     return Dialog(
-      backgroundColor: GloamColors.bg,
+      backgroundColor: context.gloam.bg,
       insetPadding: const EdgeInsets.all(40),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(GloamSpacing.radiusLg),
-        side: const BorderSide(color: GloamColors.border),
+        side: BorderSide(color: context.gloam.border),
       ),
       child: SizedBox(
         width: 900,
@@ -92,28 +92,28 @@ class _ExploreModalState extends ConsumerState<_ExploreModal>
             Container(
               height: 56,
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(
-                    bottom: BorderSide(color: GloamColors.border)),
+                    bottom: BorderSide(color: context.gloam.border)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.explore_outlined,
-                      size: 20, color: GloamColors.accent),
+                  Icon(Icons.explore_outlined,
+                      size: 20, color: context.gloam.accent),
                   const SizedBox(width: 10),
                   Text(
                     'Explore',
                     style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: GloamColors.textPrimary,
+                      color: context.gloam.textPrimary,
                     ),
                   ),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
-                    child: const Icon(Icons.close,
-                        size: 20, color: GloamColors.textTertiary),
+                    child: Icon(Icons.close,
+                        size: 20, color: context.gloam.textTertiary),
                   ),
                 ],
               ),
@@ -121,21 +121,21 @@ class _ExploreModalState extends ConsumerState<_ExploreModal>
 
             // Tab bar
             Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(
-                    bottom: BorderSide(color: GloamColors.border)),
+                    bottom: BorderSide(color: context.gloam.border)),
               ),
               child: TabBar(
                 controller: _tabController,
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,
                 padding: const EdgeInsets.only(left: 24),
-                labelColor: GloamColors.accent,
-                unselectedLabelColor: GloamColors.textSecondary,
+                labelColor: context.gloam.accent,
+                unselectedLabelColor: context.gloam.textSecondary,
                 labelStyle: GoogleFonts.inter(
                     fontSize: 13, fontWeight: FontWeight.w500),
                 unselectedLabelStyle: GoogleFonts.inter(fontSize: 13),
-                indicatorColor: GloamColors.accent,
+                indicatorColor: context.gloam.accent,
                 indicatorSize: TabBarIndicatorSize.label,
                 dividerHeight: 0,
                 tabs: const [
@@ -268,16 +268,16 @@ class _BrowseTab extends StatelessWidget {
                 child: Container(
                   height: 36,
                   decoration: BoxDecoration(
-                    color: GloamColors.bgSurface,
+                    color: context.gloam.bgSurface,
                     borderRadius:
                         BorderRadius.circular(GloamSpacing.radiusMd),
-                    border: Border.all(color: GloamColors.border),
+                    border: Border.all(color: context.gloam.border),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Row(
                     children: [
-                      const Icon(Icons.search,
-                          size: 14, color: GloamColors.textTertiary),
+                      Icon(Icons.search,
+                          size: 14, color: context.gloam.textTertiary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: TextField(
@@ -285,7 +285,7 @@ class _BrowseTab extends StatelessWidget {
                           onChanged: onSearchChanged,
                           style: GoogleFonts.inter(
                             fontSize: 13,
-                            color: GloamColors.textPrimary,
+                            color: context.gloam.textPrimary,
                           ),
                           decoration: InputDecoration(
                             hintText: state.spacesOnly
@@ -293,7 +293,7 @@ class _BrowseTab extends StatelessWidget {
                                 : 'search rooms and spaces...',
                             hintStyle: GoogleFonts.inter(
                               fontSize: 13,
-                              color: GloamColors.textTertiary,
+                              color: context.gloam.textTertiary,
                             ),
                             border: InputBorder.none,
                             contentPadding: EdgeInsets.zero,
@@ -311,13 +311,13 @@ class _BrowseTab extends StatelessWidget {
 
         // Results
         Expanded(
-          child: _buildContent(),
+          child: _buildContent(context),
         ),
       ],
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(BuildContext context) {
     if (state.error != null) {
       return Center(
         child: Padding(
@@ -326,7 +326,7 @@ class _BrowseTab extends StatelessWidget {
             state.error!,
             style: GoogleFonts.jetBrainsMono(
               fontSize: 12,
-              color: GloamColors.danger,
+              color: context.gloam.danger,
             ),
             textAlign: TextAlign.center,
           ),
@@ -335,9 +335,9 @@ class _BrowseTab extends StatelessWidget {
     }
 
     if (state.isLoading && state.rooms.isEmpty) {
-      return const Center(
+      return Center(
         child: CircularProgressIndicator(
-          color: GloamColors.accent,
+          color: context.gloam.accent,
           strokeWidth: 2,
         ),
       );
@@ -351,7 +351,7 @@ class _BrowseTab extends StatelessWidget {
               : '// no public rooms found',
           style: GoogleFonts.jetBrainsMono(
             fontSize: 11,
-            color: GloamColors.textTertiary,
+            color: context.gloam.textTertiary,
             letterSpacing: 1,
           ),
         ),
@@ -375,19 +375,19 @@ class _BrowseTab extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFF3A1A1A),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: GloamColors.danger.withAlpha(80)),
+              border: Border.all(color: context.gloam.danger.withAlpha(80)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.error_outline,
-                    size: 16, color: GloamColors.danger),
+                Icon(Icons.error_outline,
+                    size: 16, color: context.gloam.danger),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     state.error!,
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: GloamColors.danger,
+                      color: context.gloam.danger,
                     ),
                   ),
                 ),
@@ -398,7 +398,7 @@ class _BrowseTab extends StatelessWidget {
 
         final roomIndex = hasError ? index - 1 : index;
         if (roomIndex >= state.rooms.length) {
-          return _buildFooter();
+          return _buildFooter(context);
         }
 
         final room = state.rooms[roomIndex];
@@ -413,16 +413,16 @@ class _BrowseTab extends StatelessWidget {
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(BuildContext context) {
     if (state.isLoading) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
+      return Padding(
+        padding: const EdgeInsets.all(24),
         child: Center(
           child: SizedBox(
             width: 20,
             height: 20,
             child: CircularProgressIndicator(
-              color: GloamColors.accent,
+              color: context.gloam.accent,
               strokeWidth: 2,
             ),
           ),
@@ -441,7 +441,7 @@ class _BrowseTab extends StatelessWidget {
               : '$shown rooms loaded',
           style: GoogleFonts.jetBrainsMono(
             fontSize: 11,
-            color: GloamColors.textTertiary,
+            color: context.gloam.textTertiary,
             letterSpacing: 0.5,
           ),
         ),
@@ -487,12 +487,12 @@ class _JoinByAddressTab extends StatelessWidget {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: GloamColors.bgElevated,
+                color: context.gloam.bgElevated,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Center(
+              child: Center(
                 child: Icon(Icons.alternate_email,
-                    size: 28, color: GloamColors.accent),
+                    size: 28, color: context.gloam.accent),
               ),
             ),
             const SizedBox(height: 24),
@@ -502,7 +502,7 @@ class _JoinByAddressTab extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: GloamColors.textPrimary,
+                color: context.gloam.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
@@ -511,7 +511,7 @@ class _JoinByAddressTab extends StatelessWidget {
               'Enter a room alias, room ID, or paste a matrix.to link',
               style: GoogleFonts.inter(
                 fontSize: 13,
-                color: GloamColors.textTertiary,
+                color: context.gloam.textTertiary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -525,13 +525,13 @@ class _JoinByAddressTab extends StatelessWidget {
                 controller: controller,
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 14,
-                  color: GloamColors.textPrimary,
+                  color: context.gloam.textPrimary,
                 ),
                 decoration: InputDecoration(
                   hintText: '#room:server.org',
                   hintStyle: GoogleFonts.jetBrainsMono(
                     fontSize: 14,
-                    color: GloamColors.textTertiary,
+                    color: context.gloam.textTertiary,
                   ),
                   prefixIcon: Padding(
                     padding: const EdgeInsets.only(left: 16, right: 8),
@@ -539,30 +539,30 @@ class _JoinByAddressTab extends StatelessWidget {
                       '#',
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 18,
-                        color: GloamColors.accent,
+                        color: context.gloam.accent,
                       ),
                     ),
                   ),
                   prefixIconConstraints:
                       const BoxConstraints(minWidth: 0, minHeight: 0),
                   filled: true,
-                  fillColor: GloamColors.bgSurface,
+                  fillColor: context.gloam.bgSurface,
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   border: OutlineInputBorder(
                     borderRadius:
                         BorderRadius.circular(GloamSpacing.radiusMd),
-                    borderSide: const BorderSide(color: GloamColors.border),
+                    borderSide: BorderSide(color: context.gloam.border),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius:
                         BorderRadius.circular(GloamSpacing.radiusMd),
-                    borderSide: const BorderSide(color: GloamColors.border),
+                    borderSide: BorderSide(color: context.gloam.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius:
                         BorderRadius.circular(GloamSpacing.radiusMd),
-                    borderSide: const BorderSide(color: GloamColors.accent),
+                    borderSide: BorderSide(color: context.gloam.accent),
                   ),
                 ),
                 onSubmitted: (_) => onJoin(),
@@ -577,21 +577,21 @@ class _JoinByAddressTab extends StatelessWidget {
                 height: 40,
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 decoration: BoxDecoration(
-                  color: GloamColors.accentDim,
+                  color: context.gloam.accentDim,
                   borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-                  border: Border.all(color: GloamColors.accent),
+                  border: Border.all(color: context.gloam.accent),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.login, size: 16, color: GloamColors.accent),
+                    Icon(Icons.login, size: 16, color: context.gloam.accent),
                     const SizedBox(width: 8),
                     Text(
                       'Join Room',
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: GloamColors.accent,
+                        color: context.gloam.accent,
                       ),
                     ),
                   ],
@@ -607,7 +607,7 @@ class _JoinByAddressTab extends StatelessWidget {
                   error!,
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 12,
-                    color: GloamColors.danger,
+                    color: context.gloam.danger,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -618,14 +618,14 @@ class _JoinByAddressTab extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.check_circle_outline,
-                        size: 14, color: GloamColors.accent),
+                    Icon(Icons.check_circle_outline,
+                        size: 14, color: context.gloam.accent),
                     const SizedBox(width: 6),
                     Text(
                       success!,
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        color: GloamColors.accent,
+                        color: context.gloam.accent,
                       ),
                     ),
                   ],
@@ -639,7 +639,7 @@ class _JoinByAddressTab extends StatelessWidget {
               '// examples',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 10,
-                color: GloamColors.textTertiary,
+                color: context.gloam.textTertiary,
                 letterSpacing: 1,
               ),
             ),
@@ -657,7 +657,7 @@ class _JoinByAddressTab extends StatelessWidget {
                     example,
                     style: GoogleFonts.jetBrainsMono(
                       fontSize: 12,
-                      color: GloamColors.textSecondary,
+                      color: context.gloam.textSecondary,
                     ),
                   ),
                 ),

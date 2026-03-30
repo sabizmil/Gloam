@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/matrix_service.dart';
 import '../../../../widgets/gloam_avatar.dart';
@@ -57,9 +57,9 @@ class _InviteTileState extends ConsumerState<InviteTile> {
       margin: const EdgeInsets.only(bottom: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: GloamColors.bgElevated,
+        color: context.gloam.bgElevated,
         borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-        border: Border.all(color: GloamColors.accentDim),
+        border: Border.all(color: context.gloam.accentDim),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,7 +83,7 @@ class _InviteTileState extends ConsumerState<InviteTile> {
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: GloamColors.textPrimary,
+                        color: context.gloam.textPrimary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -97,7 +97,7 @@ class _InviteTileState extends ConsumerState<InviteTile> {
                               : inv.inviterId ?? 'invited you',
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        color: GloamColors.textTertiary,
+                        color: context.gloam.textTertiary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -121,26 +121,26 @@ class _InviteTileState extends ConsumerState<InviteTile> {
                   height: 28,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    color: GloamColors.bgSurface,
+                    color: context.gloam.bgSurface,
                     borderRadius:
                         BorderRadius.circular(GloamSpacing.radiusSm),
-                    border: Border.all(color: GloamColors.border),
+                    border: Border.all(color: context.gloam.border),
                   ),
                   child: Center(
                     child: _declining
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 12,
                             height: 12,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: GloamColors.textTertiary,
+                              color: context.gloam.textTertiary,
                             ),
                           )
                         : Text(
                             'Decline',
                             style: GoogleFonts.inter(
                               fontSize: 12,
-                              color: GloamColors.textSecondary,
+                              color: context.gloam.textSecondary,
                             ),
                           ),
                   ),
@@ -156,18 +156,18 @@ class _InviteTileState extends ConsumerState<InviteTile> {
                   height: 28,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    color: GloamColors.accentDim,
+                    color: context.gloam.accentDim,
                     borderRadius:
                         BorderRadius.circular(GloamSpacing.radiusSm),
                   ),
                   child: Center(
                     child: _accepting
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 12,
                             height: 12,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: GloamColors.accent,
+                              color: context.gloam.accent,
                             ),
                           )
                         : Text(
@@ -175,7 +175,7 @@ class _InviteTileState extends ConsumerState<InviteTile> {
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color: GloamColors.accent,
+                              color: context.gloam.accent,
                             ),
                           ),
                   ),

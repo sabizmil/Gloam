@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_color_extension.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../widgets/gloam_avatar.dart';
 import '../providers/timeline_provider.dart';
 import 'delivery_indicator.dart';
@@ -64,6 +65,7 @@ class _MessageBubbleState extends State<MessageBubble> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     final message = widget.message;
     final isGrouped = widget.isGrouped;
 
@@ -133,7 +135,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                                 style: GoogleFonts.inter(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: _senderColor(message.senderName),
+                                  color: _senderColor(colors, message.senderName),
                                 ),
                               ),
                             ),
@@ -143,7 +145,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                             _formatTime(message.timestamp),
                             style: GoogleFonts.jetBrainsMono(
                               fontSize: 10,
-                              color: GloamColors.textTertiary,
+                              color: colors.textTertiary,
                             ),
                           ),
                           if (message.isEdited) ...[
@@ -152,7 +154,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                               '(edited)',
                               style: GoogleFonts.inter(
                                 fontSize: 10,
-                                color: GloamColors.textTertiary,
+                                color: colors.textTertiary,
                                 fontStyle: FontStyle.italic,
                               ),
                             ),
@@ -224,18 +226,18 @@ class _MessageBubbleState extends State<MessageBubble> {
     );
   }
 
-  static Color _senderColor(String name) {
-    final colors = [
-      GloamColors.accent,
+  static Color _senderColor(GloamColorExtension colors, String name) {
+    final palette = [
+      colors.accent,
       const Color(0xFF9090B8),
       const Color(0xFFC47070),
       const Color(0xFFC4A35C),
       const Color(0xFF5C8AC4),
-      GloamColors.accentBright,
+      colors.accentBright,
       const Color(0xFF8A5CC4),
       const Color(0xFF5CC4C4),
     ];
-    return colors[name.hashCode.abs() % colors.length];
+    return palette[name.hashCode.abs() % palette.length];
   }
 }
 
@@ -246,13 +248,14 @@ class _MessageContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return switch (message.type) {
       'm.emote' => Text(
           '* ${message.senderName} ${message.body}',
           style: GoogleFonts.inter(
             fontSize: 14,
             fontStyle: FontStyle.italic,
-            color: GloamColors.textPrimary,
+            color: colors.textPrimary,
             height: 1.5,
           ),
         ),
@@ -261,7 +264,7 @@ class _MessageContent extends StatelessWidget {
           style: GoogleFonts.inter(
             fontSize: 14,
             fontStyle: FontStyle.italic,
-            color: GloamColors.textSecondary,
+            color: colors.textSecondary,
             height: 1.5,
           ),
         ),
@@ -272,15 +275,15 @@ class _MessageContent extends StatelessWidget {
       'm.bad_encrypted' => Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.lock_outline,
-                size: 14, color: GloamColors.textTertiary),
+            Icon(Icons.lock_outline,
+                size: 14, color: colors.textTertiary),
             const SizedBox(width: 6),
             Text(
               'Unable to decrypt',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 12,
                 fontStyle: FontStyle.italic,
-                color: GloamColors.textTertiary,
+                color: colors.textTertiary,
               ),
             ),
           ],
@@ -323,19 +326,20 @@ class _ReactionPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         decoration: BoxDecoration(
           color: reaction.includesMe
-              ? GloamColors.accentDim.withValues(alpha: 0.3)
-              : GloamColors.bgElevated,
+              ? colors.accentDim.withValues(alpha: 0.3)
+              : colors.bgElevated,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: reaction.includesMe
-                ? GloamColors.accentDim
-                : GloamColors.border,
+                ? colors.accentDim
+                : colors.border,
           ),
         ),
         child: Row(
@@ -348,8 +352,8 @@ class _ReactionPill extends StatelessWidget {
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 11,
                 color: reaction.includesMe
-                    ? GloamColors.accent
-                    : GloamColors.textSecondary,
+                    ? colors.accent
+                    : colors.textSecondary,
               ),
             ),
           ],
@@ -372,7 +376,7 @@ class _RedactedMessage extends StatelessWidget {
         style: GoogleFonts.inter(
           fontSize: 13,
           fontStyle: FontStyle.italic,
-          color: GloamColors.textTertiary,
+          color: context.gloam.textTertiary,
         ),
       ),
     );
@@ -412,7 +416,7 @@ class _HoverableAvatarState extends State<_HoverableAvatar> {
           boxShadow: _hovered
               ? [
                   BoxShadow(
-                    color: GloamColors.accent.withAlpha(40),
+                    color: context.gloam.accent.withAlpha(40),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),

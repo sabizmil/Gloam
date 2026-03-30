@@ -3,10 +3,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
+import 'app/theme/theme_preferences.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Pre-load libolm from the app bundle before the Matrix SDK tries.
@@ -46,9 +48,16 @@ void main() {
     }
   }
 
+  // Initialize SharedPreferences before runApp so theme
+  // preferences are available synchronously.
+  final sharedPrefs = await SharedPreferences.getInstance();
+
   runApp(
-    const ProviderScope(
-      child: GloamApp(),
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(sharedPrefs),
+      ],
+      child: const GloamApp(),
     ),
   );
 }

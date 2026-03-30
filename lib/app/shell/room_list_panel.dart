@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:matrix/matrix.dart' show EventTypes;
 
-import '../theme/color_tokens.dart';
+import '../theme/gloam_theme_ext.dart';
 import '../theme/spacing.dart';
 import '../../features/calls/data/adapters/matrix_rtc_adapter.dart';
 import '../../features/calls/domain/voice_channel.dart';
@@ -41,7 +41,7 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => Scaffold(
-            backgroundColor: GloamColors.bg,
+            backgroundColor: context.gloam.bg,
             body: SafeArea(
               child: _MobileChatScreen(roomId: roomId),
             ),
@@ -63,10 +63,10 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
 
     return Container(
       width: GloamSpacing.roomListWidth,
-      decoration: const BoxDecoration(
-        color: GloamColors.bgSurface,
+      decoration: BoxDecoration(
+        color: context.gloam.bgSurface,
         border: Border(
-          right: BorderSide(color: GloamColors.border),
+          right: BorderSide(color: context.gloam.border),
         ),
       ),
       child: Column(
@@ -97,13 +97,13 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: isActive
-                            ? GloamColors.accentDim
+                            ? context.gloam.accentDim
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isActive
-                              ? GloamColors.accent
-                              : GloamColors.border,
+                              ? context.gloam.accent
+                              : context.gloam.border,
                         ),
                       ),
                       child: Text(
@@ -111,8 +111,8 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
                         style: GoogleFonts.jetBrainsMono(
                           fontSize: 10,
                           color: isActive
-                              ? GloamColors.accent
-                              : GloamColors.textTertiary,
+                              ? context.gloam.accent
+                              : context.gloam.textTertiary,
                         ),
                       ),
                     ),
@@ -125,9 +125,9 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
           // Room list
           Expanded(
             child: roomsAsync.when(
-              loading: () => const Center(
+              loading: () => Center(
                 child: CircularProgressIndicator(
-                  color: GloamColors.accent,
+                  color: context.gloam.accent,
                   strokeWidth: 2,
                 ),
               ),
@@ -136,7 +136,7 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
                   '// error loading rooms',
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 11,
-                    color: GloamColors.danger,
+                    color: context.gloam.danger,
                   ),
                 ),
               ),
@@ -152,7 +152,7 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
                           : '// no conversations',
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 11,
-                        color: GloamColors.textTertiary,
+                        color: context.gloam.textTertiary,
                         letterSpacing: 1,
                       ),
                     ),
@@ -177,7 +177,7 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
                   children: [
                     if (invites.isNotEmpty) ...[
                       SectionHeader('invites (${invites.length})',
-                          color: GloamColors.accent),
+                          color: context.gloam.accent),
                       ...invites.map((room) => InviteTile(invite: room)),
                     ],
                     if (dms.isNotEmpty) ...[
@@ -385,7 +385,7 @@ class _PanelHeader extends ConsumerWidget {
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: GloamColors.textSecondary,
+                color: context.gloam.textSecondary,
                 letterSpacing: 1.5,
               ),
             ),
@@ -397,8 +397,8 @@ class _PanelHeader extends ConsumerWidget {
                 ref.read(selectedRoomProvider.notifier).state = roomId;
               }
             },
-            child: const Icon(Icons.add,
-                size: 18, color: GloamColors.textSecondary),
+            child: Icon(Icons.add,
+                size: 18, color: context.gloam.textSecondary),
           ),
         ],
       ),
@@ -415,28 +415,28 @@ class _SearchBar extends StatelessWidget {
     return Container(
       height: 36,
       decoration: BoxDecoration(
-        color: GloamColors.bg,
+        color: context.gloam.bg,
         borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
-        border: Border.all(color: GloamColors.border),
+        border: Border.all(color: context.gloam.border),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: Row(
         children: [
-          const Icon(Icons.search,
-              size: 14, color: GloamColors.textTertiary),
+          Icon(Icons.search,
+              size: 14, color: context.gloam.textTertiary),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
               onChanged: onChanged,
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 12,
-                color: GloamColors.textPrimary,
+                color: context.gloam.textPrimary,
               ),
               decoration: InputDecoration(
                 hintText: 'search or jump to...',
                 hintStyle: GoogleFonts.jetBrainsMono(
                   fontSize: 12,
-                  color: GloamColors.textTertiary,
+                  color: context.gloam.textTertiary,
                 ),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
@@ -449,15 +449,15 @@ class _SearchBar extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: GloamColors.bgElevated,
+              color: context.gloam.bgElevated,
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: GloamColors.border),
+              border: Border.all(color: context.gloam.border),
             ),
             child: Text(
               '\u2318K',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 10,
-                color: GloamColors.textTertiary,
+                color: context.gloam.textTertiary,
               ),
             ),
           ),

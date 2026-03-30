@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_color_extension.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 
 /// Zero-state shown when a room is joined but has no messages yet
@@ -25,6 +26,7 @@ class SyncingZeroState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return Column(
       children: [
         // Body: progress timeline
@@ -41,7 +43,7 @@ class SyncingZeroState extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: GloamColors.textPrimary,
+                      color: colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -49,7 +51,7 @@ class SyncingZeroState extends StatelessWidget {
                     'Your server is connecting to the federation',
                     style: GoogleFonts.inter(
                       fontSize: 13,
-                      color: GloamColors.textTertiary,
+                      color: colors.textTertiary,
                     ),
                   ),
                   const SizedBox(height: 28),
@@ -90,17 +92,17 @@ class SyncingZeroState extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: GloamColors.bgSurface,
+                      color: colors.bgSurface,
                       borderRadius:
                           BorderRadius.circular(GloamSpacing.radiusMd),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Padding(
-                          padding: EdgeInsets.only(top: 1),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 1),
                           child: Icon(Icons.info_outline,
-                              size: 14, color: GloamColors.textTertiary),
+                              size: 14, color: colors.textTertiary),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -109,7 +111,7 @@ class SyncingZeroState extends StatelessWidget {
                             'You can navigate away — syncing continues in the background.',
                             style: GoogleFonts.inter(
                               fontSize: 12,
-                              color: GloamColors.textTertiary,
+                              color: colors.textTertiary,
                               height: 1.5,
                             ),
                           ),
@@ -127,15 +129,15 @@ class SyncingZeroState extends StatelessWidget {
         Container(
           height: 56,
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             border: Border(
-              top: BorderSide(color: GloamColors.border),
+              top: BorderSide(color: colors.border),
             ),
           ),
           child: Row(
             children: [
-              const Icon(Icons.chat_bubble_outline,
-                  size: 14, color: GloamColors.textTertiary),
+              Icon(Icons.chat_bubble_outline,
+                  size: 14, color: colors.textTertiary),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -143,7 +145,7 @@ class SyncingZeroState extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontStyle: FontStyle.italic,
-                    color: GloamColors.textTertiary,
+                    color: colors.textTertiary,
                   ),
                 ),
               ),
@@ -154,22 +156,22 @@ class SyncingZeroState extends StatelessWidget {
                     height: 28,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      color: GloamColors.bgSurface,
+                      color: colors.bgSurface,
                       borderRadius:
                           BorderRadius.circular(GloamSpacing.radiusSm),
-                      border: Border.all(color: GloamColors.border),
+                      border: Border.all(color: colors.border),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.logout,
-                            size: 12, color: GloamColors.textTertiary),
+                        Icon(Icons.logout,
+                            size: 12, color: colors.textTertiary),
                         const SizedBox(width: 6),
                         Text(
                           'Leave Room',
                           style: GoogleFonts.inter(
                             fontSize: 12,
-                            color: GloamColors.textSecondary,
+                            color: colors.textSecondary,
                           ),
                         ),
                       ],
@@ -205,6 +207,7 @@ class _Step extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -213,14 +216,14 @@ class _Step extends StatelessWidget {
           width: 24,
           child: Column(
             children: [
-              _buildDot(),
+              _buildDot(colors),
               if (!isLast)
                 Container(
                   width: 2,
                   height: 32,
                   color: state == _StepState.complete
-                      ? GloamColors.accent
-                      : GloamColors.border,
+                      ? colors.accent
+                      : colors.border,
                 ),
             ],
           ),
@@ -241,9 +244,9 @@ class _Step extends StatelessWidget {
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: switch (state) {
-                      _StepState.complete => GloamColors.accent,
-                      _StepState.active => GloamColors.textPrimary,
-                      _StepState.pending => GloamColors.textTertiary,
+                      _StepState.complete => colors.accent,
+                      _StepState.active => colors.textPrimary,
+                      _StepState.pending => colors.textTertiary,
                     },
                   ),
                 ),
@@ -252,7 +255,7 @@ class _Step extends StatelessWidget {
                   subtitle,
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: GloamColors.textTertiary,
+                    color: colors.textTertiary,
                   ),
                 ),
               ],
@@ -263,17 +266,17 @@ class _Step extends StatelessWidget {
     );
   }
 
-  Widget _buildDot() {
+  Widget _buildDot(GloamColorExtension colors) {
     return switch (state) {
       _StepState.complete => Container(
           width: 24,
           height: 24,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: GloamColors.accent,
+            color: colors.accent,
           ),
-          child: const Center(
-            child: Icon(Icons.check, size: 12, color: GloamColors.bg),
+          child: Center(
+            child: Icon(Icons.check, size: 12, color: colors.bg),
           ),
         ),
       _StepState.active => Container(
@@ -281,16 +284,16 @@ class _Step extends StatelessWidget {
           height: 24,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: GloamColors.accentDim,
-            border: Border.all(color: GloamColors.accent, width: 2),
+            color: colors.accentDim,
+            border: Border.all(color: colors.accent, width: 2),
           ),
           child: Center(
             child: Container(
               width: 8,
               height: 8,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: GloamColors.accent,
+                color: colors.accent,
               ),
             ),
           ),
@@ -300,7 +303,7 @@ class _Step extends StatelessWidget {
           height: 24,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: GloamColors.border, width: 2),
+            border: Border.all(color: colors.border, width: 2),
           ),
         ),
     };

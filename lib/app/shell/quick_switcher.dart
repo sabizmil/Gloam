@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../theme/color_tokens.dart';
+import '../theme/gloam_theme_ext.dart';
 import '../theme/spacing.dart';
 import '../../features/rooms/presentation/providers/room_list_provider.dart';
 import '../../features/chat/presentation/providers/timeline_provider.dart';
@@ -13,7 +13,7 @@ import '../../widgets/gloam_avatar.dart';
 Future<void> showQuickSwitcher(BuildContext context, WidgetRef ref) async {
   final result = await showDialog<String>(
     context: context,
-    barrierColor: GloamColors.overlay,
+    barrierColor: context.gloam.overlay,
     builder: (_) => const _QuickSwitcherDialog(),
   );
 
@@ -102,9 +102,9 @@ class _QuickSwitcherDialogState extends ConsumerState<_QuickSwitcherDialog> {
           width: 560,
           constraints: const BoxConstraints(maxHeight: 440),
           decoration: BoxDecoration(
-            color: GloamColors.bgSurface,
+            color: context.gloam.bgSurface,
             borderRadius: BorderRadius.circular(GloamSpacing.radiusLg),
-            border: Border.all(color: GloamColors.border),
+            border: Border.all(color: context.gloam.border),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF0A1A0E).withValues(alpha: 0.5),
@@ -120,15 +120,15 @@ class _QuickSwitcherDialogState extends ConsumerState<_QuickSwitcherDialog> {
               Container(
                 height: 52,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   border: Border(
-                    bottom: BorderSide(color: GloamColors.border),
+                    bottom: BorderSide(color: context.gloam.border),
                   ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.search,
-                        size: 18, color: GloamColors.textTertiary),
+                    Icon(Icons.search,
+                        size: 18, color: context.gloam.textTertiary),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Focus(
@@ -140,13 +140,13 @@ class _QuickSwitcherDialogState extends ConsumerState<_QuickSwitcherDialog> {
                               setState(() => _selectedIndex = 0),
                           style: GoogleFonts.inter(
                             fontSize: 15,
-                            color: GloamColors.textPrimary,
+                            color: context.gloam.textPrimary,
                           ),
                           decoration: InputDecoration(
                             hintText: 'search rooms and people...',
                             hintStyle: GoogleFonts.inter(
                               fontSize: 15,
-                              color: GloamColors.textTertiary,
+                              color: context.gloam.textTertiary,
                             ),
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
@@ -174,7 +174,7 @@ class _QuickSwitcherDialogState extends ConsumerState<_QuickSwitcherDialog> {
                         '// no matches',
                         style: GoogleFonts.jetBrainsMono(
                           fontSize: 11,
-                          color: GloamColors.textTertiary,
+                          color: context.gloam.textTertiary,
                         ),
                       ),
                     );
@@ -203,7 +203,7 @@ class _QuickSwitcherDialogState extends ConsumerState<_QuickSwitcherDialog> {
                                 '// channels',
                                 style: GoogleFonts.jetBrainsMono(
                                   fontSize: 10,
-                                  color: GloamColors.textTertiary,
+                                  color: context.gloam.textTertiary,
                                   letterSpacing: 1,
                                 ),
                               ),
@@ -225,7 +225,7 @@ class _QuickSwitcherDialogState extends ConsumerState<_QuickSwitcherDialog> {
                                 '// people',
                                 style: GoogleFonts.jetBrainsMono(
                                   fontSize: 10,
-                                  color: GloamColors.textTertiary,
+                                  color: context.gloam.textTertiary,
                                   letterSpacing: 1,
                                 ),
                               ),
@@ -250,9 +250,9 @@ class _QuickSwitcherDialogState extends ConsumerState<_QuickSwitcherDialog> {
               Container(
                 height: 36,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   border: Border(
-                    top: BorderSide(color: GloamColors.border),
+                    top: BorderSide(color: context.gloam.border),
                   ),
                 ),
                 child: Row(
@@ -287,7 +287,7 @@ class _ResultTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: isSelected ? GloamColors.bgElevated : Colors.transparent,
+      color: isSelected ? context.gloam.bgElevated : Colors.transparent,
       borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
       child: InkWell(
         onTap: onTap,
@@ -305,8 +305,8 @@ class _ResultTile extends StatelessWidget {
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 16,
                     color: isSelected
-                        ? GloamColors.accent
-                        : GloamColors.textTertiary,
+                        ? context.gloam.accent
+                        : context.gloam.textTertiary,
                   ),
                 ),
               const SizedBox(width: 10),
@@ -318,8 +318,8 @@ class _ResultTile extends StatelessWidget {
                     fontWeight:
                         isSelected ? FontWeight.w500 : FontWeight.w400,
                     color: isSelected
-                        ? GloamColors.textPrimary
-                        : GloamColors.textSecondary,
+                        ? context.gloam.textPrimary
+                        : context.gloam.textSecondary,
                   ),
                 ),
               ),
@@ -328,7 +328,7 @@ class _ResultTile extends StatelessWidget {
                   '\u21b5',
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 14,
-                    color: GloamColors.textTertiary,
+                    color: context.gloam.textTertiary,
                   ),
                 ),
             ],
@@ -352,13 +352,13 @@ class _Hint extends StatelessWidget {
         Text(
           key_,
           style: GoogleFonts.jetBrainsMono(
-              fontSize: 10, color: GloamColors.textTertiary),
+              fontSize: 10, color: context.gloam.textTertiary),
         ),
         const SizedBox(width: 4),
         Text(
           label,
           style: GoogleFonts.jetBrainsMono(
-              fontSize: 10, color: GloamColors.textTertiary),
+              fontSize: 10, color: context.gloam.textTertiary),
         ),
       ],
     );

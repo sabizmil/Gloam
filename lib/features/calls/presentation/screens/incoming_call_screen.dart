@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../widgets/gloam_avatar.dart';
 import '../providers/call_provider.dart';
 
@@ -55,7 +55,7 @@ class IncomingCallScreen extends ConsumerWidget {
                 style: GoogleFonts.inter(
                   fontSize: 26,
                   fontWeight: FontWeight.w600,
-                  color: GloamColors.textPrimary,
+                  color: context.gloam.textPrimary,
                 ),
               ),
               const SizedBox(height: 12),
@@ -67,7 +67,7 @@ class IncomingCallScreen extends ConsumerWidget {
                     : 'incoming voice call...',
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 14,
-                  color: GloamColors.accent,
+                  color: context.gloam.accent,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -94,7 +94,7 @@ class IncomingCallScreen extends ConsumerWidget {
                   _CallActionButton(
                     icon: Icons.call_end_rounded,
                     label: 'decline',
-                    color: GloamColors.danger,
+                    color: context.gloam.danger,
                     onTap: () {
                       ref.read(callServiceProvider.notifier).declineCall();
                       Navigator.of(context).maybePop();
@@ -104,7 +104,7 @@ class IncomingCallScreen extends ConsumerWidget {
                   _CallActionButton(
                     icon: Icons.call_rounded,
                     label: 'accept',
-                    color: GloamColors.accent,
+                    color: context.gloam.accent,
                     onTap: () {
                       ref.read(callServiceProvider.notifier).acceptCall();
                       // Stay on screen — it will transition to active call
@@ -158,7 +158,7 @@ class _CallActionButton extends StatelessWidget {
           label,
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: GloamColors.textTertiary,
+            color: context.gloam.textTertiary,
           ),
         ),
       ],
@@ -177,7 +177,7 @@ class _PulseDot extends StatelessWidget {
       height: 8,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: GloamColors.accent.withAlpha((opacity * 255).toInt()),
+        color: context.gloam.accent.withAlpha((opacity * 255).toInt()),
       ),
     );
   }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../theme/color_tokens.dart';
+import '../theme/gloam_theme_ext.dart';
 import '../../features/calls/presentation/widgets/persistent_voice_bar.dart';
 import '../../services/voice_service.dart';
 import 'room_list_panel.dart';
@@ -28,7 +28,7 @@ class _MobileTabsState extends ConsumerState<MobileTabs> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: GloamColors.bg,
+      backgroundColor: context.gloam.bg,
       body: SafeArea(
         bottom: false,
         child: IndexedStack(
@@ -68,10 +68,10 @@ class _MobileTabsState extends ConsumerState<MobileTabs> {
           }),
           // Tab bar
           Container(
-        decoration: const BoxDecoration(
-          color: GloamColors.bg,
+        decoration: BoxDecoration(
+          color: context.gloam.bg,
           border: Border(
-            top: BorderSide(color: GloamColors.border),
+            top: BorderSide(color: context.gloam.border),
           ),
         ),
         child: SafeArea(
@@ -93,8 +93,8 @@ class _MobileTabsState extends ConsumerState<MobileTabs> {
                           isActive ? tab.activeIcon : tab.icon,
                           size: 22,
                           color: isActive
-                              ? GloamColors.accent
-                              : GloamColors.textTertiary,
+                              ? context.gloam.accent
+                              : context.gloam.textTertiary,
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -102,8 +102,8 @@ class _MobileTabsState extends ConsumerState<MobileTabs> {
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 10,
                             color: isActive
-                                ? GloamColors.accent
-                                : GloamColors.textTertiary,
+                                ? context.gloam.accent
+                                : context.gloam.textTertiary,
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -136,7 +136,7 @@ class _MobileHeader extends StatelessWidget {
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: GloamColors.accentDim,
+              color: context.gloam.accentDim,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Center(
@@ -146,7 +146,7 @@ class _MobileHeader extends StatelessWidget {
                   fontSize: 15,
                   fontWeight: FontWeight.w300,
                   fontStyle: FontStyle.italic,
-                  color: GloamColors.accentBright,
+                  color: context.gloam.accentBright,
                 ),
               ),
             ),
@@ -158,14 +158,14 @@ class _MobileHeader extends StatelessWidget {
               fontSize: 20,
               fontWeight: FontWeight.w300,
               fontStyle: FontStyle.italic,
-              color: GloamColors.accent,
+              color: context.gloam.accent,
             ),
           ),
           const Spacer(),
-          const Icon(Icons.search, size: 22, color: GloamColors.textSecondary),
+          Icon(Icons.search, size: 22, color: context.gloam.textSecondary),
           const SizedBox(width: 16),
-          const Icon(Icons.edit_outlined,
-              size: 22, color: GloamColors.textSecondary),
+          Icon(Icons.edit_outlined,
+              size: 22, color: context.gloam.textSecondary),
         ],
       ),
     );
@@ -183,7 +183,7 @@ class _PlaceholderTab extends StatelessWidget {
         '// $label — coming soon',
         style: GoogleFonts.jetBrainsMono(
           fontSize: 11,
-          color: GloamColors.textTertiary,
+          color: context.gloam.textTertiary,
           letterSpacing: 1,
         ),
       ),

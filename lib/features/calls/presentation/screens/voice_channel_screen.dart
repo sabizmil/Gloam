@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../features/chat/presentation/screens/chat_screen.dart';
 import '../../../../services/matrix_service.dart';
 import '../../../../services/voice_service.dart';
@@ -39,7 +39,7 @@ class VoiceChannelScreen extends ConsumerWidget {
         voiceState.channelId == roomId;
 
     return Container(
-      color: GloamColors.bg,
+      color: context.gloam.bg,
       child: Column(
         children: [
           // Header
@@ -89,9 +89,9 @@ class _VoiceChannelHeader extends StatelessWidget {
     return Container(
       height: 56,
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: GloamColors.border),
+          bottom: BorderSide(color: context.gloam.border),
         ),
       ),
       child: Row(
@@ -99,7 +99,7 @@ class _VoiceChannelHeader extends StatelessWidget {
           Icon(
             Icons.volume_up_rounded,
             size: 20,
-            color: isConnected ? GloamColors.accent : GloamColors.textTertiary,
+            color: isConnected ? context.gloam.accent : context.gloam.textTertiary,
           ),
           const SizedBox(width: 10),
           Column(
@@ -111,7 +111,7 @@ class _VoiceChannelHeader extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: GloamColors.textPrimary,
+                  color: context.gloam.textPrimary,
                 ),
               ),
               if (isConnected)
@@ -119,14 +119,14 @@ class _VoiceChannelHeader extends StatelessWidget {
                   '$participantCount connected',
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 11,
-                    color: GloamColors.textTertiary,
+                    color: context.gloam.textTertiary,
                   ),
                 ),
             ],
           ),
           const Spacer(),
           Icon(Icons.settings_outlined,
-              size: 18, color: GloamColors.textTertiary),
+              size: 18, color: context.gloam.textTertiary),
         ],
       ),
     );
@@ -146,14 +146,14 @@ class _JoinPrompt extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(Icons.volume_up_rounded,
-            size: 48, color: GloamColors.textTertiary),
+            size: 48, color: context.gloam.textTertiary),
         const SizedBox(height: 16),
         Text(
           channelName.isEmpty ? 'Voice Channel' : channelName,
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.w500,
-            color: GloamColors.textSecondary,
+            color: context.gloam.textSecondary,
           ),
         ),
         const SizedBox(height: 8),
@@ -161,13 +161,13 @@ class _JoinPrompt extends ConsumerWidget {
           '// click to join',
           style: GoogleFonts.jetBrainsMono(
             fontSize: 11,
-            color: GloamColors.textTertiary,
+            color: context.gloam.textTertiary,
             letterSpacing: 1,
           ),
         ),
         const SizedBox(height: 24),
         Material(
-          color: GloamColors.accentDim,
+          color: context.gloam.accentDim,
           borderRadius: BorderRadius.circular(8),
           child: InkWell(
             borderRadius: BorderRadius.circular(8),
@@ -178,15 +178,15 @@ class _JoinPrompt extends ConsumerWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.volume_up_rounded,
-                      size: 18, color: GloamColors.accent),
+                  Icon(Icons.volume_up_rounded,
+                      size: 18, color: context.gloam.accent),
                   const SizedBox(width: 8),
                   Text(
                     'Join Voice',
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: GloamColors.accent,
+                      color: context.gloam.accent,
                     ),
                   ),
                 ],
@@ -222,7 +222,7 @@ class _JoinPrompt extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to join voice: $e'),
-            backgroundColor: GloamColors.danger,
+            backgroundColor: context.gloam.danger,
           ),
         );
       }
@@ -249,10 +249,10 @@ class _TextInVoicePanelState extends ConsumerState<_TextInVoicePanel> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: GloamColors.bgSurface,
+      decoration: BoxDecoration(
+        color: context.gloam.bgSurface,
         border: Border(
-          top: BorderSide(color: GloamColors.border),
+          top: BorderSide(color: context.gloam.border),
         ),
       ),
       child: Column(
@@ -267,14 +267,14 @@ class _TextInVoicePanelState extends ConsumerState<_TextInVoicePanel> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  const Icon(Icons.chat_bubble_outline_rounded,
-                      size: 14, color: GloamColors.textTertiary),
+                  Icon(Icons.chat_bubble_outline_rounded,
+                      size: 14, color: context.gloam.textTertiary),
                   const SizedBox(width: 8),
                   Text(
                     'text chat',
                     style: GoogleFonts.jetBrainsMono(
                       fontSize: 11,
-                      color: GloamColors.textTertiary,
+                      color: context.gloam.textTertiary,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -284,7 +284,7 @@ class _TextInVoicePanelState extends ConsumerState<_TextInVoicePanel> {
                         ? Icons.keyboard_arrow_down
                         : Icons.keyboard_arrow_up,
                     size: 16,
-                    color: GloamColors.textTertiary,
+                    color: context.gloam.textTertiary,
                   ),
                 ],
               ),

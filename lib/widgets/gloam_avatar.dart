@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:matrix/matrix.dart';
 
-import '../app/theme/color_tokens.dart';
+import '../app/theme/gloam_theme_ext.dart';
 import '../services/matrix_service.dart';
 
 /// Cache resolved avatar URLs to avoid re-resolving on every rebuild.
@@ -44,15 +44,15 @@ class _GloamAvatarState extends ConsumerState<GloamAvatar> {
     Color(0xFF2A4A4A),
   ];
 
-  static const _textColors = [
-    GloamColors.accent,
-    Color(0xFF9090B8),
-    Color(0xFFC47070),
-    Color(0xFFC4A35C),
-    Color(0xFF5C8AC4),
-    GloamColors.accentBright,
-    Color(0xFF8A5CC4),
-    Color(0xFF5CC4C4),
+  static List<Color> _textColors(BuildContext context) => [
+    context.gloam.accent,
+    const Color(0xFF9090B8),
+    const Color(0xFFC47070),
+    const Color(0xFFC4A35C),
+    const Color(0xFF5C8AC4),
+    context.gloam.accentBright,
+    const Color(0xFF8A5CC4),
+    const Color(0xFF5CC4C4),
   ];
 
   @override
@@ -144,6 +144,7 @@ class _GloamAvatarState extends ConsumerState<GloamAvatar> {
     final letter = widget.displayName.isNotEmpty
         ? widget.displayName[0].toUpperCase()
         : '?';
+    final textColors = _textColors(context);
 
     return Container(
       width: widget.size,
@@ -158,7 +159,7 @@ class _GloamAvatarState extends ConsumerState<GloamAvatar> {
           style: GoogleFonts.inter(
             fontSize: widget.size * 0.4,
             fontWeight: FontWeight.w500,
-            color: _textColors[colorIndex],
+            color: textColors[colorIndex],
           ),
         ),
       ),

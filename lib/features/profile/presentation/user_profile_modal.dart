@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:matrix/matrix.dart';
 
-import '../../../app/theme/color_tokens.dart';
+import '../../../app/theme/gloam_theme_ext.dart';
 import '../../../app/theme/spacing.dart';
 import '../../../services/matrix_service.dart';
 import '../../../widgets/gloam_avatar.dart';
@@ -81,9 +81,9 @@ class _ProfileCard extends ConsumerWidget {
     return Container(
       width: 500,
       decoration: BoxDecoration(
-        color: GloamColors.bgElevated,
+        color: context.gloam.bgElevated,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: GloamColors.border),
+        border: Border.all(color: context.gloam.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(100),
@@ -124,9 +124,9 @@ class _ProfileCard extends ConsumerWidget {
                       color: Colors.black38,
                       shape: BoxShape.circle,
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Icon(Icons.close,
-                          size: 14, color: GloamColors.textSecondary),
+                          size: 14, color: context.gloam.textSecondary),
                     ),
                   ),
                 ),
@@ -146,7 +146,7 @@ class _ProfileCard extends ConsumerWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                        color: GloamColors.bgElevated, width: 5),
+                        color: context.gloam.bgElevated, width: 5),
                   ),
                   child: GloamAvatar(
                     displayName: profile.displayName,
@@ -164,10 +164,10 @@ class _ProfileCard extends ConsumerWidget {
                     width: 18,
                     height: 18,
                     decoration: BoxDecoration(
-                      color: GloamColors.online,
+                      color: context.gloam.online,
                       shape: BoxShape.circle,
                       border: Border.all(
-                          color: GloamColors.bgElevated, width: 4),
+                          color: context.gloam.bgElevated, width: 4),
                     ),
                   ),
                 ),
@@ -193,7 +193,7 @@ class _ProfileCard extends ConsumerWidget {
                             style: GoogleFonts.inter(
                               fontSize: 22,
                               fontWeight: FontWeight.w600,
-                              color: GloamColors.textPrimary,
+                              color: context.gloam.textPrimary,
                             ),
                           ),
                           const SizedBox(height: 3),
@@ -201,7 +201,7 @@ class _ProfileCard extends ConsumerWidget {
                             profile.userId,
                             style: GoogleFonts.jetBrainsMono(
                               fontSize: 12,
-                              color: GloamColors.textTertiary,
+                              color: context.gloam.textTertiary,
                             ),
                           ),
                         ],
@@ -234,7 +234,7 @@ class _ProfileCard extends ConsumerWidget {
                 ),
 
                 const SizedBox(height: 20),
-                Container(height: 1, color: GloamColors.border),
+                Container(height: 1, color: context.gloam.border),
                 const SizedBox(height: 20),
 
                 // Details grid
@@ -260,8 +260,8 @@ class _ProfileCard extends ConsumerWidget {
                                     Icons.shield_outlined,
                                     size: 13,
                                     color: profile.powerLevel == 100
-                                        ? GloamColors.accent
-                                        : GloamColors.textSecondary,
+                                        ? context.gloam.accent
+                                        : context.gloam.textSecondary,
                                   ),
                                   const SizedBox(width: 5),
                                   Text(
@@ -270,8 +270,8 @@ class _ProfileCard extends ConsumerWidget {
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
                                       color: profile.powerLevel == 100
-                                          ? GloamColors.accent
-                                          : GloamColors.textPrimary,
+                                          ? context.gloam.accent
+                                          : context.gloam.textPrimary,
                                     ),
                                   ),
                                 ],
@@ -295,8 +295,8 @@ class _ProfileCard extends ConsumerWidget {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: profile.presence == 'online'
-                                        ? GloamColors.online
-                                        : GloamColors.textTertiary,
+                                        ? context.gloam.online
+                                        : context.gloam.textTertiary,
                                   ),
                                 ),
                                 const SizedBox(width: 5),
@@ -306,7 +306,7 @@ class _ProfileCard extends ConsumerWidget {
                                       : 'Offline',
                                   style: GoogleFonts.inter(
                                     fontSize: 13,
-                                    color: GloamColors.textPrimary,
+                                    color: context.gloam.textPrimary,
                                   ),
                                 ),
                               ],
@@ -321,13 +321,13 @@ class _ProfileCard extends ConsumerWidget {
                 // Mutual rooms
                 if (profile.mutualRooms.isNotEmpty) ...[
                   const SizedBox(height: 20),
-                  Container(height: 1, color: GloamColors.border),
+                  Container(height: 1, color: context.gloam.border),
                   const SizedBox(height: 20),
                   Text(
                     '// ${profile.mutualRooms.length} mutual rooms',
                     style: GoogleFonts.jetBrainsMono(
                       fontSize: 10,
-                      color: GloamColors.textTertiary,
+                      color: context.gloam.textTertiary,
                       letterSpacing: 1,
                     ),
                   ),
@@ -410,10 +410,10 @@ class _ProfileCard extends ConsumerWidget {
     showMenu(
       context: context,
       position: position,
-      color: GloamColors.bgElevated,
+      color: context.gloam.bgElevated,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: GloamColors.border),
+        side: BorderSide(color: context.gloam.border),
       ),
       items: [
         PopupMenuItem(
@@ -429,11 +429,11 @@ class _ProfileCard extends ConsumerWidget {
           },
           child: Row(
             children: [
-              const Icon(Icons.copy, size: 14, color: GloamColors.textSecondary),
+              Icon(Icons.copy, size: 14, color: context.gloam.textSecondary),
               const SizedBox(width: 8),
               Text('Copy Matrix ID',
                   style: GoogleFonts.inter(
-                      fontSize: 13, color: GloamColors.textPrimary)),
+                      fontSize: 13, color: context.gloam.textPrimary)),
             ],
           ),
         ),
@@ -464,14 +464,14 @@ class _ActionButton extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: Material(
-        color: isPrimary ? GloamColors.accentDim : GloamColors.bgSurface,
+        color: isPrimary ? context.gloam.accentDim : context.gloam.bgSurface,
         borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
           hoverColor: isPrimary
-              ? GloamColors.accent.withAlpha(30)
-              : GloamColors.bgElevated,
+              ? context.gloam.accent.withAlpha(30)
+              : context.gloam.bgElevated,
           child: Container(
             height: 36,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -479,7 +479,7 @@ class _ActionButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
               border: isPrimary
                   ? null
-                  : Border.all(color: GloamColors.border),
+                  : Border.all(color: context.gloam.border),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -487,8 +487,8 @@ class _ActionButton extends StatelessWidget {
                 Icon(icon,
                     size: 16,
                     color: isPrimary
-                        ? GloamColors.accent
-                        : GloamColors.textSecondary),
+                        ? context.gloam.accent
+                        : context.gloam.textSecondary),
                 const SizedBox(width: 8),
                 Text(
                   label,
@@ -496,8 +496,8 @@ class _ActionButton extends StatelessWidget {
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: isPrimary
-                        ? GloamColors.accent
-                        : GloamColors.textPrimary,
+                        ? context.gloam.accent
+                        : context.gloam.textPrimary,
                   ),
                 ),
               ],
@@ -520,21 +520,21 @@ class _IconAction extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: Material(
-        color: GloamColors.bgSurface,
+        color: context.gloam.bgSurface,
         borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-          hoverColor: GloamColors.bgElevated,
+          hoverColor: context.gloam.bgElevated,
           child: Container(
             width: 36,
             height: 36,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-              border: Border.all(color: GloamColors.border),
+              border: Border.all(color: context.gloam.border),
             ),
             child: Center(
-              child: Icon(icon, size: 16, color: GloamColors.textSecondary),
+              child: Icon(icon, size: 16, color: context.gloam.textSecondary),
             ),
           ),
         ),
@@ -559,7 +559,7 @@ class _DetailField extends StatelessWidget {
           '// $label',
           style: GoogleFonts.jetBrainsMono(
             fontSize: 9,
-            color: GloamColors.textTertiary,
+            color: context.gloam.textTertiary,
             letterSpacing: 1,
           ),
         ),
@@ -569,7 +569,7 @@ class _DetailField extends StatelessWidget {
               value ?? '—',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 13,
-                color: GloamColors.textPrimary,
+                color: context.gloam.textPrimary,
               ),
             ),
       ],
@@ -591,9 +591,9 @@ class _RoomChip extends StatelessWidget {
         height: 28,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
-          color: GloamColors.bgSurface,
+          color: context.gloam.bgSurface,
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: GloamColors.border),
+          border: Border.all(color: context.gloam.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -601,12 +601,12 @@ class _RoomChip extends StatelessWidget {
             if (!name.startsWith('+'))
               Text('#  ',
                   style: GoogleFonts.jetBrainsMono(
-                      fontSize: 12, color: GloamColors.textTertiary)),
+                      fontSize: 12, color: context.gloam.textTertiary)),
             Text(
               name,
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: GloamColors.textSecondary,
+                color: context.gloam.textSecondary,
               ),
             ),
           ],
@@ -623,17 +623,17 @@ class _LoadingCard extends StatelessWidget {
       width: 500,
       height: 300,
       decoration: BoxDecoration(
-        color: GloamColors.bgElevated,
+        color: context.gloam.bgElevated,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: GloamColors.border),
+        border: Border.all(color: context.gloam.border),
       ),
-      child: const Center(
+      child: Center(
         child: SizedBox(
           width: 24,
           height: 24,
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            color: GloamColors.accent,
+            color: context.gloam.accent,
           ),
         ),
       ),
@@ -652,20 +652,20 @@ class _ErrorCard extends StatelessWidget {
       width: 500,
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: GloamColors.bgElevated,
+        color: context.gloam.bgElevated,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: GloamColors.border),
+        border: Border.all(color: context.gloam.border),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(userId,
               style: GoogleFonts.jetBrainsMono(
-                  fontSize: 13, color: GloamColors.textSecondary)),
+                  fontSize: 13, color: context.gloam.textSecondary)),
           const SizedBox(height: 12),
           Text('Failed to load profile',
               style: GoogleFonts.inter(
-                  fontSize: 14, color: GloamColors.textTertiary)),
+                  fontSize: 14, color: context.gloam.textTertiary)),
         ],
       ),
     );
@@ -759,7 +759,7 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to upload avatar: $e'),
-              backgroundColor: GloamColors.danger),
+              backgroundColor: context.gloam.danger),
         );
       }
     }
@@ -804,7 +804,7 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save: $e'),
-              backgroundColor: GloamColors.danger),
+              backgroundColor: context.gloam.danger),
         );
       }
     }
@@ -826,13 +826,13 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
         child: Container(
           width: 500, height: 300,
           decoration: BoxDecoration(
-            color: GloamColors.bgElevated,
+            color: context.gloam.bgElevated,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: GloamColors.border),
+            border: Border.all(color: context.gloam.border),
           ),
-          child: const Center(
+          child: Center(
             child: SizedBox(width: 24, height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2, color: GloamColors.accent)),
+              child: CircularProgressIndicator(strokeWidth: 2, color: context.gloam.accent)),
           ),
         ),
       );
@@ -844,9 +844,9 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
       child: Container(
         width: 500,
         decoration: BoxDecoration(
-          color: GloamColors.bgElevated,
+          color: context.gloam.bgElevated,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: GloamColors.border),
+          border: Border.all(color: context.gloam.border),
           boxShadow: [
             BoxShadow(color: Colors.black.withAlpha(100), blurRadius: 40,
                 offset: const Offset(0, 12)),
@@ -877,9 +877,9 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
                       width: 28, height: 28,
                       decoration: const BoxDecoration(
                         color: Colors.black38, shape: BoxShape.circle),
-                      child: const Center(
+                      child: Center(
                         child: Icon(Icons.close, size: 14,
-                            color: GloamColors.textSecondary)),
+                            color: context.gloam.textSecondary)),
                     ),
                   ),
                 ),
@@ -901,7 +901,7 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: _editing ? GloamColors.accent : GloamColors.bgElevated,
+                            color: _editing ? context.gloam.accent : context.gloam.bgElevated,
                             width: 5),
                         ),
                         child: Stack(
@@ -936,14 +936,14 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
                                 child: Container(
                                   width: 28, height: 28,
                                   decoration: BoxDecoration(
-                                    color: GloamColors.bgSurface,
+                                    color: context.gloam.bgSurface,
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                        color: GloamColors.bgElevated, width: 3),
+                                        color: context.gloam.bgElevated, width: 3),
                                   ),
-                                  child: const Center(
+                                  child: Center(
                                     child: Icon(Icons.camera_alt, size: 13,
-                                        color: GloamColors.textSecondary)),
+                                        color: context.gloam.textSecondary)),
                                 ),
                               ),
                           ],
@@ -980,33 +980,33 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
                 children: [
                   Text(_displayName ?? '', style: GoogleFonts.inter(
                     fontSize: 22, fontWeight: FontWeight.w600,
-                    color: GloamColors.textPrimary)),
+                    color: context.gloam.textPrimary)),
                   const SizedBox(height: 3),
                   Text(userId, style: GoogleFonts.jetBrainsMono(
-                    fontSize: 12, color: GloamColors.textTertiary)),
+                    fontSize: 12, color: context.gloam.textTertiary)),
                 ],
               ),
             ),
             MouseRegion(
               cursor: SystemMouseCursors.click,
               child: Material(
-                color: GloamColors.accentDim,
+                color: context.gloam.accentDim,
                 borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
                 child: InkWell(
                   onTap: () => setState(() => _editing = true),
                   borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-                  hoverColor: GloamColors.accent.withAlpha(30),
+                  hoverColor: context.gloam.accent.withAlpha(30),
                   child: Container(
                     height: 36,
                     padding: const EdgeInsets.symmetric(horizontal: 18),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.edit, size: 14, color: GloamColors.accent),
+                        Icon(Icons.edit, size: 14, color: context.gloam.accent),
                         const SizedBox(width: 8),
                         Text('Edit Profile', style: GoogleFonts.inter(
                           fontSize: 13, fontWeight: FontWeight.w500,
-                          color: GloamColors.accent)),
+                          color: context.gloam.accent)),
                       ],
                     ),
                   ),
@@ -1017,7 +1017,7 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
         ),
 
         const SizedBox(height: 20),
-        Container(height: 1, color: GloamColors.border),
+        Container(height: 1, color: context.gloam.border),
         const SizedBox(height: 20),
 
         // Details
@@ -1044,24 +1044,24 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
         ),
 
         const SizedBox(height: 20),
-        Container(height: 1, color: GloamColors.border),
+        Container(height: 1, color: context.gloam.border),
         const SizedBox(height: 16),
 
         // Hint
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: GloamColors.bgSurface,
+            color: context.gloam.bgSurface,
             borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
           ),
           child: Row(
             children: [
-              const Icon(Icons.info_outline, size: 13, color: GloamColors.textTertiary),
+              Icon(Icons.info_outline, size: 13, color: context.gloam.textTertiary),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Click your avatar or "Edit Profile" to upload a photo and update your display name',
-                  style: GoogleFonts.inter(fontSize: 12, color: GloamColors.textTertiary),
+                  style: GoogleFonts.inter(fontSize: 12, color: context.gloam.textTertiary),
                 ),
               ),
             ],
@@ -1076,30 +1076,30 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('// edit profile', style: GoogleFonts.jetBrainsMono(
-          fontSize: 10, color: GloamColors.textTertiary, letterSpacing: 1)),
+          fontSize: 10, color: context.gloam.textTertiary, letterSpacing: 1)),
         const SizedBox(height: 20),
 
         // Display name
         Text('Display Name', style: GoogleFonts.inter(
-          fontSize: 13, fontWeight: FontWeight.w500, color: GloamColors.textSecondary)),
+          fontSize: 13, fontWeight: FontWeight.w500, color: context.gloam.textSecondary)),
         const SizedBox(height: 6),
         TextField(
           controller: _nameController,
-          style: GoogleFonts.inter(fontSize: 14, color: GloamColors.textPrimary),
+          style: GoogleFonts.inter(fontSize: 14, color: context.gloam.textPrimary),
           decoration: InputDecoration(
             filled: true,
-            fillColor: GloamColors.bgSurface,
+            fillColor: context.gloam.bgSurface,
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-              borderSide: const BorderSide(color: GloamColors.accent)),
+              borderSide: BorderSide(color: context.gloam.accent)),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-              borderSide: const BorderSide(color: GloamColors.accent)),
+              borderSide: BorderSide(color: context.gloam.accent)),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-              borderSide: const BorderSide(color: GloamColors.accent, width: 1.5)),
-            suffixIcon: const Icon(Icons.edit, size: 14, color: GloamColors.textTertiary),
+              borderSide: BorderSide(color: context.gloam.accent, width: 1.5)),
+            suffixIcon: Icon(Icons.edit, size: 14, color: context.gloam.textTertiary),
           ),
         ),
 
@@ -1107,36 +1107,36 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
 
         // Matrix ID (read-only)
         Text('Matrix ID', style: GoogleFonts.inter(
-          fontSize: 13, fontWeight: FontWeight.w500, color: GloamColors.textSecondary)),
+          fontSize: 13, fontWeight: FontWeight.w500, color: context.gloam.textSecondary)),
         const SizedBox(height: 6),
         Container(
           width: double.infinity, height: 40,
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: GloamColors.bg,
+            color: context.gloam.bg,
             borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-            border: Border.all(color: GloamColors.border),
+            border: Border.all(color: context.gloam.border),
           ),
           alignment: Alignment.centerLeft,
           child: Row(
             children: [
               Expanded(
                 child: Text(userId, style: GoogleFonts.jetBrainsMono(
-                  fontSize: 13, color: GloamColors.textTertiary)),
+                  fontSize: 13, color: context.gloam.textTertiary)),
               ),
-              const Icon(Icons.lock, size: 12, color: GloamColors.textTertiary),
+              Icon(Icons.lock, size: 12, color: context.gloam.textTertiary),
             ],
           ),
         ),
         const SizedBox(height: 4),
         Text('Matrix ID cannot be changed', style: GoogleFonts.inter(
-          fontSize: 11, fontStyle: FontStyle.italic, color: GloamColors.textTertiary)),
+          fontSize: 11, fontStyle: FontStyle.italic, color: context.gloam.textTertiary)),
 
         const SizedBox(height: 20),
 
         // Profile picture actions
         Text('Profile Picture', style: GoogleFonts.inter(
-          fontSize: 13, fontWeight: FontWeight.w500, color: GloamColors.textSecondary)),
+          fontSize: 13, fontWeight: FontWeight.w500, color: context.gloam.textSecondary)),
         const SizedBox(height: 6),
         Row(
           children: [
@@ -1152,7 +1152,7 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
         ),
 
         const SizedBox(height: 20),
-        Container(height: 1, color: GloamColors.border),
+        Container(height: 1, color: context.gloam.border),
         const SizedBox(height: 20),
 
         // Save / Cancel
@@ -1162,21 +1162,21 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
             MouseRegion(
               cursor: SystemMouseCursors.click,
               child: Material(
-                color: GloamColors.bgSurface,
+                color: context.gloam.bgSurface,
                 borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
                 child: InkWell(
                   onTap: () => setState(() => _editing = false),
                   borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-                  hoverColor: GloamColors.bgElevated,
+                  hoverColor: context.gloam.bgElevated,
                   child: Container(
                     height: 36,
                     padding: const EdgeInsets.symmetric(horizontal: 18),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-                      border: Border.all(color: GloamColors.border)),
+                      border: Border.all(color: context.gloam.border)),
                     child: Center(
                       child: Text('Cancel', style: GoogleFonts.inter(
-                        fontSize: 13, color: GloamColors.textSecondary)),
+                        fontSize: 13, color: context.gloam.textSecondary)),
                     ),
                   ),
                 ),
@@ -1186,12 +1186,12 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
             MouseRegion(
               cursor: SystemMouseCursors.click,
               child: Material(
-                color: GloamColors.accentDim,
+                color: context.gloam.accentDim,
                 borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
                 child: InkWell(
                   onTap: _saving ? null : _saveChanges,
                   borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-                  hoverColor: GloamColors.accent.withAlpha(30),
+                  hoverColor: context.gloam.accent.withAlpha(30),
                   child: Container(
                     height: 36,
                     padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -1199,15 +1199,15 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (_saving)
-                          const SizedBox(width: 14, height: 14,
+                          SizedBox(width: 14, height: 14,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: GloamColors.accent))
+                                strokeWidth: 2, color: context.gloam.accent))
                         else
-                          const Icon(Icons.check, size: 14, color: GloamColors.accent),
+                          Icon(Icons.check, size: 14, color: context.gloam.accent),
                         const SizedBox(width: 8),
                         Text('Save Changes', style: GoogleFonts.inter(
                           fontSize: 13, fontWeight: FontWeight.w500,
-                          color: GloamColors.accent)),
+                          color: context.gloam.accent)),
                       ],
                     ),
                   ),
@@ -1236,24 +1236,24 @@ class _EditActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isDanger ? GloamColors.danger : GloamColors.textSecondary;
-    final textColor = isDanger ? GloamColors.danger : GloamColors.textPrimary;
+    final color = isDanger ? context.gloam.danger : context.gloam.textSecondary;
+    final textColor = isDanger ? context.gloam.danger : context.gloam.textPrimary;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: Material(
-        color: GloamColors.bgSurface,
+        color: context.gloam.bgSurface,
         borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-          hoverColor: GloamColors.bgElevated,
+          hoverColor: context.gloam.bgElevated,
           child: Container(
             height: 36,
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-              border: Border.all(color: GloamColors.border)),
+              border: Border.all(color: context.gloam.border)),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

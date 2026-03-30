@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 
 /// Standard settings row: icon + label + trailing (value text, toggle, chevron).
 class SettingsTile extends StatelessWidget {
@@ -24,20 +24,20 @@ class SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = danger ? GloamColors.danger : GloamColors.textPrimary;
+    final color = danger ? context.gloam.danger : context.gloam.textPrimary;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
-        hoverColor: GloamColors.bgElevated,
+        hoverColor: context.gloam.bgElevated,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 18, color: danger ? GloamColors.danger : GloamColors.textSecondary),
+                Icon(icon, size: 18, color: danger ? context.gloam.danger : context.gloam.textSecondary),
                 const SizedBox(width: 12),
               ],
               Expanded(
@@ -51,12 +51,12 @@ class SettingsTile extends StatelessWidget {
                   value!,
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 12,
-                    color: GloamColors.textTertiary,
+                    color: context.gloam.textTertiary,
                   ),
                 ),
               if (trailing != null) trailing!,
               if (onTap != null && trailing == null && value == null)
-                const Icon(Icons.chevron_right, size: 16, color: GloamColors.textTertiary),
+                Icon(Icons.chevron_right, size: 16, color: context.gloam.textTertiary),
             ],
           ),
         ),
@@ -78,7 +78,7 @@ class SettingsSectionHeader extends StatelessWidget {
         '// $text',
         style: GoogleFonts.jetBrainsMono(
           fontSize: 10,
-          color: GloamColors.textTertiary,
+          color: context.gloam.textTertiary,
           letterSpacing: 1,
         ),
       ),

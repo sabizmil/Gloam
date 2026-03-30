@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_color_extension.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 
 /// Floating action toolbar that appears on message hover.
 /// Quick-react emoji + reply/edit/overflow, positioned top-right.
@@ -33,12 +34,13 @@ class HoverToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return Container(
       height: 32,
       decoration: BoxDecoration(
-        color: GloamColors.bgElevated,
+        color: colors.bgElevated,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: GloamColors.border),
+        border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF080F0A).withValues(alpha: 0.6),
@@ -60,7 +62,7 @@ class HoverToolbar extends StatelessWidget {
             width: 1,
             height: 18,
             margin: const EdgeInsets.symmetric(horizontal: 2),
-            color: GloamColors.border,
+            color: colors.border,
           ),
 
           // Reply
@@ -90,6 +92,7 @@ class HoverToolbar extends StatelessWidget {
   }
 
   void _showOverflow(BuildContext context) {
+    final colors = context.gloam;
     final RenderBox button = context.findRenderObject() as RenderBox;
     final overlay =
         Overlay.of(context).context.findRenderObject() as RenderBox;
@@ -106,17 +109,17 @@ class HoverToolbar extends StatelessWidget {
     showMenu<String>(
       context: context,
       position: position,
-      color: GloamColors.bgSurface,
+      color: colors.bgSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: GloamColors.border),
+        side: BorderSide(color: colors.border),
       ),
       items: [
-        _menuItem('copy', Icons.content_copy, 'Copy text'),
+        _menuItem(colors, 'copy', Icons.content_copy, 'Copy text'),
         if (onThread != null)
-          _menuItem('thread', Icons.chat_bubble_outline, 'Thread'),
+          _menuItem(colors, 'thread', Icons.chat_bubble_outline, 'Thread'),
         if (isOwnMessage)
-          _menuItem('delete', Icons.delete_outline, 'Delete',
+          _menuItem(colors, 'delete', Icons.delete_outline, 'Delete',
               danger: true),
       ],
     ).then((value) {
@@ -133,12 +136,13 @@ class HoverToolbar extends StatelessWidget {
   }
 
   PopupMenuItem<String> _menuItem(
+    GloamColorExtension colors,
     String value,
     IconData icon,
     String label, {
     bool danger = false,
   }) {
-    final color = danger ? GloamColors.danger : GloamColors.textPrimary;
+    final color = danger ? colors.danger : colors.textPrimary;
     return PopupMenuItem(
       value: value,
       height: 36,
@@ -170,7 +174,7 @@ class _EmojiButton extends StatelessWidget {
         height: 30,
         decoration: isActive
             ? BoxDecoration(
-                color: GloamColors.accentDim.withValues(alpha: 0.4),
+                color: context.gloam.accentDim.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(6),
               )
             : null,
@@ -203,7 +207,7 @@ class _IconButton extends StatelessWidget {
           width: 30,
           height: 30,
           child: Center(
-            child: Icon(icon, size: 15, color: GloamColors.textSecondary),
+            child: Icon(icon, size: 15, color: context.gloam.textSecondary),
           ),
         ),
       ),

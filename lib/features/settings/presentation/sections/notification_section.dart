@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../services/notification_diagnostic.dart';
 import '../../../../services/notification_service.dart';
 import '../widgets/settings_tile.dart';
@@ -60,7 +60,7 @@ class _NotificationSectionState extends State<NotificationSection> {
             'Fires a local notification to verify your system is configured correctly.',
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: GloamColors.textTertiary,
+              color: context.gloam.textTertiary,
             ),
           ),
         ),
@@ -74,14 +74,14 @@ class _NotificationSectionState extends State<NotificationSection> {
             showDialog(
               context: context,
               builder: (ctx) => AlertDialog(
-                backgroundColor: GloamColors.bgSurface,
+                backgroundColor: ctx.gloam.bgSurface,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: GloamColors.border),
+                  side: BorderSide(color: ctx.gloam.border),
                 ),
                 title: Text('diagnostic results',
                     style: GoogleFonts.jetBrainsMono(
-                        fontSize: 13, color: GloamColors.textPrimary)),
+                        fontSize: 13, color: ctx.gloam.textPrimary)),
                 content: SizedBox(
                   width: 500,
                   child: SingleChildScrollView(
@@ -89,7 +89,7 @@ class _NotificationSectionState extends State<NotificationSection> {
                       result,
                       style: GoogleFonts.jetBrainsMono(
                           fontSize: 11,
-                          color: GloamColors.textSecondary,
+                          color: ctx.gloam.textSecondary,
                           height: 1.6),
                     ),
                   ),
@@ -110,7 +110,7 @@ class _NotificationSectionState extends State<NotificationSection> {
             'Runs a step-by-step diagnostic and logs results to the console. Run this via flutter run to see output.',
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: GloamColors.textTertiary,
+              color: context.gloam.textTertiary,
             ),
           ),
         ),
@@ -121,23 +121,23 @@ class _NotificationSectionState extends State<NotificationSection> {
   Widget _buildTrailing() {
     return switch (_result) {
       _TestResult.none => const SizedBox.shrink(),
-      _TestResult.sending => const SizedBox(
+      _TestResult.sending => SizedBox(
           width: 14,
           height: 14,
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            color: GloamColors.textTertiary,
+            color: context.gloam.textTertiary,
           ),
         ),
-      _TestResult.success => const Icon(
+      _TestResult.success => Icon(
           Icons.check_circle_outline,
           size: 16,
-          color: GloamColors.accent,
+          color: context.gloam.accent,
         ),
-      _TestResult.failure => const Icon(
+      _TestResult.failure => Icon(
           Icons.error_outline,
           size: 16,
-          color: GloamColors.danger,
+          color: context.gloam.danger,
         ),
     };
   }

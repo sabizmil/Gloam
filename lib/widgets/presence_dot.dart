@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../app/theme/color_tokens.dart';
+import '../app/theme/gloam_theme_ext.dart';
 
 /// Small presence indicator dot overlaid on avatars.
 class PresenceDot extends StatelessWidget {
@@ -19,10 +19,10 @@ class PresenceDot extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: isOnline ? GloamColors.online : GloamColors.textTertiary,
+        color: isOnline ? context.gloam.online : context.gloam.textTertiary,
         shape: BoxShape.circle,
         border: Border.all(
-          color: GloamColors.bgSurface,
+          color: context.gloam.bgSurface,
           width: 2,
         ),
       ),

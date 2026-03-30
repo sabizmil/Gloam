@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:matrix/matrix.dart' show EventTypes;
 
-import '../theme/color_tokens.dart';
+import '../theme/gloam_theme_ext.dart';
 import '../theme/spacing.dart';
 import '../../features/calls/presentation/screens/voice_channel_screen.dart';
 import '../../features/chat/presentation/providers/timeline_provider.dart';
@@ -105,8 +105,8 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: GloamColors.bg,
-      child: const Center(
+      color: context.gloam.bg,
+      child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -117,16 +117,16 @@ class _EmptyState extends StatelessWidget {
                 fontSize: 22,
                 fontWeight: FontWeight.w300,
                 fontStyle: FontStyle.italic,
-                color: GloamColors.accentDim,
+                color: context.gloam.accentDim,
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               '// select a conversation',
               style: TextStyle(
                 fontFamily: 'JetBrains Mono',
                 fontSize: 11,
-                color: GloamColors.textTertiary,
+                color: context.gloam.textTertiary,
                 letterSpacing: 1,
               ),
             ),

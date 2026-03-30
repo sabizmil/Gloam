@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../services/voice_service.dart';
 import '../../domain/voice_participant.dart';
 import '../../domain/voice_permissions.dart';
@@ -28,10 +28,10 @@ void showParticipantContextMenu({
       position.dx + 1,
       position.dy + 1,
     ),
-    color: GloamColors.bgElevated,
+    color: context.gloam.bgElevated,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(8),
-      side: const BorderSide(color: GloamColors.border),
+      side: BorderSide(color: context.gloam.border),
     ),
     items: [
       // Header: participant name
@@ -43,7 +43,7 @@ void showParticipantContextMenu({
           style: GoogleFonts.inter(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: GloamColors.textPrimary,
+            color: context.gloam.textPrimary,
           ),
         ),
       ),
@@ -69,14 +69,14 @@ void showParticipantContextMenu({
         },
         child: Row(
           children: [
-            const Icon(Icons.volume_off_rounded,
-                size: 16, color: GloamColors.textSecondary),
+            Icon(Icons.volume_off_rounded,
+                size: 16, color: context.gloam.textSecondary),
             const SizedBox(width: 8),
             Text(
               'Mute for me',
               style: GoogleFonts.inter(
                 fontSize: 13,
-                color: GloamColors.textPrimary,
+                color: context.gloam.textPrimary,
               ),
             ),
           ],
@@ -100,14 +100,14 @@ void showParticipantContextMenu({
                       ? Icons.mic_rounded
                       : Icons.mic_off_rounded,
                   size: 16,
-                  color: GloamColors.warning,
+                  color: context.gloam.warning,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   participant.isServerMuted ? 'Unmute' : 'Server Mute',
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: GloamColors.warning,
+                    color: context.gloam.warning,
                   ),
                 ),
               ],
@@ -122,14 +122,14 @@ void showParticipantContextMenu({
             },
             child: Row(
               children: [
-                const Icon(Icons.logout_rounded,
-                    size: 16, color: GloamColors.danger),
+                Icon(Icons.logout_rounded,
+                    size: 16, color: context.gloam.danger),
                 const SizedBox(width: 8),
                 Text(
                   'Disconnect',
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: GloamColors.danger,
+                    color: context.gloam.danger,
                   ),
                 ),
               ],
@@ -160,15 +160,15 @@ class _VolumeSliderItemState extends State<_VolumeSliderItem> {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Icon(Icons.volume_up_rounded,
-            size: 14, color: GloamColors.textTertiary),
+        Icon(Icons.volume_up_rounded,
+            size: 14, color: context.gloam.textTertiary),
         Expanded(
           child: SliderTheme(
             data: SliderThemeData(
-              activeTrackColor: GloamColors.accent,
-              inactiveTrackColor: GloamColors.border,
-              thumbColor: GloamColors.accent,
-              overlayColor: GloamColors.accent.withAlpha(30),
+              activeTrackColor: context.gloam.accent,
+              inactiveTrackColor: context.gloam.border,
+              thumbColor: context.gloam.accent,
+              overlayColor: context.gloam.accent.withAlpha(30),
               trackHeight: 3,
               thumbShape:
                   const RoundSliderThumbShape(enabledThumbRadius: 6),
@@ -191,7 +191,7 @@ class _VolumeSliderItemState extends State<_VolumeSliderItem> {
           '${(_volume * 100).round()}%',
           style: GoogleFonts.jetBrainsMono(
             fontSize: 10,
-            color: GloamColors.textSecondary,
+            color: context.gloam.textSecondary,
           ),
         ),
       ],

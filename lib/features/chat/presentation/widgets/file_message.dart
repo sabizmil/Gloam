@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/download_service.dart';
 import '../../../../services/matrix_service.dart';
@@ -94,13 +94,14 @@ class _FileMessageState extends ConsumerState<FileMessage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return Container(
       constraints: const BoxConstraints(maxWidth: 320),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: GloamColors.bgElevated,
+        color: colors.bgElevated,
         borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-        border: Border.all(color: GloamColors.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -109,13 +110,13 @@ class _FileMessageState extends ConsumerState<FileMessage> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: GloamColors.accentDim.withValues(alpha: 0.3),
+              color: colors.accentDim.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               _iconForMime(widget.message.mimeType),
               size: 20,
-              color: GloamColors.accent,
+              color: colors.accent,
             ),
           ),
           const SizedBox(width: 12),
@@ -128,7 +129,7 @@ class _FileMessageState extends ConsumerState<FileMessage> {
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: GloamColors.textPrimary,
+                    color: colors.textPrimary,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -138,7 +139,7 @@ class _FileMessageState extends ConsumerState<FileMessage> {
                   _formatBytes(widget.message.mediaSizeBytes),
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 10,
-                    color: GloamColors.textTertiary,
+                    color: colors.textTertiary,
                   ),
                 ),
               ],
@@ -152,6 +153,7 @@ class _FileMessageState extends ConsumerState<FileMessage> {
   }
 
   Widget _buildAction() {
+    final colors = context.gloam;
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 200),
       child: switch (_state) {
@@ -159,32 +161,32 @@ class _FileMessageState extends ConsumerState<FileMessage> {
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
               onTap: _onDownload,
-              child: const Icon(
+              child: Icon(
                 Icons.download_outlined,
-                key: ValueKey('download'),
+                key: const ValueKey('download'),
                 size: 18,
-                color: GloamColors.textSecondary,
+                color: colors.textSecondary,
               ),
             ),
           ),
-        _DownloadState.downloading => const SizedBox(
-            key: ValueKey('loading'),
+        _DownloadState.downloading => SizedBox(
+            key: const ValueKey('loading'),
             width: 18,
             height: 18,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: GloamColors.accent,
+              color: colors.accent,
             ),
           ),
         _DownloadState.complete => MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
               onTap: _onOpen,
-              child: const Icon(
+              child: Icon(
                 Icons.check_circle_outlined,
-                key: ValueKey('complete'),
+                key: const ValueKey('complete'),
                 size: 18,
-                color: GloamColors.accent,
+                color: colors.accent,
               ),
             ),
           ),
@@ -192,11 +194,11 @@ class _FileMessageState extends ConsumerState<FileMessage> {
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
               onTap: _onDownload,
-              child: const Icon(
+              child: Icon(
                 Icons.error_outline,
-                key: ValueKey('error'),
+                key: const ValueKey('error'),
                 size: 18,
-                color: GloamColors.danger,
+                color: colors.danger,
               ),
             ),
           ),
@@ -212,12 +214,13 @@ class VideoMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return Container(
       constraints: const BoxConstraints(maxWidth: 400, maxHeight: 260),
       decoration: BoxDecoration(
-        color: GloamColors.bgElevated,
+        color: colors.bgElevated,
         borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-        border: Border.all(color: GloamColors.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
@@ -230,7 +233,7 @@ class VideoMessage extends StatelessWidget {
               child: Icon(
                 Icons.videocam_outlined,
                 size: 32,
-                color: GloamColors.textTertiary,
+                color: colors.textTertiary,
               ),
             ),
           ),
@@ -238,14 +241,14 @@ class VideoMessage extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: GloamColors.bg.withValues(alpha: 0.7),
+              color: colors.bg.withValues(alpha: 0.7),
               shape: BoxShape.circle,
-              border: Border.all(color: GloamColors.border),
+              border: Border.all(color: colors.border),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.play_arrow,
               size: 28,
-              color: GloamColors.textPrimary,
+              color: colors.textPrimary,
             ),
           ),
           Positioned(
@@ -254,14 +257,14 @@ class VideoMessage extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: GloamColors.bg.withValues(alpha: 0.7),
+                color: colors.bg.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 message.body,
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 10,
-                  color: GloamColors.textPrimary,
+                  color: colors.textPrimary,
                 ),
               ),
             ),

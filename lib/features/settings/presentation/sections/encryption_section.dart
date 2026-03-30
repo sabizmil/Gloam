@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../services/matrix_service.dart';
 import '../recovery_key_dialog.dart';
 import '../widgets/settings_tile.dart';
@@ -80,8 +80,8 @@ class EncryptionSection extends ConsumerWidget {
             label: device.deviceDisplayName ?? device.deviceId ?? 'unknown',
             value: isCurrent ? 'this device' : null,
             trailing: device.verified
-                ? const Icon(Icons.verified, size: 16, color: GloamColors.accent)
-                : const Icon(Icons.warning_amber, size: 16, color: GloamColors.warning),
+                ? Icon(Icons.verified, size: 16, color: context.gloam.accent)
+                : Icon(Icons.warning_amber, size: 16, color: context.gloam.warning),
           );
         }),
 

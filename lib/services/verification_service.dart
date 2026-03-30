@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:matrix/encryption/utils/key_verification.dart';
 import 'package:matrix/matrix.dart';
 
-import '../app/theme/color_tokens.dart';
+import '../app/theme/gloam_theme_ext.dart';
 import '../app/theme/spacing.dart';
 
 /// Handles incoming and outgoing device verification flows.
@@ -56,7 +56,7 @@ class VerificationService {
     // Show accept/decline dialog
     final accepted = await showDialog<bool>(
       context: context,
-      barrierColor: GloamColors.overlay,
+      barrierColor: context.gloam.overlay,
       barrierDismissible: false,
       builder: (ctx) => _AcceptVerificationDialog(
         deviceId: request.deviceId,
@@ -92,7 +92,7 @@ class VerificationService {
   void _showSasDialog(BuildContext context, KeyVerification request) {
     showDialog<bool>(
       context: context,
-      barrierColor: GloamColors.overlay,
+      barrierColor: context.gloam.overlay,
       barrierDismissible: false,
       builder: (ctx) => _SasVerificationDialog(
         emojis: request.sasEmojis,
@@ -110,27 +110,27 @@ class VerificationService {
   void _showDoneDialog(BuildContext context) {
     showDialog(
       context: context,
-      barrierColor: GloamColors.overlay,
+      barrierColor: context.gloam.overlay,
       builder: (ctx) => Dialog(
-        backgroundColor: GloamColors.bgSurface,
+        backgroundColor: context.gloam.bgSurface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(GloamSpacing.radiusLg),
-          side: const BorderSide(color: GloamColors.border),
+          side: BorderSide(color: context.gloam.border),
         ),
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.check_circle,
-                  size: 48, color: GloamColors.accent),
+              Icon(Icons.check_circle,
+                  size: 48, color: context.gloam.accent),
               const SizedBox(height: 16),
               Text(
                 'device verified',
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: GloamColors.textPrimary,
+                  color: context.gloam.textPrimary,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -139,7 +139,7 @@ class VerificationService {
                 'encryption keys have been shared',
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: GloamColors.textSecondary,
+                  color: context.gloam.textSecondary,
                 ),
               ),
               const SizedBox(height: 24),
@@ -157,27 +157,27 @@ class VerificationService {
   void _showErrorDialog(BuildContext context, KeyVerification request) {
     showDialog(
       context: context,
-      barrierColor: GloamColors.overlay,
+      barrierColor: context.gloam.overlay,
       builder: (ctx) => Dialog(
-        backgroundColor: GloamColors.bgSurface,
+        backgroundColor: context.gloam.bgSurface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(GloamSpacing.radiusLg),
-          side: const BorderSide(color: GloamColors.border),
+          side: BorderSide(color: context.gloam.border),
         ),
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline,
-                  size: 48, color: GloamColors.danger),
+              Icon(Icons.error_outline,
+                  size: 48, color: context.gloam.danger),
               const SizedBox(height: 16),
               Text(
                 'verification failed',
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: GloamColors.textPrimary,
+                  color: context.gloam.textPrimary,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -186,7 +186,7 @@ class VerificationService {
                 request.canceledCode ?? 'unknown error',
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: GloamColors.textSecondary,
+                  color: context.gloam.textSecondary,
                 ),
               ),
               const SizedBox(height: 24),
@@ -209,24 +209,24 @@ class _AcceptVerificationDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: GloamColors.bgSurface,
+      backgroundColor: context.gloam.bgSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(GloamSpacing.radiusLg),
-        side: const BorderSide(color: GloamColors.border),
+        side: BorderSide(color: context.gloam.border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.security, size: 32, color: GloamColors.accent),
+            Icon(Icons.security, size: 32, color: context.gloam.accent),
             const SizedBox(height: 16),
             Text(
               'verification request',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: GloamColors.textPrimary,
+                color: context.gloam.textPrimary,
                 letterSpacing: 0.5,
               ),
             ),
@@ -235,7 +235,7 @@ class _AcceptVerificationDialog extends StatelessWidget {
               'another device wants to verify this session',
               style: GoogleFonts.inter(
                 fontSize: 13,
-                color: GloamColors.textSecondary,
+                color: context.gloam.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -245,7 +245,7 @@ class _AcceptVerificationDialog extends StatelessWidget {
                 deviceId!,
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 11,
-                  color: GloamColors.textTertiary,
+                  color: context.gloam.textTertiary,
                 ),
               ),
             ],
@@ -280,10 +280,10 @@ class _SasVerificationDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: GloamColors.bgSurface,
+      backgroundColor: context.gloam.bgSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(GloamSpacing.radiusLg),
-        side: const BorderSide(color: GloamColors.border),
+        side: BorderSide(color: context.gloam.border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -295,7 +295,7 @@ class _SasVerificationDialog extends StatelessWidget {
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: GloamColors.textPrimary,
+                color: context.gloam.textPrimary,
                 letterSpacing: 0.5,
               ),
             ),
@@ -304,7 +304,7 @@ class _SasVerificationDialog extends StatelessWidget {
               'confirm these match on your other device',
               style: GoogleFonts.inter(
                 fontSize: 13,
-                color: GloamColors.textSecondary,
+                color: context.gloam.textSecondary,
               ),
             ),
             const SizedBox(height: 24),
@@ -325,7 +325,7 @@ class _SasVerificationDialog extends StatelessWidget {
                               e.name,
                               style: GoogleFonts.jetBrainsMono(
                                 fontSize: 10,
-                                color: GloamColors.textTertiary,
+                                color: context.gloam.textTertiary,
                               ),
                             ),
                           ],
@@ -339,7 +339,7 @@ class _SasVerificationDialog extends StatelessWidget {
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 24,
                   fontWeight: FontWeight.w500,
-                  color: GloamColors.textPrimary,
+                  color: context.gloam.textPrimary,
                   letterSpacing: 4,
                 ),
               ),
@@ -354,7 +354,7 @@ class _SasVerificationDialog extends StatelessWidget {
                     'they don\'t match',
                     style: GoogleFonts.jetBrainsMono(
                       fontSize: 12,
-                      color: GloamColors.danger,
+                      color: context.gloam.danger,
                     ),
                   ),
                 ),

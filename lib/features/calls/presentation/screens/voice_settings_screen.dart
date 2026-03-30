@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/audio_device_service.dart';
 import '../../../settings/presentation/widgets/settings_tile.dart';
@@ -216,8 +216,8 @@ class _VoiceSettingsScreenState extends ConsumerState<VoiceSettingsScreen> {
                       : Icons.error_outline,
                   size: 14,
                   color: _testStatus.contains('working')
-                      ? GloamColors.accent
-                      : GloamColors.warning,
+                      ? context.gloam.accent
+                      : context.gloam.warning,
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -225,8 +225,8 @@ class _VoiceSettingsScreenState extends ConsumerState<VoiceSettingsScreen> {
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 11,
                     color: _testStatus.contains('working')
-                        ? GloamColors.accent
-                        : GloamColors.warning,
+                        ? context.gloam.accent
+                        : context.gloam.warning,
                   ),
                 ),
               ],
@@ -311,15 +311,15 @@ class _VoiceSettingsScreenState extends ConsumerState<VoiceSettingsScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: GloamColors.bgSurface,
+                  color: context.gloam.bgSurface,
                   borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
-                  border: Border.all(color: GloamColors.border),
+                  border: Border.all(color: context.gloam.border),
                 ),
                 child: Text(
                   'Click to set',
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 11,
-                    color: GloamColors.textTertiary,
+                    color: context.gloam.textTertiary,
                   ),
                 ),
               ),
@@ -403,10 +403,10 @@ class _DevicePopupButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
       onSelected: onSelected,
-      color: GloamColors.bgElevated,
+      color: context.gloam.bgElevated,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: GloamColors.border),
+        side: BorderSide(color: context.gloam.border),
       ),
       offset: const Offset(0, 36),
       itemBuilder: (_) => devices.map((d) {
@@ -417,7 +417,7 @@ class _DevicePopupButton extends StatelessWidget {
           child: Row(
             children: [
               if (isSelected)
-                const Icon(Icons.check, size: 14, color: GloamColors.accent)
+                Icon(Icons.check, size: 14, color: context.gloam.accent)
               else
                 const SizedBox(width: 14),
               const SizedBox(width: 8),
@@ -427,8 +427,8 @@ class _DevicePopupButton extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     color: isSelected
-                        ? GloamColors.accent
-                        : GloamColors.textPrimary,
+                        ? context.gloam.accent
+                        : context.gloam.textPrimary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -442,9 +442,9 @@ class _DevicePopupButton extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 220),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: GloamColors.bgSurface,
+          color: context.gloam.bgSurface,
           borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
-          border: Border.all(color: GloamColors.border),
+          border: Border.all(color: context.gloam.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -454,15 +454,15 @@ class _DevicePopupButton extends StatelessWidget {
                 currentName,
                 style: GoogleFonts.inter(
                   fontSize: 12,
-                  color: GloamColors.textPrimary,
+                  color: context.gloam.textPrimary,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(width: 6),
-            const Icon(Icons.keyboard_arrow_down,
-                size: 14, color: GloamColors.textTertiary),
+            Icon(Icons.keyboard_arrow_down,
+                size: 14, color: context.gloam.textTertiary),
           ],
         ),
       ),
@@ -495,17 +495,17 @@ class _LabeledSlider extends StatelessWidget {
               label,
               style: GoogleFonts.inter(
                 fontSize: 13,
-                color: GloamColors.textSecondary,
+                color: context.gloam.textSecondary,
               ),
             ),
           ),
           Expanded(
             child: SliderTheme(
               data: SliderThemeData(
-                activeTrackColor: GloamColors.accent,
-                inactiveTrackColor: GloamColors.border,
-                thumbColor: GloamColors.accent,
-                overlayColor: GloamColors.accent.withAlpha(30),
+                activeTrackColor: context.gloam.accent,
+                inactiveTrackColor: context.gloam.border,
+                thumbColor: context.gloam.accent,
+                overlayColor: context.gloam.accent.withAlpha(30),
                 trackHeight: 4,
                 thumbShape:
                     const RoundSliderThumbShape(enabledThumbRadius: 7),
@@ -519,7 +519,7 @@ class _LabeledSlider extends StatelessWidget {
               suffix ?? '${(value * 100).round()}%',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 11,
-                color: GloamColors.textSecondary,
+                color: context.gloam.textSecondary,
               ),
               textAlign: TextAlign.right,
             ),
@@ -549,10 +549,10 @@ class _ModeCard extends StatelessWidget {
         height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: isSelected ? GloamColors.accentDim : GloamColors.bgSurface,
+          color: isSelected ? context.gloam.accentDim : context.gloam.bgSurface,
           borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
           border: Border.all(
-            color: isSelected ? GloamColors.accent : GloamColors.border,
+            color: isSelected ? context.gloam.accent : context.gloam.border,
           ),
         ),
         child: Row(
@@ -564,8 +564,8 @@ class _ModeCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: isSelected
-                      ? GloamColors.accent
-                      : GloamColors.textTertiary,
+                      ? context.gloam.accent
+                      : context.gloam.textTertiary,
                   width: 2,
                 ),
               ),
@@ -574,9 +574,9 @@ class _ModeCard extends StatelessWidget {
                       child: Container(
                         width: 8,
                         height: 8,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: GloamColors.accent,
+                          color: context.gloam.accent,
                         ),
                       ),
                     )
@@ -589,8 +589,8 @@ class _ModeCard extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
                 color: isSelected
-                    ? GloamColors.textPrimary
-                    : GloamColors.textSecondary,
+                    ? context.gloam.textPrimary
+                    : context.gloam.textSecondary,
               ),
             ),
           ],
@@ -627,7 +627,7 @@ class _ToggleTile extends StatelessWidget {
                   label,
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: GloamColors.textPrimary,
+                    color: context.gloam.textPrimary,
                   ),
                 ),
                 if (subtitle != null)
@@ -635,7 +635,7 @@ class _ToggleTile extends StatelessWidget {
                     subtitle!,
                     style: GoogleFonts.inter(
                       fontSize: 11,
-                      color: GloamColors.textTertiary,
+                      color: context.gloam.textTertiary,
                     ),
                   ),
               ],
@@ -649,7 +649,7 @@ class _ToggleTile extends StatelessWidget {
               height: 22,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(11),
-                color: value ? GloamColors.accent : GloamColors.border,
+                color: value ? context.gloam.accent : context.gloam.border,
               ),
               child: AnimatedAlign(
                 duration: const Duration(milliseconds: 200),
@@ -662,7 +662,7 @@ class _ToggleTile extends StatelessWidget {
                     height: 18,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: value ? Colors.white : GloamColors.textSecondary,
+                      color: value ? Colors.white : context.gloam.textSecondary,
                     ),
                   ),
                 ),
@@ -691,7 +691,7 @@ class _ActionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: isActive ? GloamColors.accentDim : GloamColors.bgSurface,
+      color: isActive ? context.gloam.accentDim : context.gloam.bgSurface,
       borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
       child: InkWell(
         onTap: isActive ? null : onTap,
@@ -701,7 +701,7 @@ class _ActionChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
             border: Border.all(
-              color: isActive ? GloamColors.accent : GloamColors.border,
+              color: isActive ? context.gloam.accent : context.gloam.border,
             ),
           ),
           child: Row(
@@ -709,7 +709,7 @@ class _ActionChip extends StatelessWidget {
             children: [
               Icon(icon,
                   size: 14,
-                  color: isActive ? GloamColors.accent : GloamColors.accent),
+                  color: isActive ? context.gloam.accent : context.gloam.accent),
               const SizedBox(width: 8),
               Text(
                 label,
@@ -717,8 +717,8 @@ class _ActionChip extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                   color: isActive
-                      ? GloamColors.accent
-                      : GloamColors.textPrimary,
+                      ? context.gloam.accent
+                      : context.gloam.textPrimary,
                 ),
               ),
             ],

@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:matrix/matrix.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_color_extension.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/matrix_service.dart';
 
@@ -77,11 +78,12 @@ class _MediaGalleryState extends ConsumerState<MediaGallery> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return Container(
       width: GloamSpacing.rightPanelWidth,
-      decoration: const BoxDecoration(
-        color: GloamColors.bgSurface,
-        border: Border(left: BorderSide(color: GloamColors.border)),
+      decoration: BoxDecoration(
+        color: colors.bgSurface,
+        border: Border(left: BorderSide(color: colors.border)),
       ),
       child: Column(
         children: [
@@ -89,9 +91,9 @@ class _MediaGalleryState extends ConsumerState<MediaGallery> {
           Container(
             height: GloamSpacing.headerHeight,
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border:
-                  Border(bottom: BorderSide(color: GloamColors.border)),
+                  Border(bottom: BorderSide(color: colors.border)),
             ),
             child: Row(
               children: [
@@ -100,15 +102,15 @@ class _MediaGalleryState extends ConsumerState<MediaGallery> {
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: GloamColors.textPrimary,
+                    color: colors.textPrimary,
                     letterSpacing: 0.5,
                   ),
                 ),
                 const Spacer(),
                 GestureDetector(
                   onTap: widget.onClose,
-                  child: const Icon(Icons.close,
-                      size: 16, color: GloamColors.textTertiary),
+                  child: Icon(Icons.close,
+                      size: 16, color: colors.textTertiary),
                 ),
               ],
             ),
@@ -128,12 +130,12 @@ class _MediaGalleryState extends ConsumerState<MediaGallery> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: active ? GloamColors.accentDim : null,
+                        color: active ? colors.accentDim : null,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: active
-                              ? GloamColors.accent
-                              : GloamColors.border,
+                              ? colors.accent
+                              : colors.border,
                         ),
                       ),
                       child: Text(
@@ -141,8 +143,8 @@ class _MediaGalleryState extends ConsumerState<MediaGallery> {
                         style: GoogleFonts.jetBrainsMono(
                           fontSize: 10,
                           color: active
-                              ? GloamColors.accent
-                              : GloamColors.textTertiary,
+                              ? colors.accent
+                              : colors.textTertiary,
                         ),
                       ),
                     ),
@@ -155,10 +157,10 @@ class _MediaGalleryState extends ConsumerState<MediaGallery> {
           // Grid
           Expanded(
             child: _loading
-                ? const Center(
+                ? Center(
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: GloamColors.accent,
+                      color: colors.accent,
                     ),
                   )
                 : _filteredEvents.isEmpty
@@ -167,7 +169,7 @@ class _MediaGalleryState extends ConsumerState<MediaGallery> {
                           '// no media',
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 11,
-                            color: GloamColors.textTertiary,
+                            color: colors.textTertiary,
                             letterSpacing: 1,
                           ),
                         ),
@@ -191,14 +193,14 @@ class _MediaGalleryState extends ConsumerState<MediaGallery> {
           // Count
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: GloamColors.border)),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: colors.border)),
             ),
             child: Text(
               '${_filteredEvents.length} item${_filteredEvents.length == 1 ? '' : 's'}',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 10,
-                color: GloamColors.textTertiary,
+                color: colors.textTertiary,
               ),
             ),
           ),
@@ -214,13 +216,14 @@ class _MediaTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.gloam;
     final isImage = event.messageType == MessageTypes.Image;
 
     return Container(
       decoration: BoxDecoration(
-        color: GloamColors.bgElevated,
+        color: colors.bgElevated,
         borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
-        border: Border.all(color: GloamColors.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
       ),
       clipBehavior: Clip.antiAlias,
       child: isImage
@@ -234,23 +237,23 @@ class _MediaTile extends ConsumerWidget {
                     fit: BoxFit.cover,
                     width: double.infinity,
                     height: double.infinity,
-                    errorBuilder: (_, __, ___) => _filePlaceholder(),
+                    errorBuilder: (_, __, ___) => _filePlaceholder(colors),
                   );
                 }
-                return _filePlaceholder();
+                return _filePlaceholder(colors);
               },
             )
-          : _filePlaceholder(),
+          : _filePlaceholder(colors),
     );
   }
 
-  Widget _filePlaceholder() {
+  Widget _filePlaceholder(GloamColorExtension colors) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.insert_drive_file_outlined,
-              size: 20, color: GloamColors.textTertiary),
+          Icon(Icons.insert_drive_file_outlined,
+              size: 20, color: colors.textTertiary),
           const SizedBox(height: 4),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -258,7 +261,7 @@ class _MediaTile extends ConsumerWidget {
               event.body,
               style: GoogleFonts.inter(
                 fontSize: 9,
-                color: GloamColors.textTertiary,
+                color: colors.textTertiary,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,

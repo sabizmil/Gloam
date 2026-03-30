@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../services/voice_service.dart';
 import '../../domain/voice_connection_quality.dart';
 import '../../domain/voice_participant.dart';
@@ -63,10 +63,10 @@ class _PersistentVoiceBarState extends ConsumerState<PersistentVoiceBar> {
 
     return Container(
       height: height,
-      decoration: const BoxDecoration(
-        color: GloamColors.bgElevated,
+      decoration: BoxDecoration(
+        color: context.gloam.bgElevated,
         border: Border(
-          top: BorderSide(color: GloamColors.accentDim, width: 1),
+          top: BorderSide(color: context.gloam.accentDim, width: 1),
         ),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -81,8 +81,8 @@ class _PersistentVoiceBarState extends ConsumerState<PersistentVoiceBar> {
               },
               child: Row(
                 children: [
-                  const Icon(Icons.volume_up_rounded,
-                      size: 18, color: GloamColors.accent),
+                  Icon(Icons.volume_up_rounded,
+                      size: 18, color: context.gloam.accent),
                   const SizedBox(width: 10),
                   Flexible(
                     child: Column(
@@ -94,7 +94,7 @@ class _PersistentVoiceBarState extends ConsumerState<PersistentVoiceBar> {
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: GloamColors.textPrimary,
+                            color: context.gloam.textPrimary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -103,7 +103,7 @@ class _PersistentVoiceBarState extends ConsumerState<PersistentVoiceBar> {
                           _participantSummary(widget.state.participants),
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 10,
-                            color: GloamColors.textTertiary,
+                            color: context.gloam.textTertiary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -121,7 +121,7 @@ class _PersistentVoiceBarState extends ConsumerState<PersistentVoiceBar> {
             _formatElapsed(_elapsed),
             style: GoogleFonts.jetBrainsMono(
               fontSize: 11,
-              color: GloamColors.textSecondary,
+              color: context.gloam.textSecondary,
             ),
           ),
           const SizedBox(width: 8),
@@ -146,7 +146,7 @@ class _PersistentVoiceBarState extends ConsumerState<PersistentVoiceBar> {
           const SizedBox(width: 4),
           _BarIconButton(
             icon: Icons.call_end_rounded,
-            color: GloamColors.danger,
+            color: context.gloam.danger,
             backgroundColor: const Color(0xFF3A1A1A),
             tooltip: 'Disconnect',
             onTap: () => voiceService.disconnect(),
@@ -196,10 +196,10 @@ class _ConnectionQualityDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (quality) {
-      VoiceConnectionQuality.good => GloamColors.online,
-      VoiceConnectionQuality.fair => GloamColors.warning,
-      VoiceConnectionQuality.poor => GloamColors.danger,
-      VoiceConnectionQuality.unknown => GloamColors.textTertiary,
+      VoiceConnectionQuality.good => context.gloam.online,
+      VoiceConnectionQuality.fair => context.gloam.warning,
+      VoiceConnectionQuality.poor => context.gloam.danger,
+      VoiceConnectionQuality.unknown => context.gloam.textTertiary,
     };
 
     return Container(
@@ -218,22 +218,22 @@ class _BarIconButton extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onTap,
-    this.color = GloamColors.textPrimary,
-    this.backgroundColor = GloamColors.bgSurface,
+    this.color,
+    this.backgroundColor,
   });
 
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
-  final Color color;
-  final Color backgroundColor;
+  final Color? color;
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: backgroundColor,
+        color: backgroundColor ?? context.gloam.bgSurface,
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           onTap: onTap,
@@ -241,7 +241,7 @@ class _BarIconButton extends StatelessWidget {
           child: SizedBox(
             width: 36,
             height: 36,
-            child: Icon(icon, size: 18, color: color),
+            child: Icon(icon, size: 18, color: color ?? context.gloam.textPrimary),
           ),
         ),
       ),

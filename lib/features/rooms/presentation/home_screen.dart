@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../app/theme/color_tokens.dart';
+import '../../../app/theme/gloam_theme_ext.dart';
 import '../../../app/theme/spacing.dart';
 import '../../../app/router.dart';
 import '../../../app/shell/adaptive_shell.dart';
@@ -60,7 +60,7 @@ class _LoadingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: GloamColors.bg,
+      backgroundColor: context.gloam.bg,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -69,7 +69,7 @@ class _LoadingScreen extends StatelessWidget {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: GloamColors.accentDim,
+                color: context.gloam.accentDim,
                 borderRadius: BorderRadius.circular(GloamSpacing.radiusLg),
               ),
               child: Center(
@@ -79,7 +79,7 @@ class _LoadingScreen extends StatelessWidget {
                     fontSize: 32,
                     fontWeight: FontWeight.w300,
                     fontStyle: FontStyle.italic,
-                    color: GloamColors.accentBright,
+                    color: context.gloam.accentBright,
                   ),
                 ),
               ),
@@ -91,7 +91,7 @@ class _LoadingScreen extends StatelessWidget {
                 fontSize: 28,
                 fontWeight: FontWeight.w300,
                 fontStyle: FontStyle.italic,
-                color: GloamColors.accent,
+                color: context.gloam.accent,
               ),
             ),
             const SizedBox(height: 8),
@@ -99,7 +99,7 @@ class _LoadingScreen extends StatelessWidget {
               '// connecting...',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 11,
-                color: GloamColors.textTertiary,
+                color: context.gloam.textTertiary,
                 letterSpacing: 1,
               ),
             ),
@@ -182,7 +182,7 @@ class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
     final voiceState = ref.watch(voiceServiceProvider);
 
     return Scaffold(
-      backgroundColor: GloamColors.bg,
+      backgroundColor: context.gloam.bg,
       body: Shortcuts(
         shortcuts: gloamShortcuts,
         child: Actions(

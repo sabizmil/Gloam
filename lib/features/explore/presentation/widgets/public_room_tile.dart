@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:matrix/matrix.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../widgets/gloam_avatar.dart';
 
@@ -31,16 +31,16 @@ class PublicRoomTile extends StatelessWidget {
     final name = room.name ?? room.canonicalAlias ?? room.roomId;
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: GloamColors.borderSubtle),
+          bottom: BorderSide(color: context.gloam.borderSubtle),
         ),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: isJoined ? onOpen : onJoin,
-          hoverColor: GloamColors.bgElevated,
+          hoverColor: context.gloam.bgElevated,
           child: Padding(
             padding:
                 const EdgeInsets.symmetric(horizontal: 0, vertical: 14),
@@ -66,7 +66,7 @@ class PublicRoomTile extends StatelessWidget {
                             Padding(
                               padding: const EdgeInsets.only(right: 6),
                               child: Icon(Icons.grid_view_rounded,
-                                  size: 14, color: GloamColors.accent),
+                                  size: 14, color: context.gloam.accent),
                             )
                           else
                             Padding(
@@ -74,7 +74,7 @@ class PublicRoomTile extends StatelessWidget {
                               child: Text('#',
                                   style: GoogleFonts.jetBrainsMono(
                                       fontSize: 14,
-                                      color: GloamColors.textTertiary)),
+                                      color: context.gloam.textTertiary)),
                             ),
                           Flexible(
                             child: Text(
@@ -82,7 +82,7 @@ class PublicRoomTile extends StatelessWidget {
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: GloamColors.textPrimary,
+                                color: context.gloam.textPrimary,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -95,7 +95,7 @@ class PublicRoomTile extends StatelessWidget {
                                 room.canonicalAlias!,
                                 style: GoogleFonts.jetBrainsMono(
                                   fontSize: 11,
-                                  color: GloamColors.textTertiary,
+                                  color: context.gloam.textTertiary,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -111,7 +111,7 @@ class PublicRoomTile extends StatelessWidget {
                             room.topic!,
                             style: GoogleFonts.inter(
                               fontSize: 12,
-                              color: GloamColors.textTertiary,
+                              color: context.gloam.textTertiary,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -131,7 +131,7 @@ class PublicRoomTile extends StatelessWidget {
                       _formatCount(room.numJoinedMembers),
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 11,
-                        color: GloamColors.textSecondary,
+                        color: context.gloam.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -176,15 +176,15 @@ class _JoinButton extends StatelessWidget {
         height: 28,
         width: 64,
         decoration: BoxDecoration(
-          color: GloamColors.accentDim,
+          color: context.gloam.accentDim,
           borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
         ),
-        child: const Center(
+        child: Center(
           child: SizedBox(
             width: 14,
             height: 14,
             child:
-                CircularProgressIndicator(strokeWidth: 2, color: GloamColors.accent),
+                CircularProgressIndicator(strokeWidth: 2, color: context.gloam.accent),
           ),
         ),
       );
@@ -195,20 +195,20 @@ class _JoinButton extends StatelessWidget {
         height: 28,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: GloamColors.bgSurface,
+          color: context.gloam.bgSurface,
           borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
-          border: Border.all(color: GloamColors.border),
+          border: Border.all(color: context.gloam.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check, size: 12, color: GloamColors.textTertiary),
+            Icon(Icons.check, size: 12, color: context.gloam.textTertiary),
             const SizedBox(width: 4),
             Text(
               'Joined',
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: GloamColors.textTertiary,
+                color: context.gloam.textTertiary,
               ),
             ),
           ],
@@ -222,7 +222,7 @@ class _JoinButton extends StatelessWidget {
         height: 28,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: GloamColors.accentDim,
+          color: context.gloam.accentDim,
           borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
         ),
         child: Center(
@@ -231,7 +231,7 @@ class _JoinButton extends StatelessWidget {
             style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: GloamColors.accent,
+              color: context.gloam.accent,
             ),
           ),
         ),

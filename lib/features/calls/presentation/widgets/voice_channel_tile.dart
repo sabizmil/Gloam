@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../widgets/gloam_avatar.dart';
 import '../../domain/voice_channel.dart';
 
@@ -26,12 +26,12 @@ class VoiceChannelTile extends StatelessWidget {
     final hasParticipants = channel.connectedParticipants.isNotEmpty;
 
     return Material(
-      color: isConnected ? GloamColors.bgElevated : Colors.transparent,
+      color: isConnected ? context.gloam.bgElevated : Colors.transparent,
       borderRadius: BorderRadius.circular(6),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(6),
-        hoverColor: GloamColors.bgElevated,
+        hoverColor: context.gloam.bgElevated,
         child: Padding(
           padding: EdgeInsets.fromLTRB(8, 8, 8, hasParticipants ? 6 : 8),
           child: Column(
@@ -45,8 +45,8 @@ class VoiceChannelTile extends StatelessWidget {
                     Icons.volume_up_rounded,
                     size: 16,
                     color: isConnected
-                        ? GloamColors.accent
-                        : GloamColors.textTertiary,
+                        ? context.gloam.accent
+                        : context.gloam.textTertiary,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -57,8 +57,8 @@ class VoiceChannelTile extends StatelessWidget {
                         fontWeight:
                             isConnected ? FontWeight.w500 : FontWeight.w400,
                         color: isConnected
-                            ? GloamColors.accent
-                            : GloamColors.textSecondary,
+                            ? context.gloam.accent
+                            : context.gloam.textSecondary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -110,8 +110,8 @@ class _ParticipantList extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         color: p.isSpeaking
-                            ? GloamColors.accent
-                            : GloamColors.textSecondary,
+                            ? context.gloam.accent
+                            : context.gloam.textSecondary,
                         fontWeight: p.isSpeaking
                             ? FontWeight.w500
                             : FontWeight.w400,
@@ -124,7 +124,7 @@ class _ParticipantList extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(left: 4),
                       child: Icon(Icons.mic_off,
-                          size: 10, color: GloamColors.textTertiary),
+                          size: 10, color: context.gloam.textTertiary),
                     ),
                 ],
               ),
@@ -136,7 +136,7 @@ class _ParticipantList extends StatelessWidget {
               '+$overflow more',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 9,
-                color: GloamColors.textTertiary,
+                color: context.gloam.textTertiary,
               ),
             ),
           ),
@@ -158,7 +158,7 @@ class _MiniAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(
           color: participant.isSpeaking
-              ? GloamColors.accent
+              ? context.gloam.accent
               : Colors.transparent,
           width: participant.isSpeaking ? 2.0 : 0.0,
         ),

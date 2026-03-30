@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:matrix/matrix.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../services/matrix_service.dart';
 
 /// Displays "[User] is typing..." with animated dots.
@@ -42,7 +42,7 @@ class TypingIndicator extends ConsumerWidget {
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
-                  color: GloamColors.textTertiary,
+                  color: context.gloam.textTertiary,
                 ),
               ),
               const SizedBox(width: 2),
@@ -110,7 +110,7 @@ class _AnimatedDotsState extends State<_AnimatedDots>
                   '.',
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: GloamColors.textTertiary,
+                    color: context.gloam.textTertiary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

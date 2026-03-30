@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 
 /// Gloam emoji picker — matches the mockup: search bar, category tabs,
@@ -53,13 +53,14 @@ class _GloamEmojiPickerState extends State<GloamEmojiPicker> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return Container(
       width: 352,
       height: 420,
       decoration: BoxDecoration(
-        color: GloamColors.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(GloamSpacing.radiusLg),
-        border: Border.all(color: GloamColors.border),
+        border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF0A1A0E).withValues(alpha: 0.5),
@@ -75,25 +76,25 @@ class _GloamEmojiPickerState extends State<GloamEmojiPicker> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             height: 44,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: GloamColors.border),
+                bottom: BorderSide(color: colors.border),
               ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.search,
-                    size: 16, color: GloamColors.textTertiary),
+                Icon(Icons.search,
+                    size: 16, color: colors.textTertiary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     onChanged: (v) => setState(() => _search = v),
                     style: GoogleFonts.inter(
-                        fontSize: 13, color: GloamColors.textPrimary),
+                        fontSize: 13, color: colors.textPrimary),
                     decoration: InputDecoration(
                       hintText: 'search emoji...',
                       hintStyle: GoogleFonts.inter(
-                          fontSize: 13, color: GloamColors.textTertiary),
+                          fontSize: 13, color: colors.textTertiary),
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
@@ -110,9 +111,9 @@ class _GloamEmojiPickerState extends State<GloamEmojiPicker> {
           if (_search.isEmpty)
             Container(
               height: 36,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(
-                  bottom: BorderSide(color: GloamColors.border),
+                  bottom: BorderSide(color: colors.border),
                 ),
               ),
               child: Row(
@@ -144,7 +145,7 @@ class _GloamEmojiPickerState extends State<GloamEmojiPicker> {
                     : '// ${_categories[_selectedCategory].$1.toLowerCase()}',
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 10,
-                  color: GloamColors.textTertiary,
+                  color: colors.textTertiary,
                   letterSpacing: 1,
                 ),
               ),

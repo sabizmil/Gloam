@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import 'emoji_picker.dart';
 import '../../../../app/theme/spacing.dart';
 
@@ -179,10 +179,11 @@ class MessageComposerState extends State<MessageComposer> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: GloamColors.border),
+          top: BorderSide(color: colors.border),
         ),
       ),
       child: Column(
@@ -209,8 +210,8 @@ class MessageComposerState extends State<MessageComposer> {
                 // Attachment button
                 IconButton(
                   onPressed: widget.onAttach,
-                  icon: const Icon(Icons.add_circle_outline,
-                      size: 22, color: GloamColors.textTertiary),
+                  icon: Icon(Icons.add_circle_outline,
+                      size: 22, color: colors.textTertiary),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(
                       minWidth: 36, minHeight: 36),
@@ -221,10 +222,10 @@ class MessageComposerState extends State<MessageComposer> {
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: GloamColors.bgSurface,
+                      color: colors.bgSurface,
                       borderRadius:
                           BorderRadius.circular(GloamSpacing.radiusSm),
-                      border: Border.all(color: GloamColors.border),
+                      border: Border.all(color: colors.border),
                     ),
                     child: Focus(
                       onKeyEvent: _handleKeyEvent,
@@ -235,7 +236,7 @@ class MessageComposerState extends State<MessageComposer> {
                         minLines: 1,
                         style: GoogleFonts.inter(
                           fontSize: 14,
-                          color: GloamColors.textPrimary,
+                          color: colors.textPrimary,
                         ),
                         decoration: InputDecoration(
                           hintText: widget.composerState.mode ==
@@ -244,7 +245,7 @@ class MessageComposerState extends State<MessageComposer> {
                               : 'message #${widget.roomName}',
                           hintStyle: GoogleFonts.inter(
                             fontSize: 14,
-                            color: GloamColors.textTertiary,
+                            color: colors.textTertiary,
                           ),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(
@@ -269,8 +270,8 @@ class MessageComposerState extends State<MessageComposer> {
                                 );
                               }
                             },
-                            icon: const Icon(Icons.sentiment_satisfied_outlined,
-                                size: 20, color: GloamColors.textTertiary),
+                            icon: Icon(Icons.sentiment_satisfied_outlined,
+                                size: 20, color: colors.textTertiary),
                           ),
                         ),
                       ),
@@ -290,10 +291,10 @@ class MessageComposerState extends State<MessageComposer> {
                           ? Icons.check
                           : Icons.arrow_upward,
                       size: 20,
-                      color: GloamColors.accentBright,
+                      color: colors.accentBright,
                     ),
                     style: IconButton.styleFrom(
-                      backgroundColor: GloamColors.accentDim,
+                      backgroundColor: colors.accentDim,
                       shape: const CircleBorder(),
                       minimumSize: const Size(36, 36),
                     ),
@@ -323,11 +324,12 @@ class _ActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: GloamColors.borderSubtle),
+          bottom: BorderSide(color: colors.borderSubtle),
         ),
       ),
       child: Row(
@@ -335,7 +337,7 @@ class _ActionBar extends StatelessWidget {
           Icon(
             mode == ComposerMode.reply ? Icons.reply : Icons.edit_outlined,
             size: 16,
-            color: GloamColors.accent,
+            color: colors.accent,
           ),
           const SizedBox(width: 8),
           Text(
@@ -344,7 +346,7 @@ class _ActionBar extends StatelessWidget {
                 : 'editing message',
             style: GoogleFonts.jetBrainsMono(
               fontSize: 11,
-              color: GloamColors.accent,
+              color: colors.accent,
             ),
           ),
           const SizedBox(width: 8),
@@ -353,7 +355,7 @@ class _ActionBar extends StatelessWidget {
               body ?? '',
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: GloamColors.textTertiary,
+                color: colors.textTertiary,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -361,8 +363,8 @@ class _ActionBar extends StatelessWidget {
           ),
           GestureDetector(
             onTap: onCancel,
-            child: const Icon(Icons.close,
-                size: 16, color: GloamColors.textTertiary),
+            child: Icon(Icons.close,
+                size: 16, color: colors.textTertiary),
           ),
         ],
       ),

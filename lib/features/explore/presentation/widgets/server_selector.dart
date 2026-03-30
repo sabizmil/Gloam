@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 
 /// Dropdown for selecting which Matrix server to browse.
@@ -52,32 +52,32 @@ class _ServerSelectorState extends State<ServerSelector> {
           autofocus: true,
           style: GoogleFonts.jetBrainsMono(
             fontSize: 12,
-            color: GloamColors.textPrimary,
+            color: context.gloam.textPrimary,
           ),
           decoration: InputDecoration(
             hintText: 'server.example.com',
             hintStyle: GoogleFonts.jetBrainsMono(
               fontSize: 12,
-              color: GloamColors.textTertiary,
+              color: context.gloam.textTertiary,
             ),
             filled: true,
-            fillColor: GloamColors.bgSurface,
+            fillColor: context.gloam.bgSurface,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-              borderSide: const BorderSide(color: GloamColors.border),
+              borderSide: BorderSide(color: context.gloam.border),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-              borderSide: const BorderSide(color: GloamColors.border),
+              borderSide: BorderSide(color: context.gloam.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-              borderSide: const BorderSide(color: GloamColors.accent),
+              borderSide: BorderSide(color: context.gloam.accent),
             ),
             suffixIcon: IconButton(
-              icon: const Icon(Icons.check, size: 16, color: GloamColors.accent),
+              icon: Icon(Icons.check, size: 16, color: context.gloam.accent),
               onPressed: () {
                 final server = _customController.text.trim();
                 if (server.isNotEmpty) {
@@ -105,10 +105,10 @@ class _ServerSelectorState extends State<ServerSelector> {
           widget.onSelected(value);
         }
       },
-      color: GloamColors.bgElevated,
+      color: context.gloam.bgElevated,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: GloamColors.border),
+        side: BorderSide(color: context.gloam.border),
       ),
       offset: const Offset(0, 36),
       itemBuilder: (_) {
@@ -138,13 +138,13 @@ class _ServerSelectorState extends State<ServerSelector> {
           height: 36,
           child: Row(
             children: [
-              const Icon(Icons.add, size: 14, color: GloamColors.textTertiary),
+              Icon(Icons.add, size: 14, color: context.gloam.textTertiary),
               const SizedBox(width: 8),
               Text(
                 'Enter server address...',
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: GloamColors.textSecondary,
+                  color: context.gloam.textSecondary,
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -158,9 +158,9 @@ class _ServerSelectorState extends State<ServerSelector> {
         height: 36,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: GloamColors.bgSurface,
+          color: context.gloam.bgSurface,
           borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-          border: Border.all(color: GloamColors.border),
+          border: Border.all(color: context.gloam.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -170,7 +170,7 @@ class _ServerSelectorState extends State<ServerSelector> {
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: GloamColors.textPrimary,
+                color: context.gloam.textPrimary,
               ),
             ),
             if (widget.currentServer == widget.homeServer) ...[
@@ -179,13 +179,13 @@ class _ServerSelectorState extends State<ServerSelector> {
                 '(home)',
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 10,
-                  color: GloamColors.textTertiary,
+                  color: context.gloam.textTertiary,
                 ),
               ),
             ],
             const SizedBox(width: 6),
-            const Icon(Icons.keyboard_arrow_down,
-                size: 14, color: GloamColors.textTertiary),
+            Icon(Icons.keyboard_arrow_down,
+                size: 14, color: context.gloam.textTertiary),
           ],
         ),
       ),
@@ -203,7 +203,7 @@ class _ServerSelectorState extends State<ServerSelector> {
       child: Row(
         children: [
           if (isSelected)
-            const Icon(Icons.check, size: 14, color: GloamColors.accent)
+            Icon(Icons.check, size: 14, color: context.gloam.accent)
           else
             const SizedBox(width: 14),
           const SizedBox(width: 8),
@@ -212,7 +212,7 @@ class _ServerSelectorState extends State<ServerSelector> {
             style: GoogleFonts.jetBrainsMono(
               fontSize: 12,
               color:
-                  isSelected ? GloamColors.accent : GloamColors.textPrimary,
+                  isSelected ? context.gloam.accent : context.gloam.textPrimary,
             ),
           ),
           if (suffix != null) ...[
@@ -221,7 +221,7 @@ class _ServerSelectorState extends State<ServerSelector> {
               suffix,
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 10,
-                color: GloamColors.textTertiary,
+                color: context.gloam.textTertiary,
               ),
             ),
           ],

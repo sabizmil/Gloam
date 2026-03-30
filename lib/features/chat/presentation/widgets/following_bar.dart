@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../widgets/gloam_avatar.dart';
 import '../providers/following_provider.dart';
 
@@ -27,10 +27,10 @@ class FollowingBar extends ConsumerWidget {
       child: Container(
         height: 32,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: const BoxDecoration(
-          color: GloamColors.bgSurface,
+        decoration: BoxDecoration(
+          color: context.gloam.bgSurface,
           border: Border(
-            bottom: BorderSide(color: GloamColors.border),
+            bottom: BorderSide(color: context.gloam.border),
           ),
         ),
         child: Row(
@@ -38,8 +38,8 @@ class FollowingBar extends ConsumerWidget {
             Container(
               width: 6,
               height: 6,
-              decoration: const BoxDecoration(
-                color: GloamColors.online,
+              decoration: BoxDecoration(
+                color: context.gloam.online,
                 shape: BoxShape.circle,
               ),
             ),
@@ -59,7 +59,7 @@ class FollowingBar extends ConsumerWidget {
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: GloamColors.textSecondary,
+                        color: context.gloam.textSecondary,
                       ),
                     ),
                     if (othersCount > 0)
@@ -67,7 +67,7 @@ class FollowingBar extends ConsumerWidget {
                         text: ' and $othersCount ${othersCount == 1 ? 'other' : 'others'}',
                         style: GoogleFonts.inter(
                           fontSize: 11,
-                          color: GloamColors.textTertiary,
+                          color: context.gloam.textTertiary,
                         ),
                       ),
                     TextSpan(
@@ -76,7 +76,7 @@ class FollowingBar extends ConsumerWidget {
                           : ' is following the conversation',
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        color: GloamColors.textTertiary,
+                        color: context.gloam.textTertiary,
                       ),
                     ),
                   ],
@@ -90,7 +90,7 @@ class FollowingBar extends ConsumerWidget {
               '·',
               style: GoogleFonts.inter(
                 fontSize: 11,
-                color: GloamColors.textTertiary,
+                color: context.gloam.textTertiary,
               ),
             ),
             const SizedBox(width: 8),
@@ -98,7 +98,7 @@ class FollowingBar extends ConsumerWidget {
               'last read ${_relativeTime(first.lastReadTs)}',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 10,
-                color: GloamColors.textTertiary,
+                color: context.gloam.textTertiary,
               ),
             ),
           ],

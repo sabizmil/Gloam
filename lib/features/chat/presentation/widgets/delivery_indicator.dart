@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../providers/timeline_provider.dart';
 
 /// Small delivery state icon next to the message timestamp.
@@ -25,12 +25,12 @@ class DeliveryIndicator extends StatelessWidget {
       MessageSendState.sent => Icon(
           Icons.check,
           size: size,
-          color: GloamColors.textTertiary,
+          color: context.gloam.textTertiary,
         ),
       MessageSendState.error => Icon(
           Icons.error_outline,
           size: size,
-          color: GloamColors.danger,
+          color: context.gloam.danger,
         ),
     };
   }
@@ -72,7 +72,7 @@ class _SendingDotState extends State<_SendingDot>
         child: Icon(
           Icons.schedule,
           size: widget.size,
-          color: GloamColors.textTertiary,
+          color: context.gloam.textTertiary,
         ),
       ),
     );

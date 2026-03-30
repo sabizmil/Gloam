@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../providers/timeline_provider.dart';
 
@@ -31,13 +31,14 @@ class _VoiceMessageState extends State<VoiceMessage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return Container(
       constraints: const BoxConstraints(maxWidth: 300),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: GloamColors.bgElevated,
+        color: colors.bgElevated,
         borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-        border: Border.all(color: GloamColors.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -48,14 +49,14 @@ class _VoiceMessageState extends State<VoiceMessage> {
             child: Container(
               width: 36,
               height: 36,
-              decoration: const BoxDecoration(
-                color: GloamColors.accentDim,
+              decoration: BoxDecoration(
+                color: colors.accentDim,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 _playing ? Icons.pause : Icons.play_arrow,
                 size: 20,
-                color: GloamColors.accentBright,
+                color: colors.accentBright,
               ),
             ),
           ),
@@ -72,6 +73,8 @@ class _VoiceMessageState extends State<VoiceMessage> {
                     painter: _WaveformPainter(
                       progress: _progress,
                       seed: widget.message.eventId.hashCode,
+                      activeColor: colors.accent,
+                      inactiveColor: colors.textTertiary,
                     ),
                     size: const Size(double.infinity, 28),
                   ),
@@ -81,7 +84,7 @@ class _VoiceMessageState extends State<VoiceMessage> {
                   _formatDuration(widget.message.mediaSizeBytes),
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 10,
-                    color: GloamColors.textTertiary,
+                    color: colors.textTertiary,
                   ),
                 ),
               ],
@@ -98,8 +101,15 @@ class _VoiceMessageState extends State<VoiceMessage> {
 class _WaveformPainter extends CustomPainter {
   final double progress;
   final int seed;
+  final Color activeColor;
+  final Color inactiveColor;
 
-  _WaveformPainter({required this.progress, required this.seed});
+  _WaveformPainter({
+    required this.progress,
+    required this.seed,
+    required this.activeColor,
+    required this.inactiveColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -116,8 +126,8 @@ class _WaveformPainter extends CustomPainter {
 
       final paint = Paint()
         ..color = i < progressBars
-            ? GloamColors.accent
-            : GloamColors.textTertiary.withValues(alpha: 0.3)
+            ? activeColor
+            : inactiveColor.withValues(alpha: 0.3)
         ..strokeCap = StrokeCap.round;
 
       canvas.drawRRect(
@@ -132,5 +142,7 @@ class _WaveformPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_WaveformPainter oldDelegate) =>
-      oldDelegate.progress != progress;
+      oldDelegate.progress != progress ||
+      oldDelegate.activeColor != activeColor ||
+      oldDelegate.inactiveColor != inactiveColor;
 }

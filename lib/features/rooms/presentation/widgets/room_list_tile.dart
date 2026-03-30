@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../widgets/gloam_avatar.dart';
 import '../providers/room_list_provider.dart';
@@ -35,12 +35,12 @@ class RoomListTile extends StatelessWidget {
       button: true,
       label: '${room.displayName}. ${room.unreadCount > 0 ? '${room.unreadCount} unread.' : ''} ${room.lastMessagePreview ?? ''}',
       child: Material(
-      color: isActive ? GloamColors.bgElevated : Colors.transparent,
+      color: isActive ? context.gloam.bgElevated : Colors.transparent,
       borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
-        hoverColor: GloamColors.bgElevated,
+        hoverColor: context.gloam.bgElevated,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           child: Row(
@@ -68,8 +68,8 @@ class RoomListTile extends StatelessWidget {
                             ? FontWeight.w600
                             : FontWeight.w400,
                         color: room.unreadCount > 0
-                            ? GloamColors.textPrimary
-                            : GloamColors.textSecondary,
+                            ? context.gloam.textPrimary
+                            : context.gloam.textSecondary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -82,7 +82,7 @@ class RoomListTile extends StatelessWidget {
                             : '${room.lastMessageSender ?? ''}: ${room.lastMessagePreview!}',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: GloamColors.textTertiary,
+                          color: context.gloam.textTertiary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -102,18 +102,18 @@ class RoomListTile extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (room.isMuted)
-                        const Padding(
-                          padding: EdgeInsets.only(right: 4),
+                        Padding(
+                          padding: const EdgeInsets.only(right: 4),
                           child: Icon(Icons.notifications_off,
-                              size: 11, color: GloamColors.textTertiary),
+                              size: 11, color: context.gloam.textTertiary),
                         ),
                       Text(
                         _formatTimestamp(room.lastMessageTimestamp),
                         style: GoogleFonts.jetBrainsMono(
                           fontSize: 10,
                           color: room.unreadCount > 0 && !room.isMuted
-                              ? GloamColors.accent
-                              : GloamColors.textTertiary,
+                              ? context.gloam.accent
+                              : context.gloam.textTertiary,
                         ),
                       ),
                     ],
@@ -125,8 +125,8 @@ class RoomListTile extends StatelessWidget {
                           horizontal: 5, vertical: 1),
                       decoration: BoxDecoration(
                         color: room.mentionCount > 0
-                            ? GloamColors.accent
-                            : GloamColors.accentDim,
+                            ? context.gloam.accent
+                            : context.gloam.accentDim,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -137,8 +137,8 @@ class RoomListTile extends StatelessWidget {
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: room.mentionCount > 0
-                              ? GloamColors.bg
-                              : GloamColors.accent,
+                              ? context.gloam.bg
+                              : context.gloam.accent,
                         ),
                       ),
                     ),

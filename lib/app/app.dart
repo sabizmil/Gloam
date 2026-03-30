@@ -5,17 +5,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'router.dart';
 import 'theme/gloam_theme.dart';
+import 'theme/theme_preferences.dart';
 
 class GloamApp extends ConsumerWidget {
   const GloamApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    Widget app = MaterialApp.router(
-      title: 'Gloam',
-      debugShowCheckedModeBanner: false,
-      theme: buildGloamTheme(),
-      routerConfig: router,
+    final prefs = ref.watch(themePreferencesProvider);
+
+    Widget app = MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: TextScaler.linear(prefs.fontScale),
+      ),
+      child: MaterialApp.router(
+        title: 'Gloam',
+        debugShowCheckedModeBanner: false,
+        theme: buildGloamTheme(prefs: prefs),
+        themeAnimationDuration: const Duration(milliseconds: 300),
+        themeAnimationCurve: Curves.easeInOut,
+        routerConfig: router,
+      ),
     );
 
     // macOS needs a PlatformMenuBar for standard keyboard shortcuts
@@ -34,8 +44,6 @@ class GloamApp extends ConsumerWidget {
               ),
             ],
           ),
-          // The Edit menu with standard shortcuts is needed for
-          // text fields to receive Cmd+C/V/X/A correctly on macOS.
           PlatformMenu(
             label: 'Edit',
             menus: [

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../widgets/gloam_avatar.dart';
 import '../providers/timeline_provider.dart';
@@ -47,6 +47,7 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     final allMessages = ref.watch(timelineProvider(widget.roomId));
 
     // Filter thread replies — m.thread relation OR legacy m.in_reply_to
@@ -68,10 +69,10 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
 
     return Container(
       width: GloamSpacing.threadPanelWidth,
-      decoration: const BoxDecoration(
-        color: GloamColors.bgSurface,
+      decoration: BoxDecoration(
+        color: colors.bgSurface,
         border: Border(
-          left: BorderSide(color: GloamColors.border),
+          left: BorderSide(color: colors.border),
         ),
       ),
       child: Column(
@@ -116,32 +117,33 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
   }
 
   Widget _buildHeader() {
+    final colors = context.gloam;
     return Container(
       height: GloamSpacing.headerHeight,
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: GloamColors.border),
+          bottom: BorderSide(color: colors.border),
         ),
       ),
       child: Row(
         children: [
-          const Icon(Icons.chat_bubble_outline,
-              size: 16, color: GloamColors.accent),
+          Icon(Icons.chat_bubble_outline,
+              size: 16, color: colors.accent),
           const SizedBox(width: 8),
           Text(
             'Thread',
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: GloamColors.textPrimary,
+              color: colors.textPrimary,
             ),
           ),
           const Spacer(),
           GestureDetector(
             onTap: widget.onClose,
-            child: const Icon(Icons.close,
-                size: 16, color: GloamColors.textTertiary),
+            child: Icon(Icons.close,
+                size: 16, color: colors.textTertiary),
           ),
         ],
       ),
@@ -149,12 +151,13 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
   }
 
   Widget _buildRootMessage() {
+    final colors = context.gloam;
     final root = widget.rootMessage;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: GloamColors.border),
+          bottom: BorderSide(color: colors.border),
         ),
       ),
       child: Row(
@@ -177,7 +180,7 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: GloamColors.textPrimary,
+                        color: colors.textPrimary,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -185,7 +188,7 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
                       _formatTime(root.timestamp),
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 10,
-                        color: GloamColors.textTertiary,
+                        color: colors.textTertiary,
                       ),
                     ),
                   ],
@@ -195,7 +198,7 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
                   root.body,
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: GloamColors.textPrimary,
+                    color: colors.textPrimary,
                     height: 1.5,
                   ),
                 ),
@@ -213,6 +216,7 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
   ) {
     if (replies.isEmpty) return const SizedBox.shrink();
 
+    final colors = context.gloam;
     final replyWord = replies.length == 1 ? 'reply' : 'replies';
     final partWord =
         participants.length == 1 ? 'participant' : 'participants';
@@ -229,7 +233,7 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
                   '${replies.length} $replyWord',
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 10,
-                    color: GloamColors.textTertiary,
+                    color: colors.textTertiary,
                     letterSpacing: 1,
                   ),
                 ),
@@ -237,8 +241,8 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
                   width: 3,
                   height: 3,
                   margin: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: const BoxDecoration(
-                    color: GloamColors.textTertiary,
+                  decoration: BoxDecoration(
+                    color: colors.textTertiary,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -246,7 +250,7 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
                   '${participants.length} $partWord',
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 10,
-                    color: GloamColors.textTertiary,
+                    color: colors.textTertiary,
                     letterSpacing: 1,
                   ),
                 ),
@@ -267,6 +271,7 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
   Widget _buildParticipantAvatars(
     Map<String, ({String name, Uri? avatarUrl})> participants,
   ) {
+    final colors = context.gloam;
     final entries = participants.values.take(5).toList();
     const size = 22.0;
     const overlap = 6.0;
@@ -283,7 +288,7 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: GloamColors.bgSurface,
+                    color: colors.bgSurface,
                     width: 2,
                   ),
                 ),
@@ -300,12 +305,13 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
   }
 
   Widget _buildComposer() {
+    final colors = context.gloam;
     return Container(
       height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: GloamColors.border),
+          top: BorderSide(color: colors.border),
         ),
       ),
       child: Row(
@@ -315,23 +321,23 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
               height: 36,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: GloamColors.bg,
+                color: colors.bg,
                 borderRadius:
                     BorderRadius.circular(GloamSpacing.radiusSm),
-                border: Border.all(color: GloamColors.border),
+                border: Border.all(color: colors.border),
               ),
               alignment: Alignment.centerLeft,
               child: TextField(
                 controller: _controller,
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: GloamColors.textPrimary,
+                  color: colors.textPrimary,
                 ),
                 decoration: InputDecoration(
                   hintText: 'Reply in thread...',
                   hintStyle: GoogleFonts.inter(
                     fontSize: 13,
-                    color: GloamColors.textTertiary,
+                    color: colors.textTertiary,
                   ),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
@@ -347,14 +353,14 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
             child: Container(
               width: 28,
               height: 28,
-              decoration: const BoxDecoration(
-                color: GloamColors.accentDim,
+              decoration: BoxDecoration(
+                color: colors.accentDim,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.arrow_upward_rounded,
                 size: 16,
-                color: GloamColors.accentBright,
+                color: colors.accentBright,
               ),
             ),
           ),

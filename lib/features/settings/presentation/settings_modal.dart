@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../app/theme/color_tokens.dart';
+import '../../../app/theme/gloam_theme_ext.dart';
 import '../../../app/theme/spacing.dart';
 import 'sections/account_section.dart';
 import 'sections/appearance_section.dart';
@@ -42,7 +42,7 @@ class _SettingsModalState extends ConsumerState<SettingsModal> {
     final isWide = MediaQuery.sizeOf(context).width > 700;
 
     return Scaffold(
-      backgroundColor: GloamColors.bg,
+      backgroundColor: context.gloam.bg,
       body: SafeArea(
         child: Column(
           children: [
@@ -58,19 +58,19 @@ class _SettingsModalState extends ConsumerState<SettingsModal> {
                       fontSize: 22,
                       fontWeight: FontWeight.w300,
                       fontStyle: FontStyle.italic,
-                      color: GloamColors.accent,
+                      color: context.gloam.accent,
                     ),
                   ),
                   const Spacer(),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close,
-                        size: 20, color: GloamColors.textTertiary),
+                    icon: Icon(Icons.close,
+                        size: 20, color: context.gloam.textTertiary),
                   ),
                 ],
               ),
             ),
-            const Divider(color: GloamColors.border, height: 1),
+            Divider(color: context.gloam.border, height: 1),
 
             // Body
             Expanded(
@@ -82,8 +82,8 @@ class _SettingsModalState extends ConsumerState<SettingsModal> {
                           width: 240,
                           child: _buildNav(),
                         ),
-                        const VerticalDivider(
-                            color: GloamColors.border, width: 1),
+                        VerticalDivider(
+                            color: context.gloam.border, width: 1),
                         // Content
                         Expanded(child: _buildContent()),
                       ],
@@ -109,14 +109,14 @@ class _SettingsModalState extends ConsumerState<SettingsModal> {
                                         horizontal: 12, vertical: 6),
                                     decoration: BoxDecoration(
                                       color: active
-                                          ? GloamColors.accentDim
+                                          ? context.gloam.accentDim
                                           : null,
                                       borderRadius:
                                           BorderRadius.circular(16),
                                       border: Border.all(
                                         color: active
-                                            ? GloamColors.accent
-                                            : GloamColors.border,
+                                            ? context.gloam.accent
+                                            : context.gloam.border,
                                       ),
                                     ),
                                     child: Text(
@@ -124,8 +124,8 @@ class _SettingsModalState extends ConsumerState<SettingsModal> {
                                       style: GoogleFonts.jetBrainsMono(
                                         fontSize: 11,
                                         color: active
-                                            ? GloamColors.accent
-                                            : GloamColors.textSecondary,
+                                            ? context.gloam.accent
+                                            : context.gloam.textSecondary,
                                       ),
                                     ),
                                   ),
@@ -134,8 +134,8 @@ class _SettingsModalState extends ConsumerState<SettingsModal> {
                             }).toList(),
                           ),
                         ),
-                        const Divider(
-                            color: GloamColors.border, height: 1),
+                        Divider(
+                            color: context.gloam.border, height: 1),
                         Expanded(child: _buildContent()),
                       ],
                     ),
@@ -155,7 +155,7 @@ class _SettingsModalState extends ConsumerState<SettingsModal> {
           return Padding(
             padding: const EdgeInsets.only(bottom: 2),
             child: Material(
-              color: active ? GloamColors.bgElevated : Colors.transparent,
+              color: active ? context.gloam.bgElevated : Colors.transparent,
               borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
               child: InkWell(
                 onTap: () => setState(() => _selected = s),
@@ -169,8 +169,8 @@ class _SettingsModalState extends ConsumerState<SettingsModal> {
                       Icon(s.icon,
                           size: 16,
                           color: active
-                              ? GloamColors.accent
-                              : GloamColors.textTertiary),
+                              ? context.gloam.accent
+                              : context.gloam.textTertiary),
                       const SizedBox(width: 10),
                       Text(
                         s.label,
@@ -179,8 +179,8 @@ class _SettingsModalState extends ConsumerState<SettingsModal> {
                           fontWeight:
                               active ? FontWeight.w500 : FontWeight.w400,
                           color: active
-                              ? GloamColors.textPrimary
-                              : GloamColors.textSecondary,
+                              ? context.gloam.textPrimary
+                              : context.gloam.textSecondary,
                         ),
                       ),
                     ],
@@ -218,7 +218,7 @@ class _PlaceholderSection extends StatelessWidget {
         '// $name — coming soon',
         style: GoogleFonts.jetBrainsMono(
           fontSize: 11,
-          color: GloamColors.textTertiary,
+          color: context.gloam.textTertiary,
           letterSpacing: 1,
         ),
       ),

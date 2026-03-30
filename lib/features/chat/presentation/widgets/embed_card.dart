@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_color_extension.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../data/media_embed_resolver.dart';
 
@@ -20,13 +21,14 @@ class EmbedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return Container(
       margin: const EdgeInsets.only(top: 6),
       constraints: const BoxConstraints(maxWidth: 400),
       decoration: BoxDecoration(
-        color: GloamColors.bgElevated,
+        color: colors.bgElevated,
         borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-        border: Border.all(color: GloamColors.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -46,9 +48,9 @@ class EmbedCard extends StatelessWidget {
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   border: Border(
-                    top: BorderSide(color: GloamColors.borderSubtle),
+                    top: BorderSide(color: colors.borderSubtle),
                   ),
                 ),
                 child: Row(
@@ -58,13 +60,13 @@ class EmbedCard extends StatelessWidget {
                       info.providerName.toLowerCase(),
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 10,
-                        color: GloamColors.textTertiary,
+                        color: colors.textTertiary,
                         letterSpacing: 0.5,
                       ),
                     ),
                     const SizedBox(width: 6),
-                    const Icon(Icons.open_in_new,
-                        size: 10, color: GloamColors.textTertiary),
+                    Icon(Icons.open_in_new,
+                        size: 10, color: colors.textTertiary),
                   ],
                 ),
               ),
@@ -83,6 +85,7 @@ class ImageEmbed extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return EmbedCard(
       info: info,
       child: ConstrainedBox(
@@ -98,7 +101,7 @@ class ImageEmbed extends StatelessWidget {
               child: Center(
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: GloamColors.accentDim,
+                  color: colors.accentDim,
                   value: progress.expectedTotalBytes != null
                       ? progress.cumulativeBytesLoaded /
                           progress.expectedTotalBytes!
@@ -107,13 +110,13 @@ class ImageEmbed extends StatelessWidget {
               ),
             );
           },
-          errorBuilder: (_, __, ___) => _fallback(),
+          errorBuilder: (_, __, ___) => _fallback(colors),
         ),
       ),
     );
   }
 
-  Widget _fallback() {
+  Widget _fallback(GloamColorExtension colors) {
     return SizedBox(
       height: 60,
       child: Center(
@@ -121,7 +124,7 @@ class ImageEmbed extends StatelessWidget {
           '// failed to load media',
           style: GoogleFonts.jetBrainsMono(
             fontSize: 10,
-            color: GloamColors.textTertiary,
+            color: colors.textTertiary,
           ),
         ),
       ),
@@ -136,6 +139,7 @@ class YouTubeEmbed extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return EmbedCard(
       info: info,
       child: MouseRegion(
@@ -156,10 +160,10 @@ class YouTubeEmbed extends StatelessWidget {
                 height: 225,
                 errorBuilder: (_, __, ___) => Container(
                   height: 225,
-                  color: GloamColors.bg,
-                  child: const Center(
+                  color: colors.bg,
+                  child: Center(
                     child: Icon(Icons.play_circle_outline,
-                        size: 48, color: GloamColors.textTertiary),
+                        size: 48, color: colors.textTertiary),
                   ),
                 ),
               ),
@@ -189,6 +193,7 @@ class VideoEmbed extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.gloam;
     return EmbedCard(
       info: info,
       child: MouseRegion(
@@ -200,18 +205,18 @@ class VideoEmbed extends StatelessWidget {
           ),
           child: Container(
             height: 180,
-            color: GloamColors.bg,
+            color: colors.bg,
             child: Center(
               child: Container(
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: GloamColors.bgElevated.withValues(alpha: 0.8),
+                  color: colors.bgElevated.withValues(alpha: 0.8),
                   shape: BoxShape.circle,
-                  border: Border.all(color: GloamColors.border),
+                  border: Border.all(color: colors.border),
                 ),
-                child: const Icon(Icons.play_arrow,
-                    size: 28, color: GloamColors.textPrimary),
+                child: Icon(Icons.play_arrow,
+                    size: 28, color: colors.textPrimary),
               ),
             ),
           ),

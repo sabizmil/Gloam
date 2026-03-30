@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/theme/gloam_theme_ext.dart';
 import '../app/theme/typography.dart';
 
 /// The `// MONOSPACE SECTION HEADER` pattern used throughout Gloam.
@@ -16,9 +17,9 @@ class SectionHeader extends StatelessWidget {
       padding: padding ?? const EdgeInsets.fromLTRB(8, 12, 8, 4),
       child: Text(
         '// $text',
-        style: color != null
-            ? GloamTypography.sectionHeader.copyWith(color: color)
-            : GloamTypography.sectionHeader,
+        style: GloamTypography.sectionHeader.copyWith(
+          color: color ?? context.gloam.textTertiary,
+        ),
       ),
     );
   }

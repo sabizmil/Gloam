@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../widgets/gloam_avatar.dart';
 import '../providers/call_provider.dart';
 
@@ -56,7 +56,7 @@ class OutgoingCallScreen extends ConsumerWidget {
                     style: GoogleFonts.inter(
                       fontSize: 22,
                       fontWeight: FontWeight.w600,
-                      color: GloamColors.textPrimary,
+                      color: context.gloam.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -66,7 +66,7 @@ class OutgoingCallScreen extends ConsumerWidget {
                     'calling...',
                     style: GoogleFonts.jetBrainsMono(
                       fontSize: 13,
-                      color: GloamColors.accent,
+                      color: context.gloam.accent,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -76,11 +76,11 @@ class OutgoingCallScreen extends ConsumerWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _dot(0.3),
+                      _dot(context, 0.3),
                       const SizedBox(width: 6),
-                      _dot(0.6),
+                      _dot(context, 0.6),
                       const SizedBox(width: 6),
-                      _dot(1.0),
+                      _dot(context, 1.0),
                     ],
                   ),
                   const SizedBox(height: 40),
@@ -96,13 +96,13 @@ class OutgoingCallScreen extends ConsumerWidget {
                       const SizedBox(width: 16),
                       _CircleButton(
                         icon: Icons.videocam_rounded,
-                        color: GloamColors.textTertiary,
+                        color: context.gloam.textTertiary,
                         onTap: () {},
                       ),
                       const SizedBox(width: 16),
                       _CircleButton(
                         icon: Icons.call_end_rounded,
-                        backgroundColor: GloamColors.danger,
+                        backgroundColor: context.gloam.danger,
                         color: Colors.white,
                         size: 64,
                         iconSize: 24,
@@ -120,7 +120,7 @@ class OutgoingCallScreen extends ConsumerWidget {
                     outgoing.isVideo ? 'video call' : 'voice call',
                     style: GoogleFonts.jetBrainsMono(
                       fontSize: 11,
-                      color: GloamColors.textTertiary,
+                      color: context.gloam.textTertiary,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -133,12 +133,12 @@ class OutgoingCallScreen extends ConsumerWidget {
     );
   }
 
-  Widget _dot(double opacity) => Container(
+  Widget _dot(BuildContext context, double opacity) => Container(
         width: 6,
         height: 6,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: GloamColors.accent.withAlpha((opacity * 255).toInt()),
+          color: context.gloam.accent.withAlpha((opacity * 255).toInt()),
         ),
       );
 }
@@ -147,23 +147,23 @@ class _CircleButton extends StatelessWidget {
   const _CircleButton({
     required this.icon,
     required this.onTap,
-    this.color = GloamColors.textPrimary,
-    this.backgroundColor = GloamColors.bgSurface,
+    this.color,
+    this.backgroundColor,
     this.size = 52,
     this.iconSize = 22,
   });
 
   final IconData icon;
   final VoidCallback onTap;
-  final Color color;
-  final Color backgroundColor;
+  final Color? color;
+  final Color? backgroundColor;
   final double size;
   final double iconSize;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: backgroundColor,
+      color: backgroundColor ?? context.gloam.bgSurface,
       shape: const CircleBorder(),
       child: InkWell(
         onTap: onTap,
@@ -171,7 +171,7 @@ class _CircleButton extends StatelessWidget {
         child: SizedBox(
           width: size,
           height: size,
-          child: Icon(icon, size: iconSize, color: color),
+          child: Icon(icon, size: iconSize, color: color ?? context.gloam.textPrimary),
         ),
       ),
     );

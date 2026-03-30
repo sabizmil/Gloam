@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/voice_service.dart';
 import '../../domain/voice_connection_quality.dart';
@@ -26,9 +26,9 @@ class ConnectionDiagnostics extends ConsumerWidget {
       width: 280,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: GloamColors.bgElevated,
+        color: context.gloam.bgElevated,
         borderRadius: BorderRadius.circular(GloamSpacing.radiusLg),
-        border: Border.all(color: GloamColors.border),
+        border: Border.all(color: context.gloam.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(80),
@@ -46,12 +46,12 @@ class ConnectionDiagnostics extends ConsumerWidget {
             '// connection',
             style: GoogleFonts.jetBrainsMono(
               fontSize: 10,
-              color: GloamColors.textTertiary,
+              color: context.gloam.textTertiary,
               letterSpacing: 1.2,
             ),
           ),
           const SizedBox(height: 8),
-          _DiagRow(label: 'Status', value: 'Connected', color: GloamColors.accent),
+          _DiagRow(label: 'Status', value: 'Connected', color: context.gloam.accent),
           _DiagRow(label: 'Codec', value: 'Opus'),
           _DiagRow(label: 'Transport', value: 'LiveKit SFU'),
           // Note: actual ping/packet loss values would come from
@@ -65,7 +65,7 @@ class ConnectionDiagnostics extends ConsumerWidget {
               '// participants',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 10,
-                color: GloamColors.textTertiary,
+                color: context.gloam.textTertiary,
                 letterSpacing: 1.2,
               ),
             ),
@@ -73,7 +73,7 @@ class ConnectionDiagnostics extends ConsumerWidget {
             ...participants.map((p) => _DiagRow(
                   label: p.isSelf ? 'you' : p.displayName,
                   value: _qualityLabel(p.connectionQuality),
-                  color: _qualityColor(p.connectionQuality),
+                  color: _qualityColor(context, p.connectionQuality),
                 )),
           ],
         ],
@@ -88,11 +88,11 @@ class ConnectionDiagnostics extends ConsumerWidget {
         VoiceConnectionQuality.unknown => '—',
       };
 
-  Color _qualityColor(VoiceConnectionQuality q) => switch (q) {
-        VoiceConnectionQuality.good => GloamColors.accent,
-        VoiceConnectionQuality.fair => GloamColors.warning,
-        VoiceConnectionQuality.poor => GloamColors.danger,
-        VoiceConnectionQuality.unknown => GloamColors.textTertiary,
+  Color _qualityColor(BuildContext context, VoiceConnectionQuality q) => switch (q) {
+        VoiceConnectionQuality.good => context.gloam.accent,
+        VoiceConnectionQuality.fair => context.gloam.warning,
+        VoiceConnectionQuality.poor => context.gloam.danger,
+        VoiceConnectionQuality.unknown => context.gloam.textTertiary,
       };
 }
 
@@ -100,12 +100,12 @@ class _DiagRow extends StatelessWidget {
   const _DiagRow({
     required this.label,
     required this.value,
-    this.color = GloamColors.textSecondary,
+    this.color,
   });
 
   final String label;
   final String value;
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +118,7 @@ class _DiagRow extends StatelessWidget {
               label,
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: GloamColors.textTertiary,
+                color: context.gloam.textTertiary,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -128,7 +128,7 @@ class _DiagRow extends StatelessWidget {
             value,
             style: GoogleFonts.jetBrainsMono(
               fontSize: 11,
-              color: color,
+              color: color ?? context.gloam.textSecondary,
             ),
           ),
         ],

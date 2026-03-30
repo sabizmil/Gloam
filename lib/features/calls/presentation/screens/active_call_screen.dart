@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../services/voice_service.dart';
 import '../../../../widgets/gloam_avatar.dart';
 import '../providers/call_provider.dart';
@@ -66,7 +66,7 @@ class _ActiveCallScreenState extends ConsumerState<ActiveCallScreen> {
     }
 
     return Scaffold(
-      backgroundColor: GloamColors.bg,
+      backgroundColor: context.gloam.bg,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -87,9 +87,9 @@ class _ActiveCallScreenState extends ConsumerState<ActiveCallScreen> {
                     Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: GloamColors.accent,
+                        color: context.gloam.accent,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -97,7 +97,7 @@ class _ActiveCallScreenState extends ConsumerState<ActiveCallScreen> {
                       'connected',
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 11,
-                        color: GloamColors.accent,
+                        color: context.gloam.accent,
                       ),
                     ),
                     const Spacer(),
@@ -105,7 +105,7 @@ class _ActiveCallScreenState extends ConsumerState<ActiveCallScreen> {
                       _formatElapsed(_elapsed),
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 13,
-                        color: GloamColors.textSecondary,
+                        color: context.gloam.textSecondary,
                       ),
                     ),
                   ],
@@ -125,7 +125,7 @@ class _ActiveCallScreenState extends ConsumerState<ActiveCallScreen> {
                 style: GoogleFonts.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.w600,
-                  color: GloamColors.textPrimary,
+                  color: context.gloam.textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -134,14 +134,14 @@ class _ActiveCallScreenState extends ConsumerState<ActiveCallScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.signal_cellular_alt_rounded,
-                      size: 14, color: GloamColors.accent),
+                  Icon(Icons.signal_cellular_alt_rounded,
+                      size: 14, color: context.gloam.accent),
                   const SizedBox(width: 6),
                   Text(
                     '12ms',
                     style: GoogleFonts.jetBrainsMono(
                       fontSize: 11,
-                      color: GloamColors.textSecondary,
+                      color: context.gloam.textSecondary,
                     ),
                   ),
                 ],
@@ -165,7 +165,7 @@ class _ActiveCallScreenState extends ConsumerState<ActiveCallScreen> {
                     _ControlButton(
                       icon: Icons.videocam_off_rounded,
                       label: 'camera',
-                      color: GloamColors.textTertiary,
+                      color: context.gloam.textTertiary,
                       onTap: () {
                         // Toggle video
                       },
@@ -183,7 +183,7 @@ class _ActiveCallScreenState extends ConsumerState<ActiveCallScreen> {
                     _ControlButton(
                       icon: Icons.call_end_rounded,
                       label: 'end',
-                      backgroundColor: GloamColors.danger,
+                      backgroundColor: context.gloam.danger,
                       color: Colors.white,
                       size: 72,
                       onTap: () {
@@ -227,7 +227,7 @@ class _CallAvatar extends ConsumerWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: isSpeaking ? GloamColors.accent : Colors.transparent,
+          color: isSpeaking ? context.gloam.accent : Colors.transparent,
           width: isSpeaking ? 3.0 : 0.0,
         ),
       ),
@@ -245,8 +245,8 @@ class _ControlButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    this.color = GloamColors.textPrimary,
-    this.backgroundColor = GloamColors.bgSurface,
+    this.color,
+    this.backgroundColor,
     this.isActive = false,
     this.size = 56,
   });
@@ -254,18 +254,21 @@ class _ControlButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final Color color;
-  final Color backgroundColor;
+  final Color? color;
+  final Color? backgroundColor;
   final bool isActive;
   final double size;
 
   @override
   Widget build(BuildContext context) {
+    final effectiveColor = color ?? context.gloam.textPrimary;
+    final effectiveBg = backgroundColor ?? context.gloam.bgSurface;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Material(
-          color: isActive ? GloamColors.accentDim : backgroundColor,
+          color: isActive ? context.gloam.accentDim : effectiveBg,
           shape: const CircleBorder(),
           child: InkWell(
             onTap: onTap,
@@ -275,7 +278,7 @@ class _ControlButton extends StatelessWidget {
               height: size,
               child: Icon(icon,
                   size: 24,
-                  color: isActive ? GloamColors.accentBright : color),
+                  color: isActive ? context.gloam.accentBright : effectiveColor),
             ),
           ),
         ),
@@ -288,16 +291,16 @@ class _ConnectingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: GloamColors.bg,
+      backgroundColor: context.gloam.bg,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(
+            SizedBox(
               width: 32,
               height: 32,
               child: CircularProgressIndicator(
-                color: GloamColors.accent,
+                color: context.gloam.accent,
                 strokeWidth: 2,
               ),
             ),
@@ -306,7 +309,7 @@ class _ConnectingView extends StatelessWidget {
               'connecting...',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 13,
-                color: GloamColors.textTertiary,
+                color: context.gloam.textTertiary,
                 letterSpacing: 0.5,
               ),
             ),

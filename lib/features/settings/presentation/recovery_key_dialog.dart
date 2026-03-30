@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:matrix/matrix.dart';
 
-import '../../../app/theme/color_tokens.dart';
+import '../../../app/theme/gloam_theme_ext.dart';
 import '../../../app/theme/spacing.dart';
 import '../../../services/matrix_service.dart';
 import '../../chat/presentation/providers/timeline_provider.dart';
@@ -184,10 +184,10 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: GloamColors.bgSurface,
+      backgroundColor: context.gloam.bgSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(GloamSpacing.radiusLg),
-        side: const BorderSide(color: GloamColors.border),
+        side: BorderSide(color: context.gloam.border),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 440),
@@ -202,7 +202,7 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: GloamColors.textPrimary,
+                  color: context.gloam.textPrimary,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -211,7 +211,7 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
                 'enter your recovery key or passphrase to decrypt older messages',
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: GloamColors.textSecondary,
+                  color: context.gloam.textSecondary,
                   height: 1.4,
                 ),
               ),
@@ -221,7 +221,7 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
                 '// recovery key or passphrase',
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 10,
-                  color: GloamColors.textTertiary,
+                  color: context.gloam.textTertiary,
                   letterSpacing: 1,
                 ),
               ),
@@ -233,7 +233,7 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
                 enabled: !_loading && !_success,
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 13,
-                  color: GloamColors.textPrimary,
+                  color: context.gloam.textPrimary,
                 ),
                 decoration: const InputDecoration(
                   hintText: 'EsTV b9hM...',
@@ -247,7 +247,7 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
                   _error!,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: GloamColors.danger,
+                    color: context.gloam.danger,
                   ),
                 ),
               ],
@@ -256,12 +256,12 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const SizedBox(
+                    SizedBox(
                       width: 14,
                       height: 14,
                       child: CircularProgressIndicator(
                         strokeWidth: 1.5,
-                        color: GloamColors.accentDim,
+                        color: context.gloam.accentDim,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -269,7 +269,7 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
                       _status!,
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 11,
-                        color: GloamColors.textTertiary,
+                        color: context.gloam.textTertiary,
                       ),
                     ),
                   ],
@@ -280,14 +280,14 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Icon(Icons.check_circle,
-                        size: 16, color: GloamColors.accent),
+                    Icon(Icons.check_circle,
+                        size: 16, color: context.gloam.accent),
                     const SizedBox(width: 8),
                     Text(
                       'keys restored — messages decrypting...',
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 11,
-                        color: GloamColors.accent,
+                        color: context.gloam.accent,
                       ),
                     ),
                   ],
@@ -306,12 +306,12 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
                   ElevatedButton(
                     onPressed: _loading || _success ? null : _unlock,
                     child: _loading
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: GloamColors.bg,
+                              color: context.gloam.bg,
                             ),
                           )
                         : const Text('unlock'),
@@ -329,7 +329,7 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
 Future<bool?> showRecoveryKeyDialog(BuildContext context) {
   return showDialog<bool>(
     context: context,
-    barrierColor: GloamColors.overlay,
+    barrierColor: context.gloam.overlay,
     builder: (_) => const RecoveryKeyDialog(),
   );
 }

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../services/update_service.dart';
 import '../widgets/settings_tile.dart';
 
@@ -23,7 +23,7 @@ class AboutSection extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: GloamColors.accentDim,
+                  color: context.gloam.accentDim,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
@@ -33,7 +33,7 @@ class AboutSection extends StatelessWidget {
                       fontSize: 28,
                       fontWeight: FontWeight.w300,
                       fontStyle: FontStyle.italic,
-                      color: GloamColors.accentBright,
+                      color: context.gloam.accentBright,
                     ),
                   ),
                 ),
@@ -45,7 +45,7 @@ class AboutSection extends StatelessWidget {
                   fontSize: 24,
                   fontWeight: FontWeight.w300,
                   fontStyle: FontStyle.italic,
-                  color: GloamColors.accent,
+                  color: context.gloam.accent,
                 ),
               ),
               const SizedBox(height: 4),
@@ -53,7 +53,7 @@ class AboutSection extends StatelessWidget {
                 'tune in to the conversation',
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 10,
-                  color: GloamColors.textTertiary,
+                  color: context.gloam.textTertiary,
                   letterSpacing: 1,
                 ),
               ),

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:matrix/matrix.dart' show PushRuleState;
 
-import '../theme/color_tokens.dart';
+import '../theme/gloam_theme_ext.dart';
 import '../theme/spacing.dart';
 import '../../features/profile/presentation/user_profile_modal.dart';
 import '../../services/matrix_service.dart';
@@ -32,10 +32,10 @@ class RoomInfoPanel extends ConsumerWidget {
 
     return Container(
       width: GloamSpacing.rightPanelWidth,
-      decoration: const BoxDecoration(
-        color: GloamColors.bgSurface,
+      decoration: BoxDecoration(
+        color: context.gloam.bgSurface,
         border: Border(
-          left: BorderSide(color: GloamColors.border),
+          left: BorderSide(color: context.gloam.border),
         ),
       ),
       child: Column(
@@ -44,9 +44,9 @@ class RoomInfoPanel extends ConsumerWidget {
           Container(
             height: GloamSpacing.headerHeight,
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: GloamColors.border),
+                bottom: BorderSide(color: context.gloam.border),
               ),
             ),
             child: Row(
@@ -56,15 +56,15 @@ class RoomInfoPanel extends ConsumerWidget {
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: GloamColors.textPrimary,
+                    color: context.gloam.textPrimary,
                     letterSpacing: 0.5,
                   ),
                 ),
                 const Spacer(),
                 GestureDetector(
                   onTap: onClose,
-                  child: const Icon(Icons.close,
-                      size: 16, color: GloamColors.textTertiary),
+                  child: Icon(Icons.close,
+                      size: 16, color: context.gloam.textTertiary),
                 ),
               ],
             ),
@@ -90,7 +90,7 @@ class RoomInfoPanel extends ConsumerWidget {
                         style: GoogleFonts.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
-                          color: GloamColors.textPrimary,
+                          color: context.gloam.textPrimary,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -100,7 +100,7 @@ class RoomInfoPanel extends ConsumerWidget {
                           topic,
                           style: GoogleFonts.inter(
                             fontSize: 13,
-                            color: GloamColors.textSecondary,
+                            color: context.gloam.textSecondary,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -115,7 +115,7 @@ class RoomInfoPanel extends ConsumerWidget {
                   '// details',
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 10,
-                    color: GloamColors.textTertiary,
+                    color: context.gloam.textTertiary,
                     letterSpacing: 1,
                   ),
                 ),
@@ -124,7 +124,7 @@ class RoomInfoPanel extends ConsumerWidget {
                   label: 'encryption',
                   value: room.encrypted ? 'enabled' : 'disabled',
                   valueColor:
-                      room.encrypted ? GloamColors.accent : GloamColors.textSecondary,
+                      room.encrypted ? context.gloam.accent : context.gloam.textSecondary,
                   icon: room.encrypted ? Icons.lock : Icons.lock_open,
                 ),
                 const SizedBox(height: 8),
@@ -136,7 +136,7 @@ class RoomInfoPanel extends ConsumerWidget {
                   '// members \u2014 ${members.length}',
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 10,
-                    color: GloamColors.textTertiary,
+                    color: context.gloam.textTertiary,
                     letterSpacing: 1,
                   ),
                 ),
@@ -164,7 +164,7 @@ class RoomInfoPanel extends ConsumerWidget {
                                   m.calcDisplayname(),
                                   style: GoogleFonts.inter(
                                     fontSize: 13,
-                                    color: GloamColors.textPrimary,
+                                    color: context.gloam.textPrimary,
                                   ),
                                 ),
                                 if (m.powerLevel >= 100)
@@ -172,7 +172,7 @@ class RoomInfoPanel extends ConsumerWidget {
                                     'admin',
                                     style: GoogleFonts.jetBrainsMono(
                                       fontSize: 10,
-                                      color: GloamColors.accent,
+                                      color: context.gloam.accent,
                                     ),
                                   )
                                 else if (m.powerLevel >= 50)
@@ -180,7 +180,7 @@ class RoomInfoPanel extends ConsumerWidget {
                                     'moderator',
                                     style: GoogleFonts.jetBrainsMono(
                                       fontSize: 10,
-                                      color: GloamColors.textTertiary,
+                                      color: context.gloam.textTertiary,
                                     ),
                                   ),
                               ],
@@ -240,8 +240,8 @@ class _NotificationSettingRowState extends State<_NotificationSettingRow> {
         label: 'notifications',
         value: label,
         icon: icon,
-        trailing: const Icon(Icons.chevron_right,
-            size: 14, color: GloamColors.textTertiary),
+        trailing: Icon(Icons.chevron_right,
+            size: 14, color: context.gloam.textTertiary),
       ),
     );
   }
@@ -271,21 +271,21 @@ class _DetailRow extends StatelessWidget {
           label,
           style: GoogleFonts.jetBrainsMono(
             fontSize: 11,
-            color: GloamColors.textSecondary,
+            color: context.gloam.textSecondary,
           ),
         ),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 12, color: valueColor ?? GloamColors.textSecondary),
+              Icon(icon, size: 12, color: valueColor ?? context.gloam.textSecondary),
               const SizedBox(width: 4),
             ],
             Text(
               value,
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 11,
-                color: valueColor ?? GloamColors.textSecondary,
+                color: valueColor ?? context.gloam.textSecondary,
               ),
             ),
             if (trailing != null) ...[
@@ -302,7 +302,7 @@ class _DetailRow extends StatelessWidget {
 Future<PushRuleState?> _showNotificationPicker(BuildContext context, dynamic room) {
   return showModalBottomSheet<PushRuleState>(
     context: context,
-    backgroundColor: GloamColors.bgSurface,
+    backgroundColor: context.gloam.bgSurface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(
           top: Radius.circular(GloamSpacing.radiusLg)),
@@ -319,7 +319,7 @@ Future<PushRuleState?> _showNotificationPicker(BuildContext context, dynamic roo
                 '// notification settings',
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 10,
-                  color: GloamColors.textTertiary,
+                  color: context.gloam.textTertiary,
                   letterSpacing: 1,
                 ),
               ),
@@ -390,8 +390,8 @@ class _PushRuleOption extends StatelessWidget {
                 icon,
                 size: 20,
                 color: isSelected
-                    ? GloamColors.accent
-                    : GloamColors.textSecondary,
+                    ? context.gloam.accent
+                    : context.gloam.textSecondary,
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -405,22 +405,22 @@ class _PushRuleOption extends StatelessWidget {
                         fontWeight:
                             isSelected ? FontWeight.w500 : FontWeight.w400,
                         color: isSelected
-                            ? GloamColors.accent
-                            : GloamColors.textPrimary,
+                            ? context.gloam.accent
+                            : context.gloam.textPrimary,
                       ),
                     ),
                     Text(
                       subtitle,
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: GloamColors.textTertiary,
+                        color: context.gloam.textTertiary,
                       ),
                     ),
                   ],
                 ),
               ),
               if (isSelected)
-                const Icon(Icons.check, size: 18, color: GloamColors.accent),
+                Icon(Icons.check, size: 18, color: context.gloam.accent),
             ],
           ),
         ),

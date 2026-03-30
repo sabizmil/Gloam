@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../widgets/gloam_avatar.dart';
 
 /// Compact pill/chip that previews the message being replied to.
@@ -44,19 +44,19 @@ class _ReplyPillState extends State<ReplyPill> {
           margin: const EdgeInsets.only(bottom: 4),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: _isHovered ? GloamColors.bgSurface : GloamColors.bgElevated,
+            color: _isHovered ? context.gloam.bgSurface : context.gloam.bgElevated,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: _isHovered ? GloamColors.accent.withValues(alpha: 0.4) : GloamColors.border,
+              color: _isHovered ? context.gloam.accent.withValues(alpha: 0.4) : context.gloam.border,
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.reply_rounded,
                 size: 12,
-                color: GloamColors.textTertiary,
+                color: context.gloam.textTertiary,
               ),
               const SizedBox(width: 6),
               GloamAvatar(
@@ -70,7 +70,7 @@ class _ReplyPillState extends State<ReplyPill> {
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: GloamColors.textSecondary,
+                  color: context.gloam.textSecondary,
                 ),
               ),
               const SizedBox(width: 6),
@@ -79,7 +79,7 @@ class _ReplyPillState extends State<ReplyPill> {
                   widget.body,
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: GloamColors.textTertiary,
+                    color: context.gloam.textTertiary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

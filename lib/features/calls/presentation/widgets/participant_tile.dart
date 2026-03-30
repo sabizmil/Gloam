@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme/color_tokens.dart';
+import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../services/voice_service.dart';
 import '../../../../widgets/gloam_avatar.dart';
 import '../../domain/voice_participant.dart';
@@ -34,7 +34,7 @@ class ParticipantTile extends ConsumerWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: GloamColors.bgSurface,
+        color: context.gloam.bgSurface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -51,7 +51,7 @@ class ParticipantTile extends ConsumerWidget {
             style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: GloamColors.textPrimary,
+              color: context.gloam.textPrimary,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -99,7 +99,7 @@ class _SpeakingAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(
           color: isSpeaking
-              ? GloamColors.accent
+              ? context.gloam.accent
                   .withAlpha((participant.audioLevel.clamp(0.3, 1.0) * 255).toInt())
               : Colors.transparent,
           width: isSpeaking ? 3.0 : 0.0,
@@ -125,19 +125,19 @@ class _StatusIndicator extends StatelessWidget {
       return _buildStatus(
         icon: Icons.mic_off_rounded,
         label: 'server muted',
-        color: GloamColors.danger,
+        color: context.gloam.danger,
       );
     }
 
     if (participant.isSpeaking) {
-      return _buildStatus(label: 'speaking', color: GloamColors.accent);
+      return _buildStatus(label: 'speaking', color: context.gloam.accent);
     }
 
     if (participant.isDeafened) {
       return _buildStatus(
         icon: Icons.headset_off_rounded,
         label: 'deafened',
-        color: GloamColors.warning,
+        color: context.gloam.warning,
       );
     }
 
@@ -145,7 +145,7 @@ class _StatusIndicator extends StatelessWidget {
       return _buildStatus(
         icon: Icons.mic_off_rounded,
         label: 'muted',
-        color: GloamColors.textTertiary,
+        color: context.gloam.textTertiary,
       );
     }
 

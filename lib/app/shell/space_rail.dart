@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:matrix/matrix.dart';
 
-import '../theme/color_tokens.dart';
+import '../theme/gloam_theme_ext.dart';
 import '../theme/spacing.dart';
 import '../../features/explore/presentation/explore_modal.dart';
 import '../../features/rooms/presentation/providers/room_list_provider.dart';
@@ -44,10 +44,10 @@ class SpaceRail extends ConsumerWidget {
 
     return Container(
       width: GloamSpacing.spaceRailWidth,
-      decoration: const BoxDecoration(
-        color: GloamColors.bg,
+      decoration: BoxDecoration(
+        color: context.gloam.bg,
         border: Border(
-          right: BorderSide(color: GloamColors.borderSubtle),
+          right: BorderSide(color: context.gloam.borderSubtle),
         ),
       ),
       child: Column(
@@ -61,10 +61,10 @@ class SpaceRail extends ConsumerWidget {
                 fontSize: 20,
                 fontWeight: FontWeight.w300,
                 fontStyle: FontStyle.italic,
-                color: GloamColors.accentBright,
+                color: context.gloam.accentBright,
               ),
             ),
-            color: GloamColors.accentDim,
+            color: context.gloam.accentDim,
             isActive: false,
             tooltip: 'gloam',
             onTap: () {},
@@ -78,8 +78,8 @@ class SpaceRail extends ConsumerWidget {
               clipBehavior: Clip.none,
               children: [
                 _SpaceIcon(
-                  child: const Icon(Icons.chat_bubble_outline,
-                      size: 20, color: GloamColors.textSecondary),
+                  child: Icon(Icons.chat_bubble_outline,
+                      size: 20, color: context.gloam.textSecondary),
                   isActive: selectedSpace == null,
                   tooltip: 'Direct Messages',
                   onTap: () =>
@@ -92,8 +92,8 @@ class SpaceRail extends ConsumerWidget {
                     child: Container(
                       width: 16,
                       height: 16,
-                      decoration: const BoxDecoration(
-                        color: GloamColors.accent,
+                      decoration: BoxDecoration(
+                        color: context.gloam.accent,
                         shape: BoxShape.circle,
                       ),
                       child: Center(
@@ -102,7 +102,7 @@ class SpaceRail extends ConsumerWidget {
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
-                            color: GloamColors.bg,
+                            color: context.gloam.bg,
                           ),
                         ),
                       ),
@@ -118,7 +118,7 @@ class SpaceRail extends ConsumerWidget {
             child: Container(
               width: 24,
               height: 1,
-              color: GloamColors.border,
+              color: context.gloam.border,
             ),
           ),
 
@@ -162,8 +162,8 @@ class SpaceRail extends ConsumerWidget {
                             child: Container(
                               width: 8,
                               height: 8,
-                              decoration: const BoxDecoration(
-                                color: GloamColors.accent,
+                              decoration: BoxDecoration(
+                                color: context.gloam.accent,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -182,14 +182,14 @@ class SpaceRail extends ConsumerWidget {
             child: Container(
               width: 24,
               height: 1,
-              color: GloamColors.border,
+              color: context.gloam.border,
             ),
           ),
 
           // Add space button
           Builder(
             builder: (ctx) => _SpaceIcon(
-              child: const Icon(Icons.add, size: 16, color: GloamColors.textTertiary),
+              child: Icon(Icons.add, size: 16, color: context.gloam.textTertiary),
               isActive: false,
               isDashed: true,
               tooltip: 'Explore rooms & spaces',
@@ -201,8 +201,8 @@ class SpaceRail extends ConsumerWidget {
           // Settings button
           Builder(
             builder: (ctx) => _SpaceIcon(
-              child: const Icon(Icons.settings_outlined,
-                  size: 18, color: GloamColors.textSecondary),
+              child: Icon(Icons.settings_outlined,
+                  size: 18, color: context.gloam.textSecondary),
               isActive: false,
               tooltip: 'Settings',
               onTap: () => showSettingsModal(ctx),
@@ -257,7 +257,7 @@ class _SpaceIcon extends StatelessWidget {
             width: 4,
             height: isActive ? 32 : 0,
             decoration: BoxDecoration(
-              color: GloamColors.accent,
+              color: context.gloam.accent,
               borderRadius: const BorderRadius.horizontal(
                 right: Radius.circular(4),
               ),
@@ -271,12 +271,12 @@ class _SpaceIcon extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: color ?? (isActive ? GloamColors.bgElevated : GloamColors.bgSurface),
+                color: color ?? (isActive ? context.gloam.bgElevated : context.gloam.bgSurface),
                 borderRadius: BorderRadius.circular(isActive ? 12 : 20),
                 border: isDashed
-                    ? Border.all(color: GloamColors.border)
+                    ? Border.all(color: context.gloam.border)
                     : (isActive
-                        ? Border.all(color: GloamColors.accent, width: 2)
+                        ? Border.all(color: context.gloam.accent, width: 2)
                         : null),
               ),
               child: Center(child: child),
