@@ -56,6 +56,7 @@ dependencies:
   cryptography: ^2.9.0
   file_picker: ^10.3.10
   desktop_drop: ^0.7.0
+  pasteboard: ^0.5.0
   mime: ^2.0.0
   auto_updater: ^1.0.0
 

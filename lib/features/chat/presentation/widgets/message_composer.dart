@@ -50,14 +50,41 @@ class MessageComposer extends StatefulWidget {
   final VoidCallback? onCancelAction;
 
   @override
-  State<MessageComposer> createState() => _MessageComposerState();
+  MessageComposerState createState() => MessageComposerState();
 }
 
-class _MessageComposerState extends State<MessageComposer> {
+class MessageComposerState extends State<MessageComposer> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   bool _hasText = false;
   bool _isTyping = false;
+
+  /// Get the current composer text.
+  String get text => _controller.text;
+
+  /// Set the composer text (used to undo filename paste after file upload).
+  set text(String value) {
+    _controller.text = value;
+    _controller.selection = TextSelection.collapsed(offset: value.length);
+  }
+
+  /// Insert text at the current cursor position (used for manual paste fallback).
+  void pasteText(String pasteContent) {
+    final sel = _controller.selection;
+    final current = _controller.text;
+    if (sel.isValid) {
+      final newText = current.replaceRange(sel.start, sel.end, pasteContent);
+      _controller.text = newText;
+      _controller.selection = TextSelection.collapsed(
+        offset: sel.start + pasteContent.length,
+      );
+    } else {
+      _controller.text = current + pasteContent;
+      _controller.selection = TextSelection.collapsed(
+        offset: _controller.text.length,
+      );
+    }
+  }
 
   @override
   void initState() {

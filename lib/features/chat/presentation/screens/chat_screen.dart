@@ -7,12 +7,14 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/theme/color_tokens.dart';
 import '../../../../app/theme/spacing.dart';
+import '../../../../services/clipboard_paste_service.dart';
 import '../../../../services/matrix_service.dart';
-import '../../../../widgets/gloam_avatar.dart';
 import '../../../../services/upload_service.dart';
+import '../../../../widgets/gloam_avatar.dart';
 import '../providers/timeline_provider.dart';
 import '../widgets/date_separator.dart';
 import '../widgets/drop_overlay.dart';
+import '../widgets/following_bar.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/message_composer.dart';
 import '../widgets/syncing_zero_state.dart';
@@ -37,6 +39,7 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _scrollController = ScrollController();
   final _messageKeys = <String, GlobalKey>{};
+  final _composerKey = GlobalKey<MessageComposerState>();
   ComposerState _composerState = ComposerState.normal;
   bool _showScrollToBottom = false;
   String? _highlightEventId;
@@ -158,6 +161,58 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             );
           }
         }
+      }
+    }
+  }
+
+  /// Handle Cmd+V / Ctrl+V — check clipboard for file or image data.
+  /// The TextField already processed the text paste by the time this runs
+  /// (child-first key propagation), so we snapshot the text and restore
+  /// it after a successful file/image upload.
+  Future<void> _handlePaste() async {
+    // Snapshot the composer text — it already includes whatever the
+    // TextField just pasted (filename, etc). We'll restore it if we
+    // handle the paste as a file/image upload instead.
+    final textBefore = _composerKey.currentState?.text ?? '';
+
+    try {
+      // Try file paths FIRST (e.g. copied from Finder/Explorer).
+      // This reads the actual file from disk — more reliable than
+      // Pasteboard.image which returns the macOS file icon thumbnail
+      // when a file (not a screenshot) is on the clipboard.
+      final files = await ClipboardPasteService.getClipboardFiles();
+      if (files.isNotEmpty) {
+        // Undo the filename text that was pasted into the composer
+        _composerKey.currentState?.text = '';
+        for (final file in files) {
+          ref.read(timelineProvider(widget.roomId).notifier).sendFileMessage(file);
+        }
+        return;
+      }
+
+      // Try clipboard image (screenshots, images copied from browsers)
+      final imageFile = await ClipboardPasteService.getClipboardImage();
+      if (imageFile != null) {
+        final sizeError = UploadService.validateFileSize(imageFile.bytes.length);
+        if (sizeError != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(sizeError), backgroundColor: GloamColors.danger),
+          );
+          return;
+        }
+        // Undo any text that was pasted into the composer
+        _composerKey.currentState?.text = '';
+        ref.read(timelineProvider(widget.roomId).notifier).sendFileMessage(imageFile);
+        return;
+      }
+
+      // No files or images found — the TextField's native text paste
+      // already handled it, so nothing more to do.
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('paste failed: $e'), backgroundColor: GloamColors.danger),
+        );
       }
     }
   }
@@ -295,7 +350,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
     }
 
-    return FileDropZone(
+    return Focus(
+      autofocus: false,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.keyV &&
+            (HardwareKeyboard.instance.isMetaPressed ||
+                HardwareKeyboard.instance.isControlPressed)) {
+          _handlePaste();
+          // Can't consume — child TextField already processed the paste
+          // (child-first propagation). _handlePaste clears the pasted
+          // filename text after a successful file/image upload.
+        }
+        return KeyEventResult.ignored;
+      },
+      child: FileDropZone(
       onFilesDropped: _handleDroppedFiles,
       child: Column(
       children: [
@@ -317,6 +386,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           onMembersTap: () => ref.read(rightPanelProvider.notifier).state =
               const RightPanelState(view: RightPanelView.members),
         ),
+
+        // Following the conversation bar
+        if (!widget.compact) FollowingBar(roomId: widget.roomId),
 
         // Syncing zero state: joined but no messages yet
         if (messages.isEmpty && room?.lastEvent == null && !widget.compact)
@@ -473,6 +545,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
         // Composer
         MessageComposer(
+          key: _composerKey,
           roomName: roomName,
           composerState: _composerState,
           onSend: (text) => ref
@@ -506,7 +579,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         ], // end else (has messages)
       ],
-    ));
+    )));
   }
 
   String _extractServer(String roomId) {
