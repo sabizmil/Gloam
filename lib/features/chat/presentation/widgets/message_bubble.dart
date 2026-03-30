@@ -8,6 +8,7 @@ import 'delivery_indicator.dart';
 import 'file_message.dart';
 import 'hover_toolbar.dart';
 import 'image_message.dart';
+import 'reply_pill.dart';
 import 'link_preview.dart';
 import 'markdown_body.dart';
 import '../../data/media_embed_resolver.dart';
@@ -27,6 +28,7 @@ class MessageBubble extends StatefulWidget {
     this.onDelete,
     this.onThread,
     this.onCopy,
+    this.onReplyTap,
   });
 
   final TimelineMessage message;
@@ -43,6 +45,7 @@ class MessageBubble extends StatefulWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onThread;
   final VoidCallback? onCopy;
+  final VoidCallback? onReplyTap;
 
   @override
   State<MessageBubble> createState() => _MessageBubbleState();
@@ -162,40 +165,13 @@ class _MessageBubbleState extends State<MessageBubble> {
                       ),
                     ),
 
-                  // Reply preview
+                  // Reply preview pill
                   if (message.replyToBody != null)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 4),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          left: BorderSide(
-                              color: GloamColors.accent, width: 3),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            message.replyToSenderName ?? '',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: GloamColors.textSecondary,
-                            ),
-                          ),
-                          Text(
-                            message.replyToBody!,
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: GloamColors.textTertiary,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
+                    ReplyPill(
+                      senderName: message.replyToSenderName ?? '',
+                      senderAvatarUrl: message.replyToSenderAvatarUrl,
+                      body: message.replyToBody!,
+                      onTap: widget.onReplyTap,
                     ),
 
                   // Message body

@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../app/theme/color_tokens.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/matrix_service.dart';
+import '../../../../widgets/gloam_avatar.dart';
 import '../../../../services/upload_service.dart';
 import '../providers/timeline_provider.dart';
 import '../widgets/date_separator.dart';
@@ -35,8 +36,10 @@ class ChatScreen extends ConsumerStatefulWidget {
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _scrollController = ScrollController();
+  final _messageKeys = <String, GlobalKey>{};
   ComposerState _composerState = ComposerState.normal;
   bool _showScrollToBottom = false;
+  String? _highlightEventId;
 
   @override
   void initState() {
@@ -77,6 +80,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
     );
+  }
+
+  /// Scroll to a specific message and briefly highlight it.
+  void _scrollToMessage(String eventId) {
+    final key = _messageKeys[eventId];
+    final ctx = key?.currentContext;
+    if (ctx == null) return;
+
+    Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+      alignment: 0.3, // position target ~30% from top of viewport
+    );
+
+    // Flash highlight
+    setState(() => _highlightEventId = eventId);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _highlightEventId = null);
+    });
   }
 
   bool _isDifferentDay(DateTime a, DateTime b) {
@@ -239,13 +262,38 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final messages = ref.watch(timelineProvider(widget.roomId));
+    final allMessages = ref.watch(timelineProvider(widget.roomId));
     final client = ref.watch(matrixServiceProvider).client;
     final room = client?.getRoomById(widget.roomId);
     final roomName = room?.getLocalizedDisplayname() ?? '';
     final topic = room?.topic ?? '';
     final memberCount = room?.summary.mJoinedMemberCount ?? 0;
     final myUserId = client?.userID;
+
+    // Filter out thread replies from the main timeline
+    final messages = allMessages
+        .where((m) => !m.isThreadReply)
+        .toList();
+
+    // Build thread metadata per root event ID for thread indicators
+    final threadData = <String, _ThreadData>{};
+    for (final m in allMessages.where((m) => m.isThreadReply)) {
+      final rootId = m.threadRootEventId;
+      if (rootId == null) continue;
+      final data = threadData.putIfAbsent(
+        rootId,
+        () => _ThreadData(),
+      );
+      data.replyCount++;
+      data.participants.putIfAbsent(
+        m.senderId,
+        () => (name: m.senderName, avatarUrl: m.senderAvatarUrl),
+      );
+      if (data.lastReplyTime == null ||
+          m.timestamp.isAfter(data.lastReplyTime!)) {
+        data.lastReplyTime = m.timestamp;
+      }
+    }
 
     return FileDropZone(
       onFilesDropped: _handleDroppedFiles,
@@ -317,6 +365,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
                   return Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (showDateSep)
                         DateSeparator(date: msg.timestamp),
@@ -326,40 +375,68 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         onSecondaryTap: () => _showMessageActions(
                             context, msg,
                             isOwnMessage: msg.senderId == myUserId),
-                        child: MessageBubble(
-                          message: msg,
-                          isGrouped: isGrouped,
-                          roomId: widget.roomId,
-                          isOwnMessage: msg.senderId == myUserId,
-                          onAvatarTap: () => showUserProfile(
-                            context, ref,
-                            userId: msg.senderId,
-                            roomId: widget.roomId,
+                        child: AnimatedContainer(
+                          key: _messageKeys.putIfAbsent(
+                            msg.eventId,
+                            () => GlobalKey(),
                           ),
-                          onReply: () => _handleReplyAction(msg),
-                          onEdit: () => _handleEditAction(msg),
-                          onReact: (emoji) => ref
-                              .read(
-                                  timelineProvider(widget.roomId).notifier)
-                              .react(msg.eventId, emoji),
-                          onDelete: () => _confirmDelete(msg.eventId),
-                          onThread: () {
+                          duration: const Duration(milliseconds: 500),
+                          decoration: BoxDecoration(
+                            color: _highlightEventId == msg.eventId
+                                ? GloamColors.bgElevated
+                                : null,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: MessageBubble(
+                            message: msg,
+                            isGrouped: isGrouped,
+                            roomId: widget.roomId,
+                            isOwnMessage: msg.senderId == myUserId,
+                            onAvatarTap: () => showUserProfile(
+                              context, ref,
+                              userId: msg.senderId,
+                              roomId: widget.roomId,
+                            ),
+                            onReply: () => _handleReplyAction(msg),
+                            onEdit: () => _handleEditAction(msg),
+                            onReact: (emoji) => ref
+                                .read(
+                                    timelineProvider(widget.roomId).notifier)
+                                .react(msg.eventId, emoji),
+                            onDelete: () => _confirmDelete(msg.eventId),
+                            onThread: () {
+                              ref.read(rightPanelProvider.notifier).state =
+                                  RightPanelState(
+                                view: RightPanelView.thread,
+                                threadRoot: msg,
+                              );
+                            },
+                            onCopy: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('copied to clipboard'),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
+                            },
+                            onReplyTap: msg.replyToEventId != null
+                                ? () => _scrollToMessage(msg.replyToEventId!)
+                                : null,
+                          ),
+                        ),
+                      ),
+                      // Thread indicator
+                      if (threadData.containsKey(msg.eventId))
+                        _ThreadIndicator(
+                          data: threadData[msg.eventId]!,
+                          onTap: () {
                             ref.read(rightPanelProvider.notifier).state =
                                 RightPanelState(
                               view: RightPanelView.thread,
                               threadRoot: msg,
                             );
                           },
-                          onCopy: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('copied to clipboard'),
-                                duration: Duration(seconds: 1),
-                              ),
-                            );
-                          },
                         ),
-                      ),
                     ],
                   );
                 },
@@ -698,6 +775,104 @@ class _ActionTile extends StatelessWidget {
       ),
       onTap: onTap,
       dense: true,
+    );
+  }
+}
+
+/// Collected thread metadata for a root message.
+class _ThreadData {
+  int replyCount = 0;
+  final Map<String, ({String name, Uri? avatarUrl})> participants = {};
+  DateTime? lastReplyTime;
+}
+
+/// Thread indicator shown below root messages that have thread replies.
+/// Matches the Pencil prototype: overlapping avatars + reply count + last reply time.
+class _ThreadIndicator extends StatelessWidget {
+  const _ThreadIndicator({
+    required this.data,
+    required this.onTap,
+  });
+
+  final _ThreadData data;
+  final VoidCallback onTap;
+
+  String _formatTime(DateTime ts) {
+    final h = ts.hour;
+    final m = ts.minute.toString().padLeft(2, '0');
+    final period = h >= 12 ? 'pm' : 'am';
+    final hour = h > 12 ? h - 12 : (h == 0 ? 12 : h);
+    return '$hour:$m $period';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final replyWord = data.replyCount == 1 ? 'reply' : 'replies';
+    final avatars = data.participants.values.take(5).toList();
+    const avatarSize = 20.0;
+    const overlap = 6.0;
+    final avatarsWidth =
+        avatarSize + (avatars.length - 1) * (avatarSize - overlap);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 48, top: 6, bottom: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Overlapping participant avatars
+            SizedBox(
+              width: avatarsWidth,
+              height: avatarSize,
+              child: Stack(
+                children: [
+                  for (var i = 0; i < avatars.length; i++)
+                    Positioned(
+                      left: i * (avatarSize - overlap),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: GloamColors.bg,
+                            width: 2,
+                          ),
+                        ),
+                        child: GloamAvatar(
+                          displayName: avatars[i].name,
+                          mxcUrl: avatars[i].avatarUrl,
+                          size: avatarSize - 4,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '${data.replyCount} $replyWord',
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: GloamColors.accent,
+              ),
+            ),
+            if (data.lastReplyTime != null) ...[
+              const SizedBox(width: 8),
+              Text(
+                'last reply ${_formatTime(data.lastReplyTime!)}',
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 10,
+                  color: GloamColors.textTertiary,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ),
     );
   }
 }

@@ -22,12 +22,15 @@ class TimelineMessage {
   final String? replyToEventId;
   final String? replyToSenderName;
   final String? replyToBody;
+  final Uri? replyToSenderAvatarUrl;
   final Map<String, ReactionGroup> reactions;
   final bool isRedacted;
   final int? mediaSizeBytes;
   final int? imageWidth;
   final int? imageHeight;
   final String? fileSendingStatus; // generatingThumbnail, encrypting, uploading
+  final bool isThreadReply;
+  final String? threadRootEventId;
 
   const TimelineMessage({
     required this.eventId,
@@ -45,12 +48,15 @@ class TimelineMessage {
     this.replyToEventId,
     this.replyToSenderName,
     this.replyToBody,
+    this.replyToSenderAvatarUrl,
     this.reactions = const {},
     this.isRedacted = false,
     this.mediaSizeBytes,
     this.imageWidth,
     this.imageHeight,
     this.fileSendingStatus,
+    this.isThreadReply = false,
+    this.threadRootEventId,
   });
 
   bool get isLocalEcho => eventId.startsWith('~');
@@ -264,30 +270,53 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     if (_isActive) markAsRead();
   }
 
-  /// Extract the display body for an event, handling edits correctly.
-  /// For edited messages, uses m.new_content body instead of the raw
-  /// event body which includes a "* old text" fallback prefix.
+  /// Extract the display body for an event, stripping reply fallback and
+  /// handling edits. The SDK's `calcUnlocalizedBody` removes the `> <@user>`
+  /// quoted fallback that Matrix embeds in reply/thread bodies.
   String _extractBody(Event event) {
-    // If this event has m.new_content (it's an edit), use the new body
-    final newContent = event.content.tryGetMap<String, Object?>('m.new_content');
-    if (newContent != null) {
-      final newBody = newContent.tryGet<String>('body');
-      if (newBody != null) return newBody;
-    }
-    // Plain event — use body directly
-    return event.body;
+    return event.calcUnlocalizedBody(hideReply: true, hideEdit: true);
   }
 
   TimelineMessage _mapEvent(Event event, String? myUserId) {
-    // Handle replies
+    // Handle replies and threads
     String? replyToEventId;
     String? replyToSenderName;
     String? replyToBody;
+    Uri? replyToSenderAvatarUrl;
+    bool isThreadReply = false;
+    String? threadRootEventId;
 
-    // Check if this message is a reply via m.relates_to
+    // Check relation type — m.thread vs m.in_reply_to
     final relatesTo = event.content.tryGetMap<String, Object?>('m.relates_to');
-    final inReplyToMap = relatesTo?.tryGetMap<String, Object?>('m.in_reply_to');
-    replyToEventId = inReplyToMap?.tryGet<String>('event_id');
+    final relType = relatesTo?.tryGet<String>('rel_type');
+
+    if (relType == RelationshipTypes.thread) {
+      // This is a thread reply (m.thread relation)
+      isThreadReply = true;
+      threadRootEventId = relatesTo?.tryGet<String>('event_id');
+      // Thread events may also carry m.in_reply_to for the within-thread reply
+      final inReplyToMap = relatesTo?.tryGetMap<String, Object?>('m.in_reply_to');
+      replyToEventId = inReplyToMap?.tryGet<String>('event_id');
+    } else {
+      // Regular reply (m.in_reply_to only)
+      final inReplyToMap = relatesTo?.tryGetMap<String, Object?>('m.in_reply_to');
+      replyToEventId = inReplyToMap?.tryGet<String>('event_id');
+    }
+
+    // Populate reply metadata from the referenced event
+    if (replyToEventId != null) {
+      try {
+        final replyEvent = _timeline!.events.firstWhere(
+          (e) => e.eventId == replyToEventId,
+        );
+        final replySender = replyEvent.senderFromMemoryOrFallback;
+        replyToSenderName = replySender.calcDisplayname();
+        replyToBody = _extractBody(replyEvent);
+        replyToSenderAvatarUrl = replySender.avatarUrl;
+      } catch (_) {
+        // Reply target not in loaded timeline — leave fields null
+      }
+    }
 
     // Handle reactions
     final reactionMap = <String, ReactionGroup>{};
@@ -385,6 +414,9 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
       replyToEventId: replyToEventId,
       replyToSenderName: replyToSenderName,
       replyToBody: replyToBody,
+      replyToSenderAvatarUrl: replyToSenderAvatarUrl,
+      isThreadReply: isThreadReply,
+      threadRootEventId: threadRootEventId,
       reactions: reactionMap,
       isRedacted: event.redacted,
       mediaSizeBytes:
@@ -427,6 +459,13 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     if (replyEvent != null) {
       await room.sendTextEvent(text, inReplyTo: replyEvent);
     }
+  }
+
+  /// Send a reply within a thread using proper m.thread relation.
+  Future<void> sendThreadReply(String text, String rootEventId) async {
+    final room = _room;
+    if (room == null) return;
+    await room.sendTextEvent(text, threadRootEventId: rootEventId);
   }
 
   /// Edit a message.
