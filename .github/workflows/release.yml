@@ -163,22 +163,11 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           ZIP="build/Gloam-${VERSION}-macos.zip"
 
-          # Verify ZIP exists
-          ls -la "$ZIP"
-
-          # The secret is base64-encoded — decode it
-          echo "$SPARKLE_KEY" | base64 --decode > /tmp/sparkle_key 2>/dev/null || echo "$SPARKLE_KEY" > /tmp/sparkle_key
-          echo "Key file size: $(wc -c < /tmp/sparkle_key) bytes"
-
-          # Sign the ZIP and capture output (capture stderr too for diagnostics)
-          if ! SIG_OUTPUT=$(macos/Pods/Sparkle/bin/sign_update "$ZIP" --ed-key-file /tmp/sparkle_key 2>&1); then
+          # sign_update expects the base64 ed25519 key via stdin (--ed-key-file -)
+          if ! SIG_OUTPUT=$(echo "$SPARKLE_KEY" | macos/Pods/Sparkle/bin/sign_update "$ZIP" --ed-key-file - 2>&1); then
             echo "::error::sign_update failed: $SIG_OUTPUT"
-            rm -f /tmp/sparkle_key
             exit 1
           fi
-          rm -f /tmp/sparkle_key
-
-          echo "sign_update output: $SIG_OUTPUT"
 
           # Parse signature and length from output
           # sign_update outputs: sparkle:edSignature="..." length="..."
@@ -186,13 +175,13 @@ jobs:
           LENGTH=$(echo "$SIG_OUTPUT" | grep -o 'length="[^"]*"' | sed 's/length="//;s/"$//')
 
           if [ -z "$SIGNATURE" ]; then
-            echo "::error::Failed to parse signature from sign_update output"
+            echo "::error::Failed to parse signature from sign_update output: $SIG_OUTPUT"
             exit 1
           fi
 
           echo "signature=$SIGNATURE" >> $GITHUB_OUTPUT
           echo "length=$LENGTH" >> $GITHUB_OUTPUT
-          echo "✓ Sparkle signature: ${SIGNATURE:0:20}..."
+          echo "✓ Sparkle signature generated"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
