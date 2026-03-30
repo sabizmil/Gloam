@@ -7,6 +7,7 @@ import '../theme/gloam_theme_ext.dart';
 import '../theme/spacing.dart';
 import '../../features/explore/presentation/explore_modal.dart';
 import '../../features/rooms/presentation/providers/room_list_provider.dart';
+import '../../features/rooms/presentation/providers/space_hierarchy_provider.dart';
 import '../../features/settings/presentation/settings_modal.dart';
 import '../../services/matrix_service.dart';
 import '../../widgets/gloam_avatar.dart';
@@ -134,9 +135,16 @@ class SpaceRail extends ConsumerWidget {
                   final space = spaces[index];
                   final isActive = space.id == selectedSpace;
 
-                  // Count unread across space children
+                  // Count unread using hierarchy child IDs
+                  final hierarchyAsync =
+                      ref.watch(spaceHierarchyProvider(space.id));
+                  final hierarchyIds = hierarchyAsync.whenOrNull(
+                    data: (rooms) => rooms.map((r) => r.roomId).toSet(),
+                  );
                   final unreadCount = _countSpaceUnread(
-                      ref.read(matrixServiceProvider).client!, space);
+                      ref.read(matrixServiceProvider).client!,
+                      space,
+                      hierarchyIds);
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 4),
@@ -214,12 +222,14 @@ class SpaceRail extends ConsumerWidget {
     );
   }
 
-  int _countSpaceUnread(Client client, Room space) {
+  int _countSpaceUnread(
+      Client client, Room space, Set<String>? hierarchyIds) {
+    final childIds = hierarchyIds ??
+        space.spaceChildren.map((c) => c.roomId).toSet();
     var total = 0;
     for (final room in client.rooms) {
       if (room.membership != Membership.join) continue;
-      // Check if room is a child of this space
-      if (space.spaceChildren.any((c) => c.roomId == room.id)) {
+      if (childIds.contains(room.id)) {
         total += room.notificationCount;
       }
     }

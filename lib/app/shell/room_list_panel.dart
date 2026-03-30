@@ -11,6 +11,7 @@ import '../../features/calls/presentation/widgets/voice_channel_tile.dart';
 import '../../features/chat/presentation/providers/timeline_provider.dart';
 import '../../features/chat/presentation/screens/chat_screen.dart';
 import '../../features/rooms/presentation/providers/room_list_provider.dart';
+import '../../features/rooms/presentation/providers/space_hierarchy_provider.dart';
 import '../../features/rooms/presentation/widgets/create_room_dialog.dart';
 import '../../features/rooms/presentation/widgets/invite_tile.dart';
 import '../../features/rooms/presentation/widgets/room_list_tile.dart';
@@ -204,6 +205,10 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
                             onTap: () => _handleVoiceChannelTap(vc),
                           )),
                     ],
+                    // Unjoined space children
+                    if (selectedSpace != null)
+                      ..._buildUnjoinedSection(
+                        context, ref, selectedSpace!),
                   ],
                 );
               },
@@ -223,16 +228,39 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
   ) {
     var result = rooms;
 
-    // Space filter — show only rooms that are children of the selected space
+    // Space filter — use server-resolved hierarchy for complete child list
     if (spaceId != null) {
-      final client = ref.read(matrixServiceProvider).client;
-      if (client != null) {
-        final space = client.getRoomById(spaceId);
-        if (space != null) {
-          final childIds =
+      final hierarchyAsync = ref.watch(spaceHierarchyProvider(spaceId));
+      final hierarchyData = hierarchyAsync.whenOrNull(
+        data: (rooms) => rooms,
+      );
+      if (hierarchyData != null) {
+        final childIds = hierarchyData.map((r) => r.roomId).toSet();
+        // Build a name lookup for hierarchy rooms
+        final hierarchyNames = <String, String>{};
+        for (final hr in hierarchyData) {
+          if (hr.name != null) hierarchyNames[hr.roomId] = hr.name!;
+        }
+        result = result
+            .where((r) => childIds.contains(r.roomId))
+            .map((r) {
+              // Fix "Empty chat" names using hierarchy data
+              if (r.displayName == 'Empty chat' &&
+                  hierarchyNames.containsKey(r.roomId)) {
+                return r.withDisplayName(hierarchyNames[r.roomId]!);
+              }
+              return r;
+            })
+            .toList();
+      } else {
+        // Hierarchy still loading — fall back to local spaceChildren
+        final client = ref.read(matrixServiceProvider).client;
+        final space = client?.getRoomById(spaceId);
+        if (space != null && space.isSpace) {
+          final localIds =
               space.spaceChildren.map((c) => c.roomId).toSet();
           result = result
-              .where((r) => childIds.contains(r.roomId))
+              .where((r) => localIds.contains(r.roomId))
               .toList();
         }
       }
@@ -257,6 +285,80 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
     }
 
     return result;
+  }
+
+  /// Build the "available rooms" section for unjoined space children.
+  List<Widget> _buildUnjoinedSection(
+      BuildContext context, WidgetRef ref, String spaceId) {
+    final hierarchyAsync = ref.watch(spaceHierarchyProvider(spaceId));
+    return hierarchyAsync.when(
+      loading: () => [],
+      error: (_, __) => [],
+      data: (rooms) {
+        // Filter out sub-spaces — they're not joinable rooms
+        final unjoinable = rooms.where(
+            (r) => !r.isJoined && r.roomType != 'm.space');
+        final unjoinedRooms = unjoinable
+            .where((r) => !_isVoiceChannelType(r.roomType))
+            .toList();
+        final unjoinedVoice = unjoinable
+            .where((r) => _isVoiceChannelType(r.roomType))
+            .toList();
+
+        return [
+          if (unjoinedRooms.isNotEmpty) ...[
+            const SectionHeader('available rooms'),
+            ...unjoinedRooms.map((r) => _UnjoinedRoomTile(
+                  room: r,
+                  onJoin: () => _doJoin(r),
+                  onOpenPending: r.joinRule != 'restricted'
+                      ? () => _selectRoom(r.roomId)
+                      : null,
+                )),
+          ],
+          if (unjoinedVoice.isNotEmpty) ...[
+            const SectionHeader('available voice channels'),
+            ...unjoinedVoice.map((r) => _UnjoinedRoomTile(
+                  room: r,
+                  isVoice: true,
+                  onJoin: () => _doJoin(r),
+                  onOpenPending: r.joinRule != 'restricted'
+                      ? () => _selectRoom(r.roomId)
+                      : null,
+                )),
+          ],
+        ];
+      },
+    );
+  }
+
+  bool _isVoiceChannelType(String? roomType) {
+    return roomType == 'im.gloam.voice_channel' ||
+        roomType == 'org.matrix.msc3417.call';
+  }
+
+  /// Fire-and-forget join. Returns null on success, error message on failure.
+  Future<String?> _doJoin(SpaceRoom spaceRoom) async {
+    final client = ref.read(matrixServiceProvider).client;
+    if (client == null) return 'not connected';
+    try {
+      await client.joinRoom(
+        spaceRoom.roomId,
+        serverName: spaceRoom.viaServers.isNotEmpty
+            ? spaceRoom.viaServers
+            : null,
+      );
+      return null; // success
+    } catch (e) {
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('forbidden') || msg.contains('403')) {
+        return 'no access';
+      }
+      if (msg.contains('not invited') || msg.contains('invite')) {
+        return 'invite required';
+      }
+      return 'failed to join';
+    }
   }
 
   /// Check if a room is a voice channel by inspecting its create event.
@@ -290,12 +392,20 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
       return r.tags.containsKey('im.gloam.voice_channel');
     }).toList();
 
-    // Filter by selected space
+    // Filter by selected space using hierarchy
     if (selectedSpace != null) {
-      final space = client.getRoomById(selectedSpace);
-      if (space != null) {
-        final childIds = space.spaceChildren.map((c) => c.roomId).toSet();
+      final hierarchyAsync = ref.watch(spaceHierarchyProvider(selectedSpace));
+      final childIds = hierarchyAsync.whenOrNull(
+        data: (spaceRooms) => spaceRooms.map((r) => r.roomId).toSet(),
+      );
+      if (childIds != null) {
         rooms = rooms.where((r) => childIds.contains(r.id)).toList();
+      } else {
+        final space = client.getRoomById(selectedSpace);
+        if (space != null && space.isSpace) {
+          final localIds = space.spaceChildren.map((c) => c.roomId).toSet();
+          rooms = rooms.where((r) => localIds.contains(r.id)).toList();
+        }
       }
     }
 
@@ -483,5 +593,193 @@ class _MobileChatScreen extends StatelessWidget {
       });
     }
     return ChatScreen(roomId: roomId);
+  }
+}
+
+enum _JoinState { idle, joining, pending, failed }
+
+/// Tile for an unjoined space child room with join-rule-aware affordances.
+class _UnjoinedRoomTile extends StatefulWidget {
+  const _UnjoinedRoomTile({
+    required this.room,
+    required this.onJoin,
+    this.onOpenPending,
+    this.isVoice = false,
+  });
+
+  final SpaceRoom room;
+  /// Returns null on success, error message on failure.
+  final Future<String?> Function() onJoin;
+  final VoidCallback? onOpenPending;
+  final bool isVoice;
+
+  @override
+  State<_UnjoinedRoomTile> createState() => _UnjoinedRoomTileState();
+}
+
+class _UnjoinedRoomTileState extends State<_UnjoinedRoomTile> {
+  _JoinState _state = _JoinState.idle;
+  String? _error;
+
+  Future<void> _handleTap() async {
+    if (_state == _JoinState.joining) return;
+
+    // Pending = already joined but waiting for sync, tap to open
+    if (_state == _JoinState.pending) {
+      widget.onOpenPending?.call();
+      return;
+    }
+
+    // Failed = tap to retry
+    // Idle = tap to join
+    setState(() {
+      _state = _JoinState.joining;
+      _error = null;
+    });
+
+    final error = await widget.onJoin();
+
+    if (!mounted) return;
+
+    if (error != null) {
+      setState(() {
+        _state = _JoinState.failed;
+        _error = error;
+      });
+    } else {
+      // Join API succeeded — room may take a moment to appear in sync
+      setState(() => _state = _JoinState.pending);
+      // Only navigate for non-restricted rooms (restricted = waiting for approval)
+      widget.onOpenPending?.call();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.gloam;
+    final room = widget.room;
+    final name = room.name ?? room.roomId;
+    final memberText =
+        '${room.numJoinedMembers} ${room.numJoinedMembers == 1 ? 'member' : 'members'}';
+    final inviteOnly = room.isInviteOnly;
+
+    return GestureDetector(
+      onTap: inviteOnly ? null : _handleTap,
+      child: MouseRegion(
+        cursor: inviteOnly
+            ? SystemMouseCursors.basic
+            : SystemMouseCursors.click,
+        child: Container(
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          margin: const EdgeInsets.symmetric(vertical: 1),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
+          ),
+          child: Row(
+            children: [
+              // Room icon
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: colors.bgElevated,
+                  borderRadius: BorderRadius.circular(
+                      widget.isVoice ? 14 : GloamSpacing.radiusSm),
+                ),
+                child: Icon(
+                  widget.isVoice
+                      ? Icons.volume_up_outlined
+                      : inviteOnly
+                          ? Icons.lock_outline
+                          : Icons.tag,
+                  size: 14,
+                  color: colors.textTertiary,
+                ),
+              ),
+              const SizedBox(width: 10),
+              // Name + subtitle
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: inviteOnly
+                            ? colors.textTertiary.withValues(alpha: 0.5)
+                            : colors.textTertiary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      memberText,
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 9,
+                        color: colors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Action indicator
+              _buildAction(colors, inviteOnly),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAction(dynamic colors, bool inviteOnly) {
+    if (inviteOnly) {
+      return Text(
+        'invite only',
+        style: GoogleFonts.jetBrainsMono(
+          fontSize: 9,
+          color: colors.textTertiary,
+        ),
+      );
+    }
+
+    final isRestricted = widget.room.joinRule == 'restricted';
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 150),
+      child: switch (_state) {
+        _JoinState.idle => _actionLabel(
+            isRestricted ? 'request' : 'join',
+            colors.accent,
+          ),
+        _JoinState.joining => SizedBox(
+            key: const ValueKey('joining'),
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: colors.accent,
+            ),
+          ),
+        _JoinState.pending => _actionLabel(
+            isRestricted ? 'requested' : 'syncing',
+            isRestricted ? colors.info : colors.warning,
+          ),
+        _JoinState.failed => _actionLabel(_error ?? 'failed', colors.danger),
+      },
+    );
+  }
+
+  Widget _actionLabel(String text, Color color) {
+    return Text(
+      text,
+      key: ValueKey(text),
+      style: GoogleFonts.jetBrainsMono(
+        fontSize: 9,
+        color: color,
+        fontWeight: FontWeight.w500,
+      ),
+    );
   }
 }

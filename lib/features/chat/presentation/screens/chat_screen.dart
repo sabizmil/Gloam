@@ -8,10 +8,13 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/clipboard_paste_service.dart';
+import 'package:matrix/matrix.dart' show EventTypes, Membership;
+
 import '../../../../services/matrix_service.dart';
 import '../../../../services/upload_service.dart';
 import '../../../../widgets/gloam_avatar.dart';
 import '../providers/timeline_provider.dart';
+import '../../../rooms/presentation/providers/space_hierarchy_provider.dart';
 import '../widgets/date_separator.dart';
 import '../widgets/drop_overlay.dart';
 import '../widgets/following_bar.dart';
@@ -320,10 +323,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final allMessages = ref.watch(timelineProvider(widget.roomId));
     final client = ref.watch(matrixServiceProvider).client;
     final room = client?.getRoomById(widget.roomId);
-    final roomName = room?.getLocalizedDisplayname() ?? '';
+    final localName = room?.getLocalizedDisplayname() ?? '';
+    // Fall back to hierarchy name for rooms with generic/missing names
+    final hierarchyName = ref.watch(hierarchyRoomNameProvider(widget.roomId));
+    final roomName = (localName == 'Empty chat' || localName.isEmpty)
+        ? (hierarchyName ?? localName)
+        : localName;
     final topic = room?.topic ?? '';
     final memberCount = room?.summary.mJoinedMemberCount ?? 0;
     final myUserId = client?.userID;
+    // Detect "joined but no state" — room exists but has no create event
+    final isPartiallyJoined = room != null &&
+        room.membership == Membership.join &&
+        room.getState(EventTypes.RoomCreate) == null;
 
     // Filter out thread replies from the main timeline
     final messages = allMessages
@@ -390,8 +402,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         // Following the conversation bar
         if (!widget.compact) FollowingBar(roomId: widget.roomId),
 
-        // Syncing zero state: joined but no messages yet
-        if (messages.isEmpty && room?.lastEvent == null && !widget.compact)
+        // Pending state: joined but room has no state (restricted join pending sync)
+        if (isPartiallyJoined && messages.isEmpty && !widget.compact)
+          Expanded(
+            child: _PendingRoomState(
+              roomName: roomName,
+              onLeave: () async {
+                await room?.leave();
+                if (context.mounted) {
+                  ref.read(selectedRoomProvider.notifier).state = null;
+                }
+              },
+            ),
+          )
+        // Syncing zero state: joined but no messages yet AND room still syncing.
+        // Once the room is fully synced (not partial), show normal empty chat.
+        else if (messages.isEmpty && room?.lastEvent == null &&
+            (room?.partial ?? true) && !widget.compact)
           Expanded(
             child: SyncingZeroState(
               roomName: roomName,
@@ -946,6 +973,198 @@ class _ThreadIndicator extends StatelessWidget {
         ),
       ),
     ),
+    );
+  }
+}
+
+/// Zero state for rooms that are joined but waiting for the server
+/// to deliver room state (e.g. restricted rooms pending full sync).
+class _PendingRoomState extends StatelessWidget {
+  const _PendingRoomState({
+    required this.roomName,
+    this.onLeave,
+  });
+
+  final String roomName;
+  final VoidCallback? onLeave;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.gloam;
+    return Column(
+      children: [
+        Expanded(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(40),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.hourglass_top_rounded,
+                    size: 40,
+                    color: colors.info,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Request sent',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Waiting for #$roomName to become available',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: colors.textTertiary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: colors.bgSurface,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        _PendingStep(
+                          icon: Icons.check_circle,
+                          iconColor: colors.accent,
+                          title: 'Join request sent',
+                          subtitle: 'The server has received your request',
+                        ),
+                        const SizedBox(height: 12),
+                        _PendingStep(
+                          icon: Icons.sync,
+                          iconColor: colors.info,
+                          title: 'Waiting for room data',
+                          subtitle:
+                              'This can take a moment for restricted rooms. '
+                              'You\'ll be able to chat once the room syncs.',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(color: colors.border),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.schedule,
+                  size: 14, color: colors.textTertiary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'This room will appear when ready',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: colors.textTertiary,
+                  ),
+                ),
+              ),
+              if (onLeave != null)
+                GestureDetector(
+                  onTap: onLeave,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: Container(
+                      height: 28,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: colors.bgSurface,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: colors.border),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.logout,
+                              size: 12, color: colors.textTertiary),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Cancel',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PendingStep extends StatelessWidget {
+  const _PendingStep({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.gloam;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: iconColor),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: colors.textTertiary,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

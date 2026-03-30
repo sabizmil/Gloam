@@ -39,6 +39,23 @@ class RoomListItem {
 
   bool get isMuted => pushRuleState == 'dontNotify';
   bool get isNotifyAll => pushRuleState == 'notify';
+
+  RoomListItem withDisplayName(String name) => RoomListItem(
+        roomId: roomId,
+        displayName: name,
+        avatarUrl: avatarUrl,
+        lastMessagePreview: lastMessagePreview,
+        lastMessageSender: lastMessageSender,
+        lastMessageTimestamp: lastMessageTimestamp,
+        unreadCount: unreadCount,
+        mentionCount: mentionCount,
+        isEncrypted: isEncrypted,
+        isDirect: isDirect,
+        isInvite: isInvite,
+        inviterId: inviterId,
+        inviterName: inviterName,
+        pushRuleState: pushRuleState,
+      );
 }
 
 /// Transforms SDK rooms into [RoomListItem]s, sorted by recent activity.

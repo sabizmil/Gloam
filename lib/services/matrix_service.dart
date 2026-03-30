@@ -46,6 +46,14 @@ class MatrixService {
       await _client!.init(waitForFirstSync: false);
 
       if (_client!.isLogged()) {
+        // Load full state for space rooms so spaceChildren is complete.
+        // Without this, m.space.child events stored in the database but
+        // not in the initial sync response stay unloaded.
+        for (final room in _client!.rooms) {
+          if (room.isSpace && room.partial) {
+            await room.postLoad();
+          }
+        }
         _connectionState = GloamConnectionState.connected;
         return true;
       }

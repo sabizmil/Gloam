@@ -40,6 +40,7 @@ class DebugServer {
         '/debug/sync' => _sync(),
         '/debug/spaces' => _spaces(),
         '/debug/logs' => {'logs': logs},
+        '/debug/hierarchy' => await _hierarchy(),
         '/debug/logs/clear' => () { logs.clear(); return {'cleared': true}; }(),
         _ when segments.length == 3 &&
             segments[0] == 'debug' &&
@@ -217,6 +218,25 @@ class DebugServer {
         }).toList(),
       };
     }).toList();
+  }
+
+  Future<Map<String, dynamic>> _hierarchy() async {
+    final results = <String, dynamic>{};
+    for (final space in _client.rooms.where((r) => r.isSpace)) {
+      try {
+        final resp = await _client.getSpaceHierarchy(space.id, maxDepth: 2);
+        results[space.getLocalizedDisplayname()] = resp.rooms.map((r) => {
+          'roomId': r.roomId,
+          'name': r.name,
+          'roomType': r.roomType,
+          'numJoinedMembers': r.numJoinedMembers,
+          'joinRule': r.joinRule,
+        }).toList();
+      } catch (e) {
+        results[space.getLocalizedDisplayname()] = {'error': '$e'};
+      }
+    }
+    return results;
   }
 
   // ---------------------------------------------------------------------------
