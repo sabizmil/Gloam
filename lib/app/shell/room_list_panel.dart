@@ -266,6 +266,15 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
       }
     }
 
+    // Resolve "Empty chat" fallback names from hierarchy data
+    if (result.any((r) => r.displayName == 'Empty chat')) {
+      result = result.map((r) {
+        if (r.displayName != 'Empty chat') return r;
+        final name = ref.read(hierarchyRoomNameProvider(r.roomId));
+        return name != null ? r.withDisplayName(name) : r;
+      }).toList();
+    }
+
     // Text search
     if (query.isNotEmpty) {
       final q = query.toLowerCase();

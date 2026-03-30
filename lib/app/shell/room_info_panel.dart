@@ -5,9 +5,11 @@ import 'package:matrix/matrix.dart' show PushRuleState;
 
 import '../theme/gloam_theme_ext.dart';
 import '../theme/spacing.dart';
+import '../../features/chat/presentation/providers/timeline_provider.dart';
 import '../../features/profile/presentation/user_profile_modal.dart';
 import '../../services/matrix_service.dart';
 import '../../widgets/gloam_avatar.dart';
+import 'right_panel.dart';
 
 /// Right panel showing room details, members, and settings links.
 class RoomInfoPanel extends ConsumerWidget {
@@ -189,6 +191,19 @@ class RoomInfoPanel extends ConsumerWidget {
                         ],
                       ),
                     )))),
+
+                // Leave room
+                const SizedBox(height: 24),
+                Text(
+                  '// actions',
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 10,
+                    color: context.gloam.textTertiary,
+                    letterSpacing: 1,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _LeaveRoomButton(roomId: roomId),
               ],
             ),
           ),
@@ -424,6 +439,98 @@ class _PushRuleOption extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LeaveRoomButton extends ConsumerWidget {
+  const _LeaveRoomButton({required this.roomId});
+  final String roomId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.gloam;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => _confirmLeave(context, ref),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
+            border: Border.all(color: colors.danger.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.logout, size: 16, color: colors.danger),
+              const SizedBox(width: 10),
+              Text(
+                'Leave room',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: colors.danger,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmLeave(BuildContext context, WidgetRef ref) {
+    final colors = context.gloam;
+    showDialog(
+      context: context,
+      barrierColor: colors.overlay,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: colors.bgSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: colors.border),
+        ),
+        title: Text(
+          'leave room?',
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: colors.textPrimary,
+          ),
+        ),
+        content: Text(
+          'You can rejoin later if the room is still accessible.',
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            color: colors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('cancel',
+                style: GoogleFonts.jetBrainsMono(
+                    fontSize: 12, color: colors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: colors.danger),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final client = ref.read(matrixServiceProvider).client;
+              final room = client?.getRoomById(roomId);
+              if (room != null) {
+                await room.leave();
+                ref.read(selectedRoomProvider.notifier).state = null;
+                ref.read(rightPanelProvider.notifier).state =
+                    RightPanelState.closed;
+              }
+            },
+            child: Text('leave',
+                style: GoogleFonts.jetBrainsMono(
+                    fontSize: 12, color: colors.textPrimary)),
+          ),
+        ],
       ),
     );
   }

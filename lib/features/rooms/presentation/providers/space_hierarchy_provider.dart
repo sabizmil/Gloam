@@ -58,8 +58,8 @@ final _rawSpaceHierarchyProvider =
   if (client == null) return [];
 
   try {
-    // maxDepth: 2 resolves one level of sub-spaces (e.g. "Voice Chats" nested space)
-    final response = await client.getSpaceHierarchy(spaceId, maxDepth: 2);
+    // maxDepth not set = unlimited depth, resolves nested sub-spaces fully
+    final response = await client.getSpaceHierarchy(spaceId);
     return response.rooms
         .where((r) => r.roomId != spaceId && r.roomType != 'm.space')
         .map((chunk) {

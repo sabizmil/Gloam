@@ -63,8 +63,9 @@ class RoomListItem {
 List<RoomListItem> _buildRoomList(Client client) {
   final rooms = client.rooms
       .where((r) =>
-          r.membership == Membership.join ||
-          r.membership == Membership.invite)
+          (r.membership == Membership.join ||
+          r.membership == Membership.invite) &&
+          !r.isSpace) // Spaces show in the space rail, not the room list
       .toList();
 
   // Sort: invites first, then by last event timestamp descending

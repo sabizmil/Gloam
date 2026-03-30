@@ -224,7 +224,7 @@ class DebugServer {
     final results = <String, dynamic>{};
     for (final space in _client.rooms.where((r) => r.isSpace)) {
       try {
-        final resp = await _client.getSpaceHierarchy(space.id, maxDepth: 2);
+        final resp = await _client.getSpaceHierarchy(space.id, maxDepth: 10);
         results[space.getLocalizedDisplayname()] = resp.rooms.map((r) => {
           'roomId': r.roomId,
           'name': r.name,
