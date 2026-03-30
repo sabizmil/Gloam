@@ -267,7 +267,7 @@ class _MessageContent extends StatelessWidget {
         ),
       'm.image' => ImageMessage(message: message, roomId: roomId),
       'm.video' => VideoMessage(message: message),
-      'm.file' => FileMessage(message: message),
+      'm.file' => FileMessage(message: message, roomId: roomId),
       'm.audio' => VoiceMessage(message: message),
       'm.bad_encrypted' => Row(
           mainAxisSize: MainAxisSize.min,

@@ -1,14 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/theme/color_tokens.dart';
 import '../../../../app/theme/spacing.dart';
+import '../../../../services/download_service.dart';
+import '../../../../services/matrix_service.dart';
 import '../providers/timeline_provider.dart';
 
-/// Renders a file attachment with icon, name, size, and download action.
-class FileMessage extends StatelessWidget {
-  const FileMessage({super.key, required this.message});
+enum _DownloadState { idle, downloading, complete, error }
+
+/// Renders a file attachment with icon, name, size, and interactive download.
+class FileMessage extends ConsumerStatefulWidget {
+  const FileMessage({
+    super.key,
+    required this.message,
+    this.roomId,
+  });
+
   final TimelineMessage message;
+  final String? roomId;
+
+  @override
+  ConsumerState<FileMessage> createState() => _FileMessageState();
+}
+
+class _FileMessageState extends ConsumerState<FileMessage> {
+  _DownloadState _state = _DownloadState.idle;
+  String? _savedPath;
 
   IconData _iconForMime(String? mime) {
     if (mime == null) return Icons.insert_drive_file_outlined;
@@ -27,6 +46,50 @@ class FileMessage extends StatelessWidget {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  Future<void> _onDownload() async {
+    final client = ref.read(matrixServiceProvider).client;
+    final roomId = widget.roomId;
+    if (client == null || roomId == null) return;
+
+    setState(() => _state = _DownloadState.downloading);
+
+    try {
+      final matrixFile = await DownloadService.downloadAttachment(
+        client,
+        roomId,
+        widget.message.eventId,
+      );
+
+      final savedPath = await DownloadService.saveFile(
+        bytes: matrixFile.bytes,
+        filename: matrixFile.name,
+      );
+
+      if (savedPath == null) {
+        // User cancelled save dialog
+        if (mounted) setState(() => _state = _DownloadState.idle);
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          _state = _DownloadState.complete;
+          _savedPath = savedPath;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _state = _DownloadState.error);
+      }
+    }
+  }
+
+  void _onOpen() {
+    if (_savedPath != null) {
+      DownloadService.openFile(_savedPath!);
+    }
   }
 
   @override
@@ -50,7 +113,7 @@ class FileMessage extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
-              _iconForMime(message.mimeType),
+              _iconForMime(widget.message.mimeType),
               size: 20,
               color: GloamColors.accent,
             ),
@@ -61,7 +124,7 @@ class FileMessage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  message.body,
+                  widget.message.body,
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -72,7 +135,7 @@ class FileMessage extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _formatBytes(message.mediaSizeBytes),
+                  _formatBytes(widget.message.mediaSizeBytes),
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 10,
                     color: GloamColors.textTertiary,
@@ -82,13 +145,62 @@ class FileMessage extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Icon(
-            Icons.download_outlined,
-            size: 18,
-            color: GloamColors.textSecondary,
-          ),
+          _buildAction(),
         ],
       ),
+    );
+  }
+
+  Widget _buildAction() {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: switch (_state) {
+        _DownloadState.idle => MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: _onDownload,
+              child: const Icon(
+                Icons.download_outlined,
+                key: ValueKey('download'),
+                size: 18,
+                color: GloamColors.textSecondary,
+              ),
+            ),
+          ),
+        _DownloadState.downloading => const SizedBox(
+            key: ValueKey('loading'),
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: GloamColors.accent,
+            ),
+          ),
+        _DownloadState.complete => MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: _onOpen,
+              child: const Icon(
+                Icons.check_circle_outlined,
+                key: ValueKey('complete'),
+                size: 18,
+                color: GloamColors.accent,
+              ),
+            ),
+          ),
+        _DownloadState.error => MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: _onDownload,
+              child: const Icon(
+                Icons.error_outline,
+                key: ValueKey('error'),
+                size: 18,
+                color: GloamColors.danger,
+              ),
+            ),
+          ),
+      },
     );
   }
 }
@@ -111,7 +223,6 @@ class VideoMessage extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Placeholder — will be replaced with actual thumbnail
           SizedBox(
             width: 300,
             height: 180,
@@ -123,7 +234,6 @@ class VideoMessage extends StatelessWidget {
               ),
             ),
           ),
-          // Play button overlay
           Container(
             width: 48,
             height: 48,
@@ -138,7 +248,6 @@ class VideoMessage extends StatelessWidget {
               color: GloamColors.textPrimary,
             ),
           ),
-          // Duration badge
           Positioned(
             bottom: 8,
             right: 8,
