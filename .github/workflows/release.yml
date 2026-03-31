@@ -155,19 +155,34 @@ jobs:
           cd build/macos/Build/Products/Release
           zip -r -y "../../../../Gloam-${VERSION}-macos.zip" gloam.app
 
-      - name: Sign update with Sparkle
-        id: sparkle_sign
+      - name: Install Sparkle signing key
         env:
           SPARKLE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          # Store the Sparkle ed25519 key in the CI keychain so sign_update
+          # can find it the same way it does on a developer machine
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          CLEAN_KEY=$(printf '%s' "$SPARKLE_KEY" | tr -d '[:space:]')
+          security add-generic-password \
+            -a "ed25519" \
+            -s "https://sparkle-project.org" \
+            -D "private key" \
+            -C "spky" \
+            -l "Private key for signing Sparkle updates" \
+            -T "" \
+            -w "$CLEAN_KEY" \
+            -U \
+            "$KEYCHAIN_PATH"
+          echo "✓ Sparkle signing key installed in CI keychain"
+
+      - name: Sign update with Sparkle
+        id: sparkle_sign
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           ZIP="build/Gloam-${VERSION}-macos.zip"
 
-          # Strip any trailing whitespace/newlines from the secret
-          CLEAN_KEY=$(printf '%s' "$SPARKLE_KEY" | tr -d '[:space:]')
-
-          # sign_update expects the base64 ed25519 key via stdin
-          if ! SIG_OUTPUT=$(printf '%s' "$CLEAN_KEY" | macos/Pods/Sparkle/bin/sign_update "$ZIP" --ed-key-file - 2>&1); then
+          # sign_update reads from the keychain automatically
+          if ! SIG_OUTPUT=$(macos/Pods/Sparkle/bin/sign_update "$ZIP" 2>&1); then
             echo "::error::sign_update failed: $SIG_OUTPUT"
             exit 1
           fi
