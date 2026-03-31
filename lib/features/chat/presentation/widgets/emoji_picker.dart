@@ -3,59 +3,98 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
+import '../../../../data/emoji_data.dart';
+import '../../../../data/emoji_frequency.dart';
 
-/// Gloam emoji picker — matches the mockup: search bar, category tabs,
-/// frequently used section, emoji grid.
+/// Search-first emoji picker (Prototype C design).
+/// Used in both the hover toolbar (reactions) and the message composer.
 class GloamEmojiPicker extends StatefulWidget {
-  const GloamEmojiPicker({super.key, required this.onSelect});
+  const GloamEmojiPicker({
+    super.key,
+    required this.onSelect,
+    this.width = 352,
+  });
+
   final void Function(String emoji) onSelect;
+  final double width;
 
   @override
   State<GloamEmojiPicker> createState() => _GloamEmojiPickerState();
 }
 
 class _GloamEmojiPickerState extends State<GloamEmojiPicker> {
-  String _search = '';
-  int _selectedCategory = 0;
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
+  String _query = '';
 
-  static const _categories = [
-    ('Frequent', _frequentlyUsed),
-    ('Smileys', _smileys),
-    ('People', _people),
-    ('Nature', _nature),
-    ('Food', _food),
-    ('Objects', _objects),
-    ('Symbols', _symbols),
-  ];
-
-  List<String> get _displayedEmoji {
-    if (_search.isNotEmpty) {
-      // Simple search through all categories
-      return _allEmoji
-          .where((e) => _emojiNames[e]?.contains(_search.toLowerCase()) ?? false)
-          .toList();
-    }
-    return _categories[_selectedCategory].$2;
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.requestFocus();
+    EmojiFrequency.load();
   }
 
-  static List<String> get _allEmoji {
-    final seen = <String>{};
-    final result = <String>[];
-    for (final list in [
-      _frequentlyUsed, _smileys, _people, _nature, _food, _objects, _symbols,
-    ]) {
-      for (final e in list) {
-        if (seen.add(e)) result.add(e);
-      }
-    }
-    return result;
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
+
+  void _selectEmoji(String emoji) {
+    EmojiFrequency.record(emoji);
+    widget.onSelect(emoji);
+  }
+
+  // ── Search ──
+
+  List<EmojiEntry> _search(String query) {
+    final q = query.toLowerCase().trim();
+    if (q.isEmpty) return [];
+
+    final scored = <(EmojiEntry, double)>[];
+    for (final entry in allEmoji) {
+      final s = _score(entry, q);
+      if (s > 0) scored.add((entry, s));
+    }
+    scored.sort((a, b) => b.$2.compareTo(a.$2));
+    return scored.take(40).map((e) => e.$1).toList();
+  }
+
+  double _score(EmojiEntry entry, String q) {
+    final name = entry.name.toLowerCase();
+
+    // Exact name match
+    if (name == q) return 100;
+    // Name starts with query
+    if (name.startsWith(q)) return 80;
+    // A word in the name starts with query
+    final words = name.split(RegExp(r'[\s_:-]+'));
+    if (words.any((w) => w.startsWith(q))) return 60;
+    // Name contains query as substring
+    if (name.contains(q)) return 40;
+    // Any keyword starts with query
+    for (final k in entry.keywords) {
+      if (k.toLowerCase().startsWith(q)) return 30;
+    }
+    // Any keyword contains query
+    for (final k in entry.keywords) {
+      if (k.toLowerCase().contains(q)) return 20;
+    }
+    return 0;
+  }
+
+  // ── Build ──
 
   @override
   Widget build(BuildContext context) {
     final colors = context.gloam;
+    final isSearching = _query.isNotEmpty;
+    final searchResults = isSearching ? _search(_query) : <EmojiEntry>[];
+    final frequent = EmojiFrequency.topN(8);
+
     return Container(
-      width: 352,
+      width: widget.width,
       height: 420,
       decoration: BoxDecoration(
         color: colors.bgSurface,
@@ -72,209 +111,228 @@ class _GloamEmojiPickerState extends State<GloamEmojiPicker> {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          // Search bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            height: 44,
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: colors.border),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.search,
-                    size: 16, color: colors.textTertiary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    onChanged: (v) => setState(() => _search = v),
-                    style: GoogleFonts.inter(
-                        fontSize: 13, color: colors.textPrimary),
-                    decoration: InputDecoration(
-                      hintText: 'search emoji...',
-                      hintStyle: GoogleFonts.inter(
-                          fontSize: 13, color: colors.textTertiary),
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                      isDense: true,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // ── Search field ──
+          _buildSearchField(colors),
 
-          // Category tabs
-          if (_search.isEmpty)
-            Container(
-              height: 36,
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: colors.border),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: List.generate(_categoryIcons.length, (i) {
-                  final isActive = i == _selectedCategory;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedCategory = i),
-                    child: Opacity(
-                      opacity: isActive ? 1.0 : 0.4,
-                      child: Text(
-                        _categoryIcons[i],
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
+          Divider(height: 1, color: colors.border),
 
-          // Section header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                _search.isNotEmpty
-                    ? '// results'
-                    : '// ${_categories[_selectedCategory].$1.toLowerCase()}',
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 10,
-                  color: colors.textTertiary,
-                  letterSpacing: 1,
-                ),
-              ),
-            ),
-          ),
-
-          // Emoji grid
+          // ── Grid area ──
           Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 8,
-                mainAxisSpacing: 2,
-                crossAxisSpacing: 2,
-              ),
-              itemCount: _displayedEmoji.length,
-              itemBuilder: (context, index) {
-                final emoji = _displayedEmoji[index];
-                return GestureDetector(
-                  onTap: () => widget.onSelect(emoji),
-                  child: Center(
-                    child: Text(
-                      emoji,
-                      style: const TextStyle(fontSize: 22),
-                    ),
-                  ),
-                );
-              },
-            ),
+            child: isSearching
+                ? _buildSearchResults(searchResults, colors)
+                : _buildBrowseGrid(colors),
           ),
+
+          // ── Recently used footer ──
+          if (!isSearching) ...[
+            Divider(height: 1, color: colors.border),
+            _buildFrequentFooter(frequent, colors),
+          ],
         ],
       ),
     );
   }
 
-  static const _categoryIcons = [
-    '\u2b50', // star (frequent)
-    '\ud83d\ude00', // smiley
-    '\ud83d\udc4b', // wave (people)
-    '\ud83d\udc3e', // paw (nature)
-    '\ud83c\udf55', // pizza (food)
-    '\ud83d\udca1', // bulb (objects)
-    '\ud83d\udd23', // symbols
-  ];
+  Widget _buildSearchField(dynamic colors) {
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          Icon(Icons.search, size: 16, color: colors.textTertiary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              onChanged: (v) => setState(() => _query = v),
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: colors.textPrimary,
+              ),
+              decoration: InputDecoration(
+                hintText: 'search emoji...',
+                hintStyle: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: colors.textTertiary,
+                ),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
+              ),
+            ),
+          ),
+          if (_query.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                _controller.clear();
+                setState(() => _query = '');
+              },
+              child: Icon(Icons.close,
+                  size: 14, color: colors.textTertiary),
+            ),
+        ],
+      ),
+    );
+  }
 
-  static const _frequentlyUsed = [
-    '\ud83d\udc4d', '\ud83d\udd25', '\ud83d\udc40', '\u2764\ufe0f',
-    '\ud83d\ude02', '\ud83c\udf89', '\u2705', '\ud83d\udcaf',
-    '\ud83d\ude4f', '\ud83e\udd14', '\ud83d\ude0d', '\ud83d\udc4f',
-    '\ud83d\ude80', '\ud83c\udf1f', '\ud83d\udcaa', '\ud83d\ude4c',
-  ];
+  Widget _buildSearchResults(List<EmojiEntry> results, dynamic colors) {
+    if (results.isEmpty) {
+      return Center(
+        child: Text(
+          '// no matches',
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: 11,
+            color: colors.textTertiary,
+          ),
+        ),
+      );
+    }
 
-  static const _smileys = [
-    '\ud83d\ude00', '\ud83d\ude03', '\ud83d\ude04', '\ud83d\ude01',
-    '\ud83d\ude06', '\ud83d\ude05', '\ud83e\udd23', '\ud83d\ude02',
-    '\ud83d\ude42', '\ud83d\ude43', '\ud83d\ude09', '\ud83d\ude0a',
-    '\ud83d\ude07', '\ud83e\udd70', '\ud83d\ude0d', '\ud83e\udd29',
-    '\ud83d\ude18', '\ud83d\ude17', '\ud83d\ude1a', '\ud83d\ude19',
-    '\ud83e\udd72', '\ud83d\ude0b', '\ud83d\ude1b', '\ud83d\ude1c',
-    '\ud83e\udd2a', '\ud83d\ude1d', '\ud83e\udd11', '\ud83e\udd17',
-    '\ud83e\udd2d', '\ud83e\udd2b', '\ud83e\udd14', '\ud83e\udd28',
-    '\ud83d\ude10', '\ud83d\ude11', '\ud83d\ude36', '\ud83d\ude44',
-    '\ud83d\ude0f', '\ud83d\ude23', '\ud83d\ude25', '\ud83e\udd7a',
-  ];
+    return GridView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 8,
+        mainAxisSpacing: 2,
+        crossAxisSpacing: 2,
+      ),
+      itemCount: results.length,
+      itemBuilder: (context, index) =>
+          _emojiCell(results[index].emoji, colors),
+    );
+  }
 
-  static const _people = [
-    '\ud83d\udc4b', '\ud83e\udd1a', '\ud83d\udd90\ufe0f', '\u270b',
-    '\ud83d\udc4c', '\ud83e\udd0c', '\ud83e\udd0f', '\u270c\ufe0f',
-    '\ud83e\udd1e', '\ud83e\udd1f', '\ud83e\udd18', '\ud83d\udc4d',
-    '\ud83d\udc4e', '\u270a', '\ud83d\udc4a', '\ud83e\udd1b',
-  ];
+  Widget _buildBrowseGrid(dynamic colors) {
+    // Build a flat list of widgets: category headers + emoji cells
+    final items = <_GridItem>[];
+    int? lastCategory;
 
-  static const _nature = [
-    '\ud83d\udc36', '\ud83d\udc31', '\ud83d\udc2d', '\ud83d\udc39',
-    '\ud83d\udc30', '\ud83e\udd8a', '\ud83d\udc3b', '\ud83d\udc3c',
-    '\ud83d\udc28', '\ud83d\udc2f', '\ud83e\udd81', '\ud83d\udc2e',
-    '\ud83d\udc37', '\ud83d\udc38', '\ud83d\udc35', '\ud83d\udc12',
-  ];
+    for (final entry in allEmoji) {
+      if (entry.categoryIndex != lastCategory) {
+        lastCategory = entry.categoryIndex;
+        items.add(_GridItem.header(emojiCategories[entry.categoryIndex]));
+      }
+      items.add(_GridItem.emoji(entry.emoji));
+    }
 
-  static const _food = [
-    '\ud83c\udf4e', '\ud83c\udf4a', '\ud83c\udf4b', '\ud83c\udf4c',
-    '\ud83c\udf49', '\ud83c\udf47', '\ud83c\udf53', '\ud83e\uded0',
-    '\ud83c\udf51', '\ud83c\udf52', '\ud83c\udf55', '\ud83c\udf54',
-    '\ud83c\udf2e', '\ud83c\udf2f', '\ud83e\udd59', '\ud83c\udf5e',
-  ];
+    return CustomScrollView(
+      slivers: _buildSlivers(items, colors),
+    );
+  }
 
-  static const _objects = [
-    '\ud83d\udcbb', '\ud83d\udcf1', '\u2328\ufe0f', '\ud83d\udda5\ufe0f',
-    '\ud83d\udcf7', '\ud83d\udcf8', '\ud83c\udfa5', '\ud83d\udcfd\ufe0f',
-    '\ud83d\udcde', '\ud83d\udce1', '\ud83d\udcfa', '\ud83d\udcfb',
-    '\ud83d\udd0a', '\ud83d\udd14', '\ud83c\udfb5', '\ud83c\udfb6',
-  ];
+  List<Widget> _buildSlivers(List<_GridItem> items, dynamic colors) {
+    final slivers = <Widget>[];
+    var emojiBuffer = <String>[];
 
-  static const _symbols = [
-    '\u2764\ufe0f', '\ud83e\udde1', '\ud83d\udc9b', '\ud83d\udc9a',
-    '\ud83d\udc99', '\ud83d\udc9c', '\ud83e\udd0e', '\ud83d\udda4',
-    '\u2b50', '\ud83c\udf1f', '\u2728', '\ud83d\udcab',
-    '\u2705', '\u274c', '\u2753', '\u2757',
-  ];
+    void flushEmoji() {
+      if (emojiBuffer.isEmpty) return;
+      final emojis = List<String>.from(emojiBuffer);
+      slivers.add(
+        SliverGrid(
+          delegate: SliverChildBuilderDelegate(
+            (ctx, i) => _emojiCell(emojis[i], colors),
+            childCount: emojis.length,
+          ),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 8,
+            mainAxisSpacing: 2,
+            crossAxisSpacing: 2,
+          ),
+        ),
+      );
+      emojiBuffer = [];
+    }
 
-  static const _emojiNames = <String, String>{
-    '\ud83d\udc4d': 'thumbsup thumbs up like yes',
-    '\ud83d\udd25': 'fire hot flame',
-    '\ud83d\udc40': 'eyes look see watching',
-    '\u2764\ufe0f': 'heart love red',
-    '\ud83d\ude02': 'joy laugh crying tears',
-    '\ud83c\udf89': 'tada party celebrate',
-    '\u2705': 'check done complete',
-    '\ud83d\udcaf': 'hundred perfect',
-    '\ud83d\ude4f': 'pray thanks please',
-    '\ud83e\udd14': 'thinking hmm',
-    '\ud83d\ude0d': 'heart eyes love',
-    '\ud83d\udc4f': 'clap applause',
-    '\ud83d\ude80': 'rocket launch ship',
-    '\ud83d\ude00': 'grinning happy smile',
-    '\ud83d\ude42': 'slight smile',
-    '\ud83d\ude09': 'wink',
-    '\ud83d\ude0a': 'blush smile',
-  };
+    for (final item in items) {
+      if (item.isHeader) {
+        flushEmoji();
+        slivers.add(SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+            child: Text(
+              '// ${item.label!.toLowerCase()}',
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 10,
+                color: colors.textTertiary,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+        ));
+      } else {
+        emojiBuffer.add(item.emoji!);
+      }
+    }
+    flushEmoji();
+    return slivers;
+  }
+
+  Widget _buildFrequentFooter(List<String> frequent, dynamic colors) {
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          Text(
+            '//',
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 10,
+              color: colors.textTertiary,
+            ),
+          ),
+          const SizedBox(width: 6),
+          ...frequent.map((e) => GestureDetector(
+                onTap: () => _selectEmoji(e),
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Text(e, style: const TextStyle(fontSize: 18)),
+                  ),
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+
+  Widget _emojiCell(String emoji, dynamic colors) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        onTap: () => _selectEmoji(emoji),
+        mouseCursor: SystemMouseCursors.click,
+        hoverColor: colors.border.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(6),
+        child: Center(
+          child: Text(emoji, style: const TextStyle(fontSize: 22)),
+        ),
+      ),
+    );
+  }
 }
 
-/// Shows the emoji picker as a dialog/overlay.
+/// Internal helper for building the mixed header+emoji list.
+class _GridItem {
+  final String? label;
+  final String? emoji;
+  bool get isHeader => label != null;
+
+  _GridItem.header(this.label) : emoji = null;
+  _GridItem.emoji(this.emoji) : label = null;
+}
+
+/// Shows the emoji picker as a positioned popup.
+/// [anchor] controls where the picker appears relative to the screen.
 Future<String?> showEmojiPicker(BuildContext context) {
   return showDialog<String>(
     context: context,
     barrierColor: Colors.transparent,
     builder: (ctx) => Stack(
       children: [
-        // Dismiss on tap outside
         GestureDetector(
           onTap: () => Navigator.pop(ctx),
           child: Container(color: Colors.transparent),
@@ -285,6 +343,42 @@ Future<String?> showEmojiPicker(BuildContext context) {
           child: Material(
             color: Colors.transparent,
             child: GloamEmojiPicker(
+              onSelect: (emoji) => Navigator.pop(ctx, emoji),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Shows the emoji picker anchored to a specific position.
+Future<String?> showEmojiPickerAt(
+  BuildContext context, {
+  double? top,
+  double? bottom,
+  double? left,
+  double? right,
+  double width = 352,
+}) {
+  return showDialog<String>(
+    context: context,
+    barrierColor: Colors.transparent,
+    builder: (ctx) => Stack(
+      children: [
+        GestureDetector(
+          onTap: () => Navigator.pop(ctx),
+          child: Container(color: Colors.transparent),
+        ),
+        Positioned(
+          top: top,
+          bottom: bottom,
+          left: left,
+          right: right,
+          child: Material(
+            color: Colors.transparent,
+            child: GloamEmojiPicker(
+              width: width,
               onSelect: (emoji) => Navigator.pop(ctx, emoji),
             ),
           ),

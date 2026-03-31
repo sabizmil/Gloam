@@ -41,11 +41,18 @@ class ChatScreen extends ConsumerStatefulWidget {
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _scrollController = ScrollController();
-  final _messageKeys = <String, GlobalKey>{};
+  // GlobalKeys only for messages that need _scrollToMessage (reply-tap nav).
+  // Most items use lightweight ValueKeys on the Column instead.
+  final _scrollTargetKeys = <String, GlobalKey>{};
   final _composerKey = GlobalKey<MessageComposerState>();
   ComposerState _composerState = ComposerState.normal;
-  bool _showScrollToBottom = false;
+  // FAB visibility in a ValueNotifier so toggling it doesn't rebuild
+  // the entire ChatScreen (and the ListView with it).
+  final _showScrollToBottom = ValueNotifier<bool>(false);
   String? _highlightEventId;
+  /// Tracks the composer text before a paste event so we can restore
+  /// the user's in-progress message after a file/image upload.
+  String _prePasteText = '';
 
   @override
   void initState() {
@@ -62,14 +69,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void dispose() {
     ref.read(timelineProvider(widget.roomId).notifier).setActive(false);
     _scrollController.dispose();
+    _showScrollToBottom.dispose();
     super.dispose();
   }
 
   void _onScroll() {
-    final showBtn = _scrollController.hasClients &&
-        _scrollController.position.pixels > 200;
-    if (showBtn != _showScrollToBottom) {
-      setState(() => _showScrollToBottom = showBtn);
+    // Update FAB visibility via ValueNotifier — no setState, no rebuild.
+    if (_scrollController.hasClients) {
+      _showScrollToBottom.value =
+          _scrollController.position.pixels > 200;
     }
 
     // Load more when near the top (reversed list = near max scroll extent)
@@ -90,7 +98,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   /// Scroll to a specific message and briefly highlight it.
   void _scrollToMessage(String eventId) {
-    final key = _messageKeys[eventId];
+    final key = _scrollTargetKeys[eventId];
     final ctx = key?.currentContext;
     if (ctx == null) return;
 
@@ -170,23 +178,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   /// Handle Cmd+V / Ctrl+V — check clipboard for file or image data.
   /// The TextField already processed the text paste by the time this runs
-  /// (child-first key propagation), so we snapshot the text and restore
-  /// it after a successful file/image upload.
+  /// (child-first key propagation). If a file/image is found, we restore
+  /// the user's original text from _prePasteText and upload the file
+  /// separately — the user's in-progress message is preserved.
   Future<void> _handlePaste() async {
-    // Snapshot the composer text — it already includes whatever the
-    // TextField just pasted (filename, etc). We'll restore it if we
-    // handle the paste as a file/image upload instead.
-    final textBefore = _composerKey.currentState?.text ?? '';
-
     try {
       // Try file paths FIRST (e.g. copied from Finder/Explorer).
-      // This reads the actual file from disk — more reliable than
-      // Pasteboard.image which returns the macOS file icon thumbnail
-      // when a file (not a screenshot) is on the clipboard.
       final files = await ClipboardPasteService.getClipboardFiles();
       if (files.isNotEmpty) {
-        // Undo the filename text that was pasted into the composer
-        _composerKey.currentState?.text = '';
+        // Restore the user's text from before the paste
+        _composerKey.currentState?.text = _prePasteText;
         for (final file in files) {
           ref.read(timelineProvider(widget.roomId).notifier).sendFileMessage(file);
         }
@@ -203,8 +204,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           );
           return;
         }
-        // Undo any text that was pasted into the composer
-        _composerKey.currentState?.text = '';
+        // Restore the user's text from before the paste
+        _composerKey.currentState?.text = _prePasteText;
         ref.read(timelineProvider(widget.roomId).notifier).sendFileMessage(imageFile);
         return;
       }
@@ -365,14 +366,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return Focus(
       autofocus: false,
       onKeyEvent: (node, event) {
-        if (event is KeyDownEvent &&
-            event.logicalKey == LogicalKeyboardKey.keyV &&
-            (HardwareKeyboard.instance.isMetaPressed ||
-                HardwareKeyboard.instance.isControlPressed)) {
-          _handlePaste();
-          // Can't consume — child TextField already processed the paste
-          // (child-first propagation). _handlePaste clears the pasted
-          // filename text after a successful file/image upload.
+        if (event is KeyDownEvent) {
+          final isPaste = event.logicalKey == LogicalKeyboardKey.keyV &&
+              (HardwareKeyboard.instance.isMetaPressed ||
+                  HardwareKeyboard.instance.isControlPressed);
+          if (isPaste) {
+            _handlePaste();
+          } else {
+            // Continuously track the composer text so _prePasteText
+            // always holds the user's text from before any paste.
+            _prePasteText = _composerKey.currentState?.text ?? '';
+          }
         }
         return KeyEventResult.ignored;
       },
@@ -462,7 +466,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           3 &&
                       !prevMsg.isRedacted;
 
+                  // Register a GlobalKey only for messages that are
+                  // reply targets — needed for _scrollToMessage.
+                  if (msg.replyToEventId != null) {
+                    _scrollTargetKeys.putIfAbsent(
+                      msg.replyToEventId!,
+                      () => GlobalKey(),
+                    );
+                  }
+
                   return Column(
+                    // ValueKey on the top-level widget lets Flutter
+                    // reliably track items across rebuilds in a
+                    // reversed list.
+                    key: ValueKey<String>(msg.eventId),
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -475,10 +492,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             context, msg,
                             isOwnMessage: msg.senderId == myUserId),
                         child: AnimatedContainer(
-                          key: _messageKeys.putIfAbsent(
-                            msg.eventId,
-                            () => GlobalKey(),
-                          ),
+                          key: _scrollTargetKeys[msg.eventId],
                           duration: const Duration(milliseconds: 500),
                           decoration: BoxDecoration(
                             color: _highlightEventId == msg.eventId
@@ -541,28 +555,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 },
               ),
 
-              // Scroll-to-bottom FAB
-              if (_showScrollToBottom)
-                Positioned(
-                  right: 20,
-                  bottom: 12,
-                  child: Material(
-                    color: context.gloam.bgElevated,
-                    shape: CircleBorder(
-                      side: BorderSide(color: context.gloam.border),
-                    ),
-                    elevation: 0,
-                    child: InkWell(
-                      onTap: _scrollToBottom,
-                      customBorder: const CircleBorder(),
-                      child: Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Icon(Icons.keyboard_arrow_down,
-                            size: 20, color: context.gloam.textSecondary),
+              // Scroll-to-bottom FAB — rebuilds independently via
+              // ValueListenableBuilder, not via ChatScreen setState.
+              ValueListenableBuilder<bool>(
+                valueListenable: _showScrollToBottom,
+                builder: (context, show, _) {
+                  if (!show) return const SizedBox.shrink();
+                  return Positioned(
+                    right: 20,
+                    bottom: 12,
+                    child: Material(
+                      color: context.gloam.bgElevated,
+                      shape: CircleBorder(
+                        side: BorderSide(color: context.gloam.border),
+                      ),
+                      elevation: 0,
+                      child: InkWell(
+                        onTap: _scrollToBottom,
+                        customBorder: const CircleBorder(),
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Icon(Icons.keyboard_arrow_down,
+                              size: 20, color: context.gloam.textSecondary),
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
+              ),
             ],
           ),
         ),

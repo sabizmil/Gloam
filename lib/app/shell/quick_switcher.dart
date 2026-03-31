@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/gloam_theme_ext.dart';
 import '../theme/spacing.dart';
 import '../../features/rooms/presentation/providers/room_list_provider.dart';
+import '../../features/rooms/presentation/providers/space_hierarchy_provider.dart';
 import '../../features/chat/presentation/providers/timeline_provider.dart';
 import '../../widgets/gloam_avatar.dart';
 
@@ -49,9 +50,17 @@ class _QuickSwitcherDialogState extends ConsumerState<_QuickSwitcherDialog> {
   }
 
   List<RoomListItem> _getFilteredRooms(List<RoomListItem> rooms) {
+    // Resolve "Empty chat" fallback names from space hierarchy data
+    // so rooms like "Board Games" are searchable by their real name.
+    final resolved = rooms.map((r) {
+      if (r.displayName != 'Empty chat') return r;
+      final name = ref.read(hierarchyRoomNameProvider(r.roomId));
+      return name != null ? r.withDisplayName(name) : r;
+    }).toList();
+
     final query = _controller.text.toLowerCase();
-    if (query.isEmpty) return rooms.take(10).toList();
-    return rooms
+    if (query.isEmpty) return resolved.take(10).toList();
+    return resolved
         .where((r) => r.displayName.toLowerCase().contains(query))
         .take(10)
         .toList();

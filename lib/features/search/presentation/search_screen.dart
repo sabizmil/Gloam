@@ -124,14 +124,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Search input
-                Container(
+                SizedBox(
                   height: 44,
-                  decoration: BoxDecoration(
-                    color: context.gloam.bgSurface,
-                    borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
-                    border: Border.all(color: context.gloam.border),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   child: Row(
                     children: [
                       Icon(Icons.search,
@@ -153,6 +147,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               color: context.gloam.textTertiary,
                             ),
                             border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
                             contentPadding: EdgeInsets.zero,
                             isDense: true,
                           ),

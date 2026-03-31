@@ -104,6 +104,11 @@ class MessageComposerState extends State<MessageComposer> {
       );
       _focusNode.requestFocus();
     }
+    // When entering reply mode, focus the input
+    if (widget.composerState.mode == ComposerMode.reply &&
+        oldWidget.composerState.mode != ComposerMode.reply) {
+      _focusNode.requestFocus();
+    }
   }
 
   @override

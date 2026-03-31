@@ -112,12 +112,31 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
     }
   }
 
+  /// Compute a stable size for the image container so the layout
+  /// doesn't shift when the image loads. Uses server-provided
+  /// width/height metadata when available.
+  Size _stableSize() {
+    const maxW = 400.0;
+    const maxH = 300.0;
+    final w = widget.message.imageWidth;
+    final h = widget.message.imageHeight;
+    if (w != null && h != null && w > 0 && h > 0) {
+      final scale = (maxW / w).clamp(0.0, 1.0).clamp(0.0, maxH / h);
+      return Size(w * scale, h * scale);
+    }
+    // Fallback — use a fixed size so at least it doesn't jump.
+    return const Size(240, 160);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.gloam;
+    final size = _stableSize();
     return GestureDetector(
       onTap: (_imageBytes != null || _httpUrl != null) ? () => _openFullscreen(context) : null,
       child: Container(
+        width: size.width,
+        height: size.height,
         constraints: const BoxConstraints(maxWidth: 400, maxHeight: 300),
         decoration: BoxDecoration(
           color: colors.bgElevated,
@@ -142,43 +161,36 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
         'uploading' => 'Uploading...',
         _ => 'Sending...',
       };
-      return SizedBox(
-        width: 240,
-        height: 160,
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 32,
-                height: 32,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: colors.accent.withAlpha(180),
-                ),
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 32,
+              height: 32,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colors.accent.withAlpha(180),
               ),
-              const SizedBox(height: 10),
-              Text(
-                label,
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 11,
-                  color: colors.textTertiary,
-                  letterSpacing: 0.3,
-                ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              label,
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 11,
+                color: colors.textTertiary,
+                letterSpacing: 0.3,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
 
     if (_loading) {
-      return SizedBox(
-        width: 240, height: 160,
-        child: Center(
-          child: SizedBox(width: 20, height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2, color: colors.accentDim),
-          ),
+      return Center(
+        child: SizedBox(width: 20, height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2, color: colors.accentDim),
         ),
       );
     }
@@ -202,15 +214,12 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
         headers: _authHeaders,
         loadingBuilder: (_, child, progress) {
           if (progress == null) return child;
-          return SizedBox(
-            width: 240, height: 160,
-            child: Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2, color: colors.accentDim,
-                value: progress.expectedTotalBytes != null
-                    ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
-                    : null,
-              ),
+          return Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2, color: colors.accentDim,
+              value: progress.expectedTotalBytes != null
+                  ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                  : null,
             ),
           );
         },

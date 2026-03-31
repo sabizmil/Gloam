@@ -54,6 +54,7 @@ class MessageBubble extends StatefulWidget {
 
 class _MessageBubbleState extends State<MessageBubble> {
   bool _isHovered = false;
+  bool _toolbarPinned = false;
 
   String _formatTime(DateTime ts) {
     final h = ts.hour;
@@ -70,14 +71,19 @@ class _MessageBubbleState extends State<MessageBubble> {
     final isGrouped = widget.isGrouped;
 
     if (message.isRedacted) {
-      return _RedactedMessage(isGrouped: isGrouped);
+      return _RedactedMessage(
+        isGrouped: isGrouped,
+        count: message.redactedCount,
+      );
     }
 
     final opacity = message.sendState == MessageSendState.sending ? 0.6 : 1.0;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
+      onExit: (_) {
+        if (!_toolbarPinned) setState(() => _isHovered = false);
+      },
       child: Opacity(
       opacity: opacity,
       child: Stack(
@@ -201,7 +207,7 @@ class _MessageBubbleState extends State<MessageBubble> {
         ),
           ),
           // Hover toolbar — positioned top-right
-          if (_isHovered)
+          if (_isHovered || _toolbarPinned)
             Positioned(
               top: -4,
               right: 0,
@@ -218,6 +224,8 @@ class _MessageBubbleState extends State<MessageBubble> {
                 onDelete: widget.isOwnMessage ? () => widget.onDelete?.call() : null,
                 onThread: () => widget.onThread?.call(),
                 onCopy: () => widget.onCopy?.call(),
+                onPinChanged: (pinned) =>
+                    setState(() => _toolbarPinned = pinned),
               ),
             ),
         ],
@@ -364,15 +372,18 @@ class _ReactionPill extends StatelessWidget {
 }
 
 class _RedactedMessage extends StatelessWidget {
-  const _RedactedMessage({required this.isGrouped});
+  const _RedactedMessage({required this.isGrouped, this.count = 1});
   final bool isGrouped;
+  final int count;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(left: 48, top: isGrouped ? 1 : 8),
       child: Text(
-        '[message deleted]',
+        count > 1
+            ? '[$count messages deleted]'
+            : '[message deleted]',
         style: GoogleFonts.inter(
           fontSize: 13,
           fontStyle: FontStyle.italic,

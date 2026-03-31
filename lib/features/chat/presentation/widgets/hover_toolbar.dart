@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
-
-import '../../../../app/theme/gloam_color_extension.dart';
 import '../../../../app/theme/gloam_theme_ext.dart';
+import 'emoji_picker.dart';
 
 /// Floating action toolbar that appears on message hover.
 /// Quick-react emoji + reply/edit/overflow, positioned top-right.
@@ -19,6 +17,7 @@ class HoverToolbar extends StatelessWidget {
     this.onCopy,
     this.onThread,
     this.myReactions = const {},
+    this.onPinChanged,
   });
 
   final bool isOwnMessage;
@@ -31,14 +30,19 @@ class HoverToolbar extends StatelessWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onCopy;
   final VoidCallback? onThread;
+  /// Called to pin/unpin the toolbar (keeps it visible while emoji picker is open).
+  final void Function(bool pinned)? onPinChanged;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.gloam;
-    return Container(
+    return Material(
+      color: colors.bgElevated,
+      borderRadius: BorderRadius.circular(8),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
       height: 32,
       decoration: BoxDecoration(
-        color: colors.bgElevated,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: colors.border),
         boxShadow: [
@@ -57,6 +61,13 @@ class HoverToolbar extends StatelessWidget {
           _EmojiButton(emoji: '❤️', isActive: myReactions.contains('❤️'), onTap: () => onReact('❤️')),
           _EmojiButton(emoji: '😂', isActive: myReactions.contains('😂'), onTap: () => onReact('😂')),
 
+          // More emoji picker
+          _IconButton(
+            icon: Icons.add,
+            tooltip: 'More emoji',
+            onTap: () => _openEmojiPicker(context),
+          ),
+
           // Divider
           Container(
             width: 1,
@@ -72,6 +83,14 @@ class HoverToolbar extends StatelessWidget {
             onTap: onReply,
           ),
 
+          // Thread
+          if (onThread != null)
+            _IconButton(
+              icon: Icons.chat_bubble_outline,
+              tooltip: 'Thread',
+              onTap: onThread,
+            ),
+
           // Edit (own messages only)
           if (isOwnMessage)
             _IconButton(
@@ -80,81 +99,61 @@ class HoverToolbar extends StatelessWidget {
               onTap: onEdit,
             ),
 
-          // Overflow → context menu
+          // Copy
           _IconButton(
-            icon: Icons.more_horiz,
-            tooltip: 'More',
-            onTap: () => _showOverflow(context),
+            icon: Icons.content_copy,
+            tooltip: 'Copy',
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: messageBody));
+              onCopy?.call();
+            },
           ),
+
+          // Delete (own messages only)
+          if (isOwnMessage)
+            _IconButton(
+              icon: Icons.delete_outline,
+              tooltip: 'Delete',
+              onTap: onDelete,
+              iconColor: context.gloam.danger,
+            ),
         ],
+      ),
       ),
     );
   }
 
-  void _showOverflow(BuildContext context) {
-    final colors = context.gloam;
-    final RenderBox button = context.findRenderObject() as RenderBox;
+  void _openEmojiPicker(BuildContext context) async {
+    onPinChanged?.call(true);
+
+    final RenderBox box = context.findRenderObject() as RenderBox;
     final overlay =
         Overlay.of(context).context.findRenderObject() as RenderBox;
-    final position = RelativeRect.fromRect(
-      Rect.fromPoints(
-        button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(
-            button.size.bottomRight(Offset.zero),
-            ancestor: overlay),
-      ),
-      Offset.zero & overlay.size,
-    );
+    final pos = box.localToGlobal(Offset.zero, ancestor: overlay);
 
-    showMenu<String>(
-      context: context,
-      position: position,
-      color: colors.bgSurface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: colors.border),
-      ),
-      items: [
-        _menuItem(colors, 'copy', Icons.content_copy, 'Copy text'),
-        if (onThread != null)
-          _menuItem(colors, 'thread', Icons.chat_bubble_outline, 'Thread'),
-        if (isOwnMessage)
-          _menuItem(colors, 'delete', Icons.delete_outline, 'Delete',
-              danger: true),
-      ],
-    ).then((value) {
-      switch (value) {
-        case 'copy':
-          Clipboard.setData(ClipboardData(text: messageBody));
-          onCopy?.call();
-        case 'thread':
-          onThread?.call();
-        case 'delete':
-          onDelete?.call();
-      }
-    });
-  }
+    const pickerHeight = 420.0;
+    final spaceAbove = pos.dy;
+    final rightPos = overlay.size.width - (pos.dx + box.size.width);
 
-  PopupMenuItem<String> _menuItem(
-    GloamColorExtension colors,
-    String value,
-    IconData icon,
-    String label, {
-    bool danger = false,
-  }) {
-    final color = danger ? colors.danger : colors.textPrimary;
-    return PopupMenuItem(
-      value: value,
-      height: 36,
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 10),
-          Text(label,
-              style: GoogleFonts.inter(fontSize: 13, color: color)),
-        ],
-      ),
-    );
+    final String? emoji;
+    if (spaceAbove >= pickerHeight + 8) {
+      // Enough room above — open upward (default)
+      emoji = await showEmojiPickerAt(
+        context,
+        bottom: overlay.size.height - pos.dy + 4,
+        right: rightPos,
+      );
+    } else {
+      // Not enough room above — flip to open below the toolbar
+      emoji = await showEmojiPickerAt(
+        context,
+        top: pos.dy + box.size.height + 4,
+        right: rightPos,
+      );
+    }
+
+    onPinChanged?.call(false);
+    if (emoji != null) onReact(emoji);
   }
 }
 
@@ -168,6 +167,8 @@ class _EmojiButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
+      mouseCursor: SystemMouseCursors.click,
+      hoverColor: context.gloam.border.withValues(alpha: 0.8),
       borderRadius: BorderRadius.circular(6),
       child: Container(
         width: 30,
@@ -189,11 +190,13 @@ class _IconButton extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     this.onTap,
+    this.iconColor,
   });
 
   final IconData icon;
   final String tooltip;
   final VoidCallback? onTap;
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -202,12 +205,14 @@ class _IconButton extends StatelessWidget {
       waitDuration: const Duration(milliseconds: 400),
       child: InkWell(
         onTap: onTap,
+        mouseCursor: SystemMouseCursors.click,
+        hoverColor: context.gloam.border.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(6),
         child: SizedBox(
           width: 30,
           height: 30,
           child: Center(
-            child: Icon(icon, size: 15, color: context.gloam.textSecondary),
+            child: Icon(icon, size: 15, color: iconColor ?? context.gloam.textSecondary),
           ),
         ),
       ),

@@ -2,13 +2,39 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../services/update_service.dart';
 import '../widgets/settings_tile.dart';
 
-class AboutSection extends StatelessWidget {
+class AboutSection extends StatefulWidget {
   const AboutSection({super.key});
+
+  @override
+  State<AboutSection> createState() => _AboutSectionState();
+}
+
+class _AboutSectionState extends State<AboutSection> {
+  String _version = '...';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() => _version = info.version);
+    }
+  }
+
+  void _openUrl(String url) {
+    launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,20 +89,25 @@ class AboutSection extends StatelessWidget {
         const SizedBox(height: 24),
 
         const SettingsSectionHeader('app info'),
-        const SettingsTile(icon: Icons.tag, label: 'version', value: '0.2.7'),
+        SettingsTile(icon: Icons.tag, label: 'version', value: _version),
         if (Platform.isMacOS || Platform.isWindows)
           SettingsTile(
             icon: Icons.system_update,
             label: 'check for updates',
             onTap: () => UpdateService.checkNow(),
           ),
-        const SettingsTile(icon: Icons.flutter_dash, label: 'framework', value: 'Flutter'),
-        const SettingsTile(icon: Icons.code, label: 'matrix SDK', value: 'matrix_dart_sdk'),
 
         const SettingsSectionHeader('links'),
-        SettingsTile(icon: Icons.language, label: 'gloam.chat', onTap: () {}),
-        SettingsTile(icon: Icons.code, label: 'source code', onTap: () {}),
-        SettingsTile(icon: Icons.description_outlined, label: 'licenses', onTap: () {}),
+        SettingsTile(
+          icon: Icons.code,
+          label: 'source code',
+          onTap: () => _openUrl('https://github.com/sabizmil/Gloam'),
+        ),
+        SettingsTile(
+          icon: Icons.new_releases_outlined,
+          label: 'changelog',
+          onTap: () => _openUrl('https://github.com/sabizmil/Gloam/releases'),
+        ),
       ],
     );
   }

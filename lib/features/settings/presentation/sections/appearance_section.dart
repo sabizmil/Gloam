@@ -8,6 +8,22 @@ import '../../../../app/theme/theme_preferences.dart';
 import '../../../../app/theme/theme_variants.dart';
 import '../widgets/settings_tile.dart';
 
+/// Theme display names and preview bg colors for each variant.
+const _themeInfo = <ThemeVariant, (String, Color)>{
+  ThemeVariant.gloamDark: ('gloam dark', Color(0xFF080F0A)),
+  ThemeVariant.midnight: ('midnight', Color(0xFF08101E)),
+  ThemeVariant.ember: ('ember', Color(0xFF140C08)),
+  ThemeVariant.slate: ('slate', Color(0xFFE0E0E4)),
+  ThemeVariant.obsidian: ('obsidian', Color(0xFF000000)),
+  ThemeVariant.moss: ('moss', Color(0xFF081408)),
+  ThemeVariant.dusk: ('dusk', Color(0xFF120E20)),
+  ThemeVariant.storm: ('storm', Color(0xFF141C24)),
+  ThemeVariant.copper: ('copper', Color(0xFF1A1208)),
+  ThemeVariant.dawn: ('dawn', Color(0xFFF5F5F0)),
+  ThemeVariant.frost: ('frost', Color(0xFFE8F0FA)),
+  ThemeVariant.sand: ('sand', Color(0xFFF0E4D0)),
+};
+
 class AppearanceSection extends ConsumerWidget {
   const AppearanceSection({super.key});
 
@@ -20,39 +36,34 @@ class AppearanceSection extends ConsumerWidget {
     // Map slider 0..1 to font scale 0.85..1.25
     final sliderValue = (prefs.fontScale - 0.85) / (1.25 - 0.85);
 
+    // Build theme grid in rows of 4
+    final variants = ThemeVariant.values;
+    final themeRows = <Widget>[];
+    for (var i = 0; i < variants.length; i += 4) {
+      final row = <Widget>[];
+      for (var j = i; j < i + 4 && j < variants.length; j++) {
+        if (row.isNotEmpty) row.add(const SizedBox(width: 10));
+        final v = variants[j];
+        final info = _themeInfo[v]!;
+        row.add(_ThemeCard(
+          label: info.$1,
+          bgColor: info.$2,
+          accentColor: prefs.accentColor.base,
+          isSelected: prefs.variant == v,
+          onTap: () => notifier.setVariant(v),
+        ));
+      }
+      if (themeRows.isNotEmpty) themeRows.add(const SizedBox(height: 10));
+      themeRows.add(Row(children: row));
+    }
+
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
         const SettingsSectionHeader('theme'),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            children: [
-              _ThemeCard(
-                label: 'gloam dark',
-                bgColor: const Color(0xFF080F0A),
-                accentColor: prefs.accentColor.base,
-                isSelected: prefs.variant == ThemeVariant.gloamDark,
-                onTap: () => notifier.setVariant(ThemeVariant.gloamDark),
-              ),
-              const SizedBox(width: 12),
-              _ThemeCard(
-                label: 'midnight',
-                bgColor: const Color(0xFF0A0F14),
-                accentColor: prefs.accentColor.base,
-                isSelected: prefs.variant == ThemeVariant.midnight,
-                onTap: () => notifier.setVariant(ThemeVariant.midnight),
-              ),
-              const SizedBox(width: 12),
-              _ThemeCard(
-                label: 'dawn',
-                bgColor: const Color(0xFFF5F5F0),
-                accentColor: prefs.accentColor.base,
-                isSelected: prefs.variant == ThemeVariant.dawn,
-                onTap: () => notifier.setVariant(ThemeVariant.dawn),
-              ),
-            ],
-          ),
+          child: Column(children: themeRows),
         ),
 
         const SettingsSectionHeader('density'),
@@ -150,13 +161,21 @@ class _ThemeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final g = context.gloam;
+    // Use contrasting label color based on bg brightness
+    final isLight = bgColor.computeLuminance() > 0.3;
+    final labelColor = isSelected
+        ? accentColor
+        : isLight
+            ? const Color(0xFF8FA894)
+            : g.textTertiary;
+
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
           child: Container(
-            height: 80,
+            height: 64,
             decoration: BoxDecoration(
               color: bgColor,
               borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
@@ -165,17 +184,17 @@ class _ThemeCard extends StatelessWidget {
                 width: isSelected ? 2 : 1,
               ),
             ),
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(width: 40, height: 4, decoration: BoxDecoration(
+                Container(width: 28, height: 3, decoration: BoxDecoration(
                   color: accentColor, borderRadius: BorderRadius.circular(2))),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(label, style: GoogleFonts.jetBrainsMono(
-                  fontSize: 9,
-                  color: isSelected ? accentColor : g.textTertiary,
+                  fontSize: 11,
+                  color: labelColor,
                 )),
               ],
             ),

@@ -28,11 +28,19 @@ class ThreadPanel extends ConsumerStatefulWidget {
 class _ThreadPanelState extends ConsumerState<ThreadPanel> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
+  final _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.requestFocus();
+  }
 
   @override
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -307,61 +315,63 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
   Widget _buildComposer() {
     final colors = context.gloam;
     return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: GloamSpacing.xl,
+        vertical: 8,
+      ),
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(color: colors.border),
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Container(
-              height: 36,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: colors.bg,
+                color: colors.bgSurface,
                 borderRadius:
                     BorderRadius.circular(GloamSpacing.radiusSm),
                 border: Border.all(color: colors.border),
               ),
-              alignment: Alignment.centerLeft,
               child: TextField(
                 controller: _controller,
+                focusNode: _focusNode,
+                maxLines: 6,
+                minLines: 1,
                 style: GoogleFonts.inter(
-                  fontSize: 13,
+                  fontSize: 14,
                   color: colors.textPrimary,
                 ),
                 decoration: InputDecoration(
                   hintText: 'Reply in thread...',
                   hintStyle: GoogleFonts.inter(
-                    fontSize: 13,
+                    fontSize: 14,
                     color: colors.textTertiary,
                   ),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                 ),
                 onSubmitted: (_) => _send(),
               ),
             ),
           ),
           const SizedBox(width: 8),
-          GestureDetector(
-            onTap: _send,
-            child: Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: colors.accentDim,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.arrow_upward_rounded,
-                size: 16,
-                color: colors.accentBright,
-              ),
+          IconButton(
+            onPressed: _send,
+            icon: Icon(
+              Icons.arrow_upward,
+              size: 20,
+              color: colors.accentBright,
+            ),
+            style: IconButton.styleFrom(
+              backgroundColor: colors.accentDim,
+              shape: const CircleBorder(),
+              minimumSize: const Size(36, 36),
             ),
           ),
         ],

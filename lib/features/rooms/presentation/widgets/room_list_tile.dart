@@ -64,12 +64,14 @@ class RoomListTile extends StatelessWidget {
                       room.displayName,
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        fontWeight: room.unreadCount > 0
+                        fontWeight: room.unreadCount > 0 || isActive
                             ? FontWeight.w600
                             : FontWeight.w400,
-                        color: room.unreadCount > 0
+                        color: isActive
                             ? context.gloam.textPrimary
-                            : context.gloam.textSecondary,
+                            : room.unreadCount > 0
+                                ? context.gloam.textPrimary
+                                : context.gloam.textSecondary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -82,7 +84,9 @@ class RoomListTile extends StatelessWidget {
                             : '${room.lastMessageSender ?? ''}: ${room.lastMessagePreview!}',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: context.gloam.textTertiary,
+                          color: isActive
+                              ? context.gloam.textSecondary
+                              : context.gloam.textTertiary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

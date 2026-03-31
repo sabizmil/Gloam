@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:matrix/matrix.dart';
 
 import '../../../../services/matrix_service.dart';
+import '../../../../services/search_service.dart';
 
 /// Lightweight message model — isolates UI from SDK types.
 class TimelineMessage {
@@ -25,6 +26,7 @@ class TimelineMessage {
   final Uri? replyToSenderAvatarUrl;
   final Map<String, ReactionGroup> reactions;
   final bool isRedacted;
+  final int redactedCount; // > 1 when consecutive redacted messages are collapsed
   final int? mediaSizeBytes;
   final int? imageWidth;
   final int? imageHeight;
@@ -51,6 +53,7 @@ class TimelineMessage {
     this.replyToSenderAvatarUrl,
     this.reactions = const {},
     this.isRedacted = false,
+    this.redactedCount = 1,
     this.mediaSizeBytes,
     this.imageWidth,
     this.imageHeight,
@@ -83,8 +86,9 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
   Timeline? _timeline;
   StreamSubscription? _sub;
   StreamSubscription? _syncSub;
+  final SearchService _searchService;
 
-  TimelineNotifier(this._client, this._roomId) : super([]) {
+  TimelineNotifier(this._client, this._roomId, this._searchService) : super([]) {
     _init();
   }
 
@@ -128,6 +132,11 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     // filter out, leaving very few visible messages. Pre-fetch extra
     // pages so the timeline has enough content to fill the viewport.
     await _ensureMinimumMessages(30);
+
+    // Index all loaded timeline events for search.
+    if (_timeline != null) {
+      _searchService.indexTimeline(_roomId, _timeline!.events);
+    }
   }
 
   /// Keep requesting history until we have at least [minVisible] display
@@ -264,10 +273,60 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     }
 
     // SDK returns newest first — reverse for display (oldest at top)
-    state = messages.reversed.toList();
+    final reversed = messages.reversed.toList();
+
+    // Collapse consecutive redacted messages into a single entry
+    final collapsed = <TimelineMessage>[];
+    for (final msg in reversed) {
+      if (msg.isRedacted &&
+          collapsed.isNotEmpty &&
+          collapsed.last.isRedacted) {
+        // Merge into the previous redacted entry
+        final prev = collapsed.last;
+        collapsed[collapsed.length - 1] = TimelineMessage(
+          eventId: prev.eventId,
+          senderId: prev.senderId,
+          senderName: prev.senderName,
+          senderAvatarUrl: prev.senderAvatarUrl,
+          timestamp: prev.timestamp,
+          type: prev.type,
+          body: prev.body,
+          isRedacted: true,
+          redactedCount: prev.redactedCount + 1,
+        );
+      } else {
+        collapsed.add(msg);
+      }
+    }
+
+    // Skip state update if the message list hasn't changed —
+    // avoids unnecessary ListView relayouts that cause scroll jumps.
+    if (_stateUnchanged(collapsed)) return;
+
+    state = collapsed;
 
     // Auto-mark as read when the room is actively viewed
     if (_isActive) markAsRead();
+  }
+
+  /// Fast check: do the new messages match the current state?
+  /// Compares event IDs, redacted status, edit status, and reaction counts
+  /// to detect meaningful changes without deep equality.
+  bool _stateUnchanged(List<TimelineMessage> newState) {
+    final old = state;
+    if (old.length != newState.length) return false;
+    for (var i = 0; i < old.length; i++) {
+      if (old[i].eventId != newState[i].eventId ||
+          old[i].isRedacted != newState[i].isRedacted ||
+          old[i].redactedCount != newState[i].redactedCount ||
+          old[i].isEdited != newState[i].isEdited ||
+          old[i].body != newState[i].body ||
+          old[i].reactions.length != newState[i].reactions.length ||
+          old[i].sendState != newState[i].sendState) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /// Extract the display body for an event, stripping reply fallback and
@@ -431,8 +490,20 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
   }
 
   /// Request older messages from the server.
+  bool _loadingMore = false;
+
   Future<void> loadMore() async {
-    await _timeline?.requestHistory();
+    if (_loadingMore) return;
+    _loadingMore = true;
+    try {
+      await _timeline?.requestHistory();
+      // Index newly loaded historical messages for search
+      if (_timeline != null) {
+        _searchService.indexTimeline(_roomId, _timeline!.events);
+      }
+    } finally {
+      _loadingMore = false;
+    }
   }
 
   /// Send a text message. Returns immediately (optimistic).
@@ -603,10 +674,11 @@ final timelineProvider = StateNotifierProvider.family<TimelineNotifier,
     List<TimelineMessage>, String>(
   (ref, roomId) {
     final client = ref.watch(matrixServiceProvider).client;
+    final searchService = ref.read(searchServiceProvider);
     if (client == null) {
-      return TimelineNotifier(Client('dummy'), roomId);
+      return TimelineNotifier(Client('dummy'), roomId, searchService);
     }
-    return TimelineNotifier(client, roomId);
+    return TimelineNotifier(client, roomId, searchService);
   },
 );
 

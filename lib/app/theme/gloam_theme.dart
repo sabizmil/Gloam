@@ -10,7 +10,7 @@ import 'theme_variants.dart';
 ThemeData buildGloamTheme({ThemePreferences? prefs}) {
   final p = prefs ?? const ThemePreferences();
   final colors = resolveColors(p.variant, p.accentColor);
-  final isDark = p.variant != ThemeVariant.dawn;
+  final isDark = !isLightTheme(p.variant);
 
   final visualDensity = switch (p.density) {
     DensityMode.compact => VisualDensity.compact,
