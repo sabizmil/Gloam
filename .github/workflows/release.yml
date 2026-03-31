@@ -162,18 +162,13 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           ZIP="build/Gloam-${VERSION}-macos.zip"
-          SIGN_UPDATE="macos/Pods/Sparkle/bin/sign_update"
 
-          echo "Key length: ${#SPARKLE_KEY} chars"
+          # Strip any trailing whitespace/newlines from the secret
+          CLEAN_KEY=$(printf '%s' "$SPARKLE_KEY" | tr -d '[:space:]')
 
-          # Try 1: key is already the base64 ed25519 key — pipe directly
-          if SIG_OUTPUT=$(printf '%s' "$SPARKLE_KEY" | "$SIGN_UPDATE" "$ZIP" --ed-key-file - 2>&1); then
-            echo "Signed with direct key"
-          # Try 2: key is double-base64-encoded — decode once, then pipe
-          elif SIG_OUTPUT=$(printf '%s' "$SPARKLE_KEY" | base64 --decode 2>/dev/null | "$SIGN_UPDATE" "$ZIP" --ed-key-file - 2>&1); then
-            echo "Signed with base64-decoded key"
-          else
-            echo "::error::sign_update failed with both direct and decoded key: $SIG_OUTPUT"
+          # sign_update expects the base64 ed25519 key via stdin
+          if ! SIG_OUTPUT=$(printf '%s' "$CLEAN_KEY" | macos/Pods/Sparkle/bin/sign_update "$ZIP" --ed-key-file - 2>&1); then
+            echo "::error::sign_update failed: $SIG_OUTPUT"
             exit 1
           fi
 
