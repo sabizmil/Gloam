@@ -162,21 +162,27 @@ jobs:
           # Store the Sparkle ed25519 key in the CI keychain so sign_update
           # can find it the same way it does on a developer machine
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD="ci-keychain-pwd"
           CLEAN_KEY=$(printf '%s' "$SPARKLE_KEY" | tr -d '[:space:]')
+
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security add-generic-password \
             -a "ed25519" \
             -s "https://sparkle-project.org" \
             -D "private key" \
-            -C "spky" \
             -l "Private key for signing Sparkle updates" \
-            -T "" \
+            -A \
             -w "$CLEAN_KEY" \
             -U \
             "$KEYCHAIN_PATH"
+
+          # Verify the key is accessible
+          security find-generic-password -a "ed25519" -s "https://sparkle-project.org" "$KEYCHAIN_PATH" > /dev/null
           echo "✓ Sparkle signing key installed in CI keychain"
 
       - name: Sign update with Sparkle
         id: sparkle_sign
+        timeout-minutes: 2
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           ZIP="build/Gloam-${VERSION}-macos.zip"
