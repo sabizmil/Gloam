@@ -58,6 +58,8 @@ begin
 end;
 
 function InitializeSetup: Boolean;
+var
+  ResultCode: Integer;
 begin
   Result := True;
   // If Gloam is already installed, this is an update — run silently.
@@ -68,7 +70,7 @@ begin
     if not WizardSilent then
     begin
       // Re-launch ourselves with /VERYSILENT and auto-restart the app
-      Exec(ExpandConstant('{srcexe}'), '/VERYSILENT /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS', '', SW_HIDE, ewNoWait, Result);
+      Exec(ExpandConstant('{srcexe}'), '/VERYSILENT /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS', '', SW_HIDE, ewNoWait, ResultCode);
       Result := False; // Abort this (non-silent) instance
     end;
   end;
