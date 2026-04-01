@@ -6,7 +6,8 @@ import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../widgets/gloam_avatar.dart';
 import '../providers/timeline_provider.dart';
 import 'delivery_indicator.dart';
-import 'file_message.dart';
+import 'file_message.dart' hide VideoMessage;
+import 'video_message.dart';
 import 'hover_toolbar.dart';
 import 'image_message.dart';
 import 'reply_pill.dart';
@@ -279,7 +280,7 @@ class _MessageContent extends StatelessWidget {
           ),
         ),
       'm.image' => ImageMessage(message: message, roomId: roomId),
-      'm.video' => VideoMessage(message: message),
+      'm.video' => VideoMessage(message: message, roomId: roomId),
       'm.file' => FileMessage(message: message, roomId: roomId),
       'm.audio' => VoiceMessage(message: message),
       'm.bad_encrypted' => Row(
