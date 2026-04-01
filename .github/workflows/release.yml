@@ -383,7 +383,7 @@ jobs:
               <language>en</language>
               <item>
                 <title>Version ${VERSION}</title>
-                <sparkle:version>${BUILD_NUM}</sparkle:version>
+                <sparkle:version>${VERSION}</sparkle:version>
                 <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
                 <pubDate>${DATE}</pubDate>
                 <enclosure
