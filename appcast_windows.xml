@@ -6,12 +6,12 @@
     <description>Most recent updates for Gloam on Windows</description>
     <language>en</language>
     <item>
-      <title>Version 0.4.1</title>
-      <sparkle:version>0.4.1</sparkle:version>
-      <sparkle:shortVersionString>0.4.1</sparkle:shortVersionString>
-      <pubDate>Wed, 01 Apr 2026 01:10:23 +0000</pubDate>
+      <title>Version 0.4.2</title>
+      <sparkle:version>0.4.2</sparkle:version>
+      <sparkle:shortVersionString>0.4.2</sparkle:shortVersionString>
+      <pubDate>Wed, 01 Apr 2026 02:43:55 +0000</pubDate>
       <enclosure
-        url="https://github.com/sabizmil/Gloam/releases/download/v0.4.1/Gloam-0.4.1-windows-setup.exe"
+        url="https://github.com/sabizmil/Gloam/releases/download/v0.4.2/Gloam-0.4.2-windows-setup.exe"
         length="0"
         type="application/octet-stream" />
     </item>
