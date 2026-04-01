@@ -1,5 +1,9 @@
 ; Inno Setup script for Gloam Windows installer
 ; Used by CI to create a self-installing .exe that WinSparkle can run
+;
+; When run as an update (gloam.exe already exists), the installer
+; auto-applies /VERYSILENT mode so the user sees no wizard — the app
+; closes, updates, and relaunches seamlessly.
 
 #ifndef AppVersion
 #define AppVersion "0.0.0"
@@ -39,6 +43,7 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 [Run]
 ; Install VC++ Redistributable silently if needed (before launching app)
 Filename: "{tmp}\vcredist_x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing Visual C++ Runtime..."; Flags: waituntilterminated; Check: not VCRedistInstalled
+; Launch after install — runs for both fresh installs and silent updates
 Filename: "{app}\gloam.exe"; Description: "Launch Gloam"; Flags: nowait postinstall skipifsilent
 
 [Code]
@@ -50,4 +55,21 @@ begin
   Result :=
     RegQueryStringValue(HKLM, 'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64', 'Version', Version) or
     RegQueryStringValue(HKLM, 'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\x64', 'Version', Version);
+end;
+
+function InitializeSetup: Boolean;
+begin
+  Result := True;
+  // If Gloam is already installed, this is an update — run silently.
+  // WinSparkle downloads and launches the installer; the user shouldn't
+  // see a wizard for updates, just a seamless restart.
+  if FileExists(ExpandConstant('{autopf}\Gloam\gloam.exe')) then
+  begin
+    if not WizardSilent then
+    begin
+      // Re-launch ourselves with /VERYSILENT and auto-restart the app
+      Exec(ExpandConstant('{srcexe}'), '/VERYSILENT /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS', '', SW_HIDE, ewNoWait, Result);
+      Result := False; // Abort this (non-silent) instance
+    end;
+  end;
 end;
