@@ -71,7 +71,7 @@ jobs:
           echo "✓ Apple certificate installed"
 
       - name: Build macOS release
-        run: flutter build macos --release
+        run: flutter build macos --release --dart-define=KLIPY_API_KEY=${{ secrets.KLIPY_API_KEY }}
 
       - name: Bundle native libs and sign
         env:
@@ -242,7 +242,7 @@ jobs:
         run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Build Windows release
-        run: flutter build windows --release
+        run: flutter build windows --release --dart-define=KLIPY_API_KEY=${{ secrets.KLIPY_API_KEY }}
 
       - name: Bundle libolm for Windows
         shell: bash
