@@ -56,3 +56,14 @@ begin
     RegQueryStringValue(HKLM, 'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64', 'Version', Version) or
     RegQueryStringValue(HKLM, 'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\x64', 'Version', Version);
 end;
+
+function InitializeSetup: Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := True;
+  // Force-kill gloam.exe to release DLL file locks before installing.
+  // CloseApplications=force sometimes doesn't wait long enough.
+  Exec('taskkill', '/F /IM gloam.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Sleep(500);
+end;
