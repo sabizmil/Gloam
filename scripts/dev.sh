@@ -6,12 +6,22 @@ pkill -f "gloam" 2>/dev/null || true
 sleep 2
 pkill -9 -f "gloam" 2>/dev/null || true
 
+# Load environment variables
+DART_DEFINES=""
+if [ -f ".env" ]; then
+  while IFS='=' read -r key value; do
+    [ -z "$key" ] && continue
+    [[ "$key" =~ ^# ]] && continue
+    DART_DEFINES="$DART_DEFINES --dart-define=$key=$value"
+  done < .env
+fi
+
 # Clean build to avoid stale Dart cache
 echo "Cleaning..."
 fvm flutter clean 2>&1 | tail -1
 
 echo "Building Gloam..."
-fvm flutter build macos --debug 2>&1 | tail -2
+fvm flutter build macos --debug $DART_DEFINES 2>&1 | tail -2
 
 # Bundle native libs
 APP="build/macos/Build/Products/Debug/gloam.app"

@@ -1,7 +1,7 @@
 name: gloam
 description: A Matrix chat client built for the twilight.
 publish_to: 'none'
-version: 0.3.1+10
+version: 0.4.0+12
 
 environment:
   sdk: ^3.11.3

@@ -88,13 +88,11 @@ class ImageEmbed extends StatelessWidget {
     final colors = context.gloam;
     return EmbedCard(
       info: info,
-      child: SizedBox(
-        height: 300,
-        width: double.infinity,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400, maxHeight: 300),
         child: Image.network(
           info.mediaUrl,
-          fit: BoxFit.cover,
-          width: double.infinity,
+          fit: BoxFit.contain,
           loadingBuilder: (_, child, progress) {
             if (progress == null) return child;
             return Center(

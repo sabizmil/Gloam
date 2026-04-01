@@ -12,8 +12,9 @@ import '../../chat/presentation/providers/timeline_provider.dart';
 
 /// Full search view — replaces the chat area on desktop, pushed screen on mobile.
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key, this.onSelectResult});
+  const SearchScreen({super.key, this.onSelectResult, this.onClose});
   final void Function(String roomId, String eventId)? onSelectResult;
+  final VoidCallback? onClose;
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -109,7 +110,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: context.gloam.bg,
+      decoration: BoxDecoration(
+        color: context.gloam.bg,
+        border: Border(
+          left: BorderSide(color: context.gloam.border),
+        ),
+      ),
       child: Column(
         children: [
           // Header
@@ -163,6 +169,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           child: Icon(Icons.close,
                               size: 16, color: context.gloam.textTertiary),
                         ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: widget.onClose,
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: Icon(Icons.close,
+                              size: 18, color: context.gloam.textTertiary),
+                        ),
+                      ),
                     ],
                   ),
                 ),

@@ -1,4 +1,10 @@
+import 'dart:io' show HttpClient;
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart' show compute;
+
 import 'package:desktop_drop/desktop_drop.dart';
+import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +17,7 @@ import '../../../../services/clipboard_paste_service.dart';
 import 'package:matrix/matrix.dart' show EventTypes, Membership;
 
 import '../../../../services/matrix_service.dart';
+import '../../../../services/klipy_service.dart';
 import '../../../../services/upload_service.dart';
 import '../../../../widgets/gloam_avatar.dart';
 import '../providers/timeline_provider.dart';
@@ -27,6 +34,17 @@ import '../../../calls/presentation/providers/call_provider.dart';
 import '../../../calls/presentation/screens/outgoing_call_screen.dart';
 import '../../../profile/presentation/user_profile_modal.dart';
 import '../../../settings/presentation/recovery_key_dialog.dart';
+
+/// Download bytes on a background isolate (used by compute()).
+Future<Uint8List> _downloadBytes(String url) async {
+  final client = HttpClient();
+  final request = await client.getUrl(Uri.parse(url));
+  final response = await request.close();
+  final builder = BytesBuilder();
+  await response.forEach(builder.add);
+  client.close();
+  return builder.toBytes();
+}
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key, required this.roomId, this.compact = false});
@@ -62,6 +80,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // on init and whenever new messages arrive
     Future.microtask(() {
       ref.read(timelineProvider(widget.roomId).notifier).setActive(true);
+    });
+    // Focus the composer so the user can start typing immediately
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _composerKey.currentState?.focus();
     });
   }
 
@@ -144,6 +166,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         );
       }
     }
+  }
+
+  void _sendGif(KlipyItem item) {
+    final roomId = widget.roomId;
+    final notifier = ref.read(timelineProvider(roomId).notifier);
+    final url = item.fullUrl;
+    final w = item.fullWidth;
+    final h = item.fullHeight;
+
+    // Download on a background isolate, then upload directly.
+    () async {
+      try {
+        final bytes = await compute(_downloadBytes, url);
+
+        final uri = Uri.parse(url);
+        final name = uri.pathSegments.isNotEmpty
+            ? uri.pathSegments.last
+            : 'gif.webp';
+
+        await notifier.sendGif(bytes, name, width: w, height: h);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to send: $e'), backgroundColor: context.gloam.danger),
+          );
+        }
+      }
+    }();
   }
 
   Future<void> _handleDroppedFiles(List<DropDoneDetails> detailsList) async {
@@ -621,6 +671,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               .read(timelineProvider(widget.roomId).notifier)
               .setTyping(isTyping),
           onAttach: () => _pickAndUploadFile(),
+          onGif: (item) => _sendGif(item),
           onCancelAction: () =>
               setState(() => _composerState = ComposerState.normal),
         ),

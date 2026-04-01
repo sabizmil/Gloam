@@ -15,8 +15,18 @@ set -e
 VERSION=$(grep 'version:' pubspec.yaml | head -1 | awk '{print $2}' | cut -d+ -f1)
 echo "Building Gloam v${VERSION} for macOS..."
 
+# Load environment variables
+DART_DEFINES=""
+if [ -f ".env" ]; then
+  while IFS='=' read -r key value; do
+    [ -z "$key" ] && continue
+    [[ "$key" =~ ^# ]] && continue
+    DART_DEFINES="$DART_DEFINES --dart-define=$key=$value"
+  done < .env
+fi
+
 # Build
-fvm flutter build macos --release 2>&1 | tail -3
+fvm flutter build macos --release $DART_DEFINES 2>&1 | tail -3
 
 APP="build/macos/Build/Products/Release/gloam.app"
 DEST="$APP/Contents/MacOS"

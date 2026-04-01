@@ -4,7 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/theme/gloam_theme_ext.dart';
 import 'emoji_picker.dart';
+import 'gif_picker.dart';
 import '../../../../app/theme/spacing.dart';
+import '../../../../services/klipy_service.dart';
 
 /// The state of the composer — normal, replying to a message, or editing.
 class ComposerState {
@@ -37,6 +39,7 @@ class MessageComposer extends StatefulWidget {
     this.onEditLastMessage,
     this.composerState = const ComposerState(),
     this.onCancelAction,
+    this.onGif,
   });
 
   final String roomName;
@@ -48,6 +51,7 @@ class MessageComposer extends StatefulWidget {
   final VoidCallback? onEditLastMessage;
   final ComposerState composerState;
   final VoidCallback? onCancelAction;
+  final void Function(KlipyItem item)? onGif;
 
   @override
   MessageComposerState createState() => MessageComposerState();
@@ -58,6 +62,9 @@ class MessageComposerState extends State<MessageComposer> {
   final _focusNode = FocusNode();
   bool _hasText = false;
   bool _isTyping = false;
+
+  /// Focus the composer input.
+  void focus() => _focusNode.requestFocus();
 
   /// Get the current composer text.
   String get text => _controller.text;
@@ -257,26 +264,47 @@ class MessageComposerState extends State<MessageComposer> {
                             horizontal: 14,
                             vertical: 10,
                           ),
-                          suffixIcon: IconButton(
-                            onPressed: () async {
-                              final emoji =
-                                  await showEmojiPicker(context);
-                              if (emoji != null) {
-                                final pos = _controller.selection;
-                                final text = _controller.text;
-                                final newText =
-                                    text.substring(0, pos.baseOffset) +
-                                        emoji +
-                                        text.substring(pos.extentOffset);
-                                _controller.text = newText;
-                                _controller.selection =
-                                    TextSelection.collapsed(
-                                  offset: pos.baseOffset + emoji.length,
-                                );
-                              }
-                            },
-                            icon: Icon(Icons.sentiment_satisfied_outlined,
-                                size: 20, color: colors.textTertiary),
+                          suffixIcon: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                onPressed: () async {
+                                  final item = await showGifPicker(context);
+                                  if (item != null) {
+                                    widget.onGif?.call(item);
+                                  }
+                                },
+                                icon: Icon(Icons.gif_box_outlined,
+                                    size: 20, color: colors.textTertiary),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                    minWidth: 36, minHeight: 36),
+                              ),
+                              IconButton(
+                                onPressed: () async {
+                                  final emoji =
+                                      await showEmojiPicker(context);
+                                  if (emoji != null) {
+                                    final pos = _controller.selection;
+                                    final text = _controller.text;
+                                    final newText =
+                                        text.substring(0, pos.baseOffset) +
+                                            emoji +
+                                            text.substring(pos.extentOffset);
+                                    _controller.text = newText;
+                                    _controller.selection =
+                                        TextSelection.collapsed(
+                                      offset: pos.baseOffset + emoji.length,
+                                    );
+                                  }
+                                },
+                                icon: Icon(Icons.sentiment_satisfied_outlined,
+                                    size: 20, color: colors.textTertiary),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                    minWidth: 36, minHeight: 36),
+                              ),
+                            ],
                           ),
                         ),
                       ),

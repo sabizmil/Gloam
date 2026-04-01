@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:matrix/matrix.dart';
@@ -623,6 +624,72 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     final room = _room;
     if (room == null) return;
     await room.sendFileEvent(file);
+  }
+
+  /// Send a GIF/sticker with known dimensions.
+  /// Bypasses sendFileEvent to avoid synchronous thumbnail generation
+  /// and does a direct upload + manual event construction.
+  Future<void> sendGif(Uint8List bytes, String filename, {int? width, int? height}) async {
+    final room = _room;
+    if (room == null) return;
+
+    final mimeType = filename.endsWith('.webp')
+        ? 'image/webp'
+        : filename.endsWith('.gif')
+            ? 'image/gif'
+            : 'image/png';
+
+    Uri uploadUri;
+    Map<String, dynamic>? fileBlock;
+
+    if (room.encrypted && _client.fileEncryptionEnabled) {
+      // Encrypt and upload
+      final plain = MatrixImageFile(bytes: bytes, name: filename, mimeType: mimeType);
+      final encrypted = await plain.encrypt();
+      final encFile = encrypted.toMatrixFile();
+      uploadUri = await _client.uploadContent(
+        encFile.bytes,
+        filename: encFile.name,
+        contentType: encFile.mimeType,
+      );
+      fileBlock = {
+        'url': uploadUri.toString(),
+        'mimetype': mimeType,
+        'v': 'v2',
+        'key': {
+          'alg': 'A256CTR',
+          'ext': true,
+          'k': encrypted.k,
+          'key_ops': ['encrypt', 'decrypt'],
+          'kty': 'oct',
+        },
+        'iv': encrypted.iv,
+        'hashes': {'sha256': encrypted.sha256},
+      };
+    } else {
+      // Upload directly
+      uploadUri = await _client.uploadContent(
+        bytes,
+        filename: filename,
+        contentType: mimeType,
+      );
+    }
+
+    final content = <String, dynamic>{
+      'msgtype': MessageTypes.Image,
+      'body': filename,
+      'filename': filename,
+      if (fileBlock != null) 'file': fileBlock,
+      if (fileBlock == null) 'url': uploadUri.toString(),
+      'info': {
+        'mimetype': mimeType,
+        'size': bytes.length,
+        if (width != null) 'w': width,
+        if (height != null) 'h': height,
+      },
+    };
+
+    await room.sendEvent(content);
   }
 
   /// Send typing notification.
