@@ -6,15 +6,15 @@
     <description>Most recent updates for Gloam</description>
     <language>en</language>
     <item>
-      <title>Version 0.4.0</title>
-      <sparkle:version>12</sparkle:version>
-      <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
+      <title>Version 0.4.1</title>
+      <sparkle:version>13</sparkle:version>
+      <sparkle:shortVersionString>0.4.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
-      <pubDate>Wed, 01 Apr 2026 00:53:40 +0000</pubDate>
+      <pubDate>Wed, 01 Apr 2026 01:10:23 +0000</pubDate>
       <enclosure
-        url="https://github.com/sabizmil/Gloam/releases/download/v0.4.0/Gloam-0.4.0-macos.zip"
-        sparkle:edSignature="gDtUZUBkeuu9hhDWjSbQdmDZar20257w6sU3OY8mcxVEs0QtHsOi8Apg2T5MFNeRw6Ofk4A8vgreXuBz/+MjAA=="
-        length="47185348"
+        url="https://github.com/sabizmil/Gloam/releases/download/v0.4.1/Gloam-0.4.1-macos.zip"
+        sparkle:edSignature="24uUTXoVnS3+pq1E4undAGiUAYhUywDzJjs4riY4rOxTLGE1KyG1N4MJVFaWc87WnUiVweesZ/1GRsaJV4cuBg=="
+        length="47185466"
         type="application/octet-stream" />
     </item>
   </channel>
