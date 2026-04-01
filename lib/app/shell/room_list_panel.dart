@@ -18,6 +18,7 @@ import '../../features/rooms/presentation/widgets/room_list_tile.dart';
 import '../../services/matrix_service.dart';
 import '../../services/voice_service.dart';
 import '../../widgets/section_header.dart';
+import 'right_panel.dart';
 import 'space_rail.dart';
 
 /// Room list panel — shows rooms filtered by the selected space.
@@ -34,6 +35,7 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
 
   void _selectRoom(String roomId) {
     ref.read(selectedRoomProvider.notifier).state = roomId;
+    ref.read(rightPanelProvider.notifier).state = RightPanelState.closed;
 
     // On mobile, push chat screen
     final width = MediaQuery.sizeOf(context).width;
