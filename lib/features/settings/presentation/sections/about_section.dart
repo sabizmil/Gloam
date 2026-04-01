@@ -28,7 +28,9 @@ class _AboutSectionState extends State<AboutSection> {
   Future<void> _loadVersion() async {
     final info = await PackageInfo.fromPlatform();
     if (mounted) {
-      setState(() => _version = info.version);
+      // Strip build number suffix if present (e.g. "0.4.2+14" → "0.4.2")
+      final v = info.version.split('+').first;
+      setState(() => _version = v);
     }
   }
 
