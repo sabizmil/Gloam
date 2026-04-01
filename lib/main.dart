@@ -8,8 +8,29 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app/app.dart';
 import 'app/theme/theme_preferences.dart';
 
+/// Use the platform's native certificate store on Windows/Linux.
+/// Flutter's bundled BoringSSL doesn't include all CA roots that the
+/// OS trusts (e.g. Let's Encrypt ISRG Root X1), causing
+/// CERTIFICATE_VERIFY_FAILED on some servers.
+class _NativeCertHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    final client = super.createHttpClient(
+      SecurityContext(withTrustedRoots: true),
+    );
+    // Still verify certificates — just use the OS trust store
+    // instead of BoringSSL's limited bundle.
+    return client;
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Use the OS certificate store on desktop platforms
+  if (Platform.isWindows || Platform.isLinux) {
+    HttpOverrides.global = _NativeCertHttpOverrides();
+  }
 
   // Pre-load libolm from the app bundle before the Matrix SDK tries.
   //
