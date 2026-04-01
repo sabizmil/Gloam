@@ -1,14 +1,18 @@
+import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:matrix/matrix.dart';
+import 'package:pasteboard/pasteboard.dart';
 
 import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/debug_server.dart';
+import '../../../../services/download_service.dart';
 import '../../../../services/matrix_service.dart';
 import '../providers/timeline_provider.dart';  // TimelineMessage, MessageSendState
 
@@ -134,6 +138,9 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
     final size = _stableSize();
     return GestureDetector(
       onTap: (_imageBytes != null || _httpUrl != null) ? () => _openFullscreen(context) : null,
+      onSecondaryTapUp: (details) => _showImageContextMenu(
+        context, details.globalPosition,
+      ),
       child: Container(
         width: size.width,
         height: size.height,
@@ -255,6 +262,87 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
     return {'Authorization': 'Bearer ${client!.accessToken}'};
   }
 
+  Future<Uint8List?> _getImageBytes() async {
+    if (_imageBytes != null) return _imageBytes;
+    if (_httpUrl == null) return null;
+    try {
+      final response = await Dio().get<List<int>>(
+        _httpUrl.toString(),
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: _authHeaders,
+        ),
+      );
+      return Uint8List.fromList(response.data!);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _showImageContextMenu(BuildContext context, Offset position) {
+    final colors = context.gloam;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final relPos = RelativeRect.fromLTRB(
+      position.dx, position.dy,
+      overlay.size.width - position.dx,
+      overlay.size.height - position.dy,
+    );
+
+    showMenu<String>(
+      context: context,
+      position: relPos,
+      color: colors.bgSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.border),
+      ),
+      items: [
+        PopupMenuItem(
+          value: 'copy',
+          height: 36,
+          child: Row(children: [
+            Icon(Icons.copy, size: 16, color: colors.textPrimary),
+            const SizedBox(width: 10),
+            Text('Copy image',
+                style: TextStyle(fontSize: 13, color: colors.textPrimary)),
+          ]),
+        ),
+        PopupMenuItem(
+          value: 'save',
+          height: 36,
+          child: Row(children: [
+            Icon(Icons.download, size: 16, color: colors.textPrimary),
+            const SizedBox(width: 10),
+            Text('Save image',
+                style: TextStyle(fontSize: 13, color: colors.textPrimary)),
+          ]),
+        ),
+      ],
+    ).then((value) async {
+      if (value == null) return;
+      final bytes = await _getImageBytes();
+      if (bytes == null || !context.mounted) return;
+
+      if (value == 'copy') {
+        await Pasteboard.writeImage(bytes);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Image copied to clipboard'),
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
+      } else if (value == 'save') {
+        await DownloadService.saveFile(
+          bytes: bytes,
+          filename: widget.message.body,
+        );
+      }
+    });
+  }
+
   void _openFullscreen(BuildContext context) {
     Navigator.of(context).push(
       PageRouteBuilder(
@@ -280,6 +368,89 @@ class _FullscreenImageView extends StatelessWidget {
   final String filename;
   final Map<String, String>? authHeaders;
 
+  Future<Uint8List?> _getBytes() async {
+    if (bytes != null) return bytes;
+    if (url == null) return null;
+    try {
+      final response = await Dio().get<List<int>>(
+        url.toString(),
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: authHeaders,
+        ),
+      );
+      return Uint8List.fromList(response.data!);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _copyImage(BuildContext context) async {
+    final b = await _getBytes();
+    if (b == null) return;
+    await Pasteboard.writeImage(b);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Image copied to clipboard'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
+  void _saveImage() async {
+    final b = await _getBytes();
+    if (b == null) return;
+    await DownloadService.saveFile(bytes: b, filename: filename);
+  }
+
+  void _showContextMenu(BuildContext context, Offset position) {
+    final colors = context.gloam;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final relPos = RelativeRect.fromLTRB(
+      position.dx, position.dy,
+      overlay.size.width - position.dx,
+      overlay.size.height - position.dy,
+    );
+
+    showMenu<String>(
+      context: context,
+      position: relPos,
+      color: colors.bgSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.border),
+      ),
+      items: [
+        PopupMenuItem(
+          value: 'copy',
+          height: 36,
+          child: Row(children: [
+            Icon(Icons.copy, size: 16, color: colors.textPrimary),
+            const SizedBox(width: 10),
+            Text('Copy image',
+                style: TextStyle(fontSize: 13, color: colors.textPrimary)),
+          ]),
+        ),
+        PopupMenuItem(
+          value: 'save',
+          height: 36,
+          child: Row(children: [
+            Icon(Icons.download, size: 16, color: colors.textPrimary),
+            const SizedBox(width: 10),
+            Text('Save image',
+                style: TextStyle(fontSize: 13, color: colors.textPrimary)),
+          ]),
+        ),
+      ],
+    ).then((value) {
+      if (value == 'copy') _copyImage(context);
+      if (value == 'save') _saveImage();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.gloam;
@@ -301,14 +472,31 @@ class _FullscreenImageView extends StatelessWidget {
             ),
             title: Text(filename,
               style: GoogleFonts.inter(fontSize: 13, color: colors.textSecondary)),
+            actions: [
+              IconButton(
+                icon: Icon(Icons.copy, color: colors.textSecondary),
+                tooltip: 'Copy image',
+                onPressed: () => _copyImage(context),
+              ),
+              IconButton(
+                icon: Icon(Icons.download, color: colors.textSecondary),
+                tooltip: 'Save image',
+                onPressed: _saveImage,
+              ),
+              const SizedBox(width: 8),
+            ],
           ),
-          body: Center(
-            child: InteractiveViewer(
-              minScale: 0.5,
-              maxScale: 4.0,
-              child: bytes != null
-                  ? Image.memory(bytes!)
-                  : (url != null ? Image.network(url.toString(), headers: authHeaders) : const SizedBox()),
+          body: GestureDetector(
+            onSecondaryTapUp: (details) =>
+                _showContextMenu(context, details.globalPosition),
+            child: Center(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: bytes != null
+                    ? Image.memory(bytes!)
+                    : (url != null ? Image.network(url.toString(), headers: authHeaders) : const SizedBox()),
+              ),
             ),
           ),
         ),
