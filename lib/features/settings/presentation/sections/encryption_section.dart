@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/gloam_theme_ext.dart';
+import '../../../../app/router.dart';
 import '../../../../services/matrix_service.dart';
+import '../../../../services/verification_service.dart';
 import '../recovery_key_dialog.dart';
 import '../widgets/settings_tile.dart';
 
@@ -43,32 +45,13 @@ class EncryptionSection extends ConsumerWidget {
         SettingsTile(
           icon: Icons.security,
           label: 'verify this device',
-          onTap: () async {
-            // Try to self-sign using cached SSSS secrets
-            final encryption = client?.encryption;
-            if (encryption == null) return;
-
-            try {
-              if (encryption.crossSigning.enabled) {
-                final ssss = encryption.ssss;
-                final keyInfo = ssss.open();
-                await encryption.crossSigning.selfSign(openSsss: keyInfo);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Device verified successfully')),
-                  );
-                }
-              } else {
-                // Cross-signing not set up — need recovery key first
-                showRecoveryKeyDialog(context);
-              }
-            } catch (e) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Verification failed: $e. Try entering your recovery key first.')),
-                );
-              }
-            }
+          onTap: () {
+            if (client == null) return;
+            final service = VerificationService(
+              client: client,
+              navigatorKey: rootNavigatorKey,
+            );
+            service.verifySelf();
           },
         ),
 

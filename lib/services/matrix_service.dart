@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:matrix/encryption/utils/key_verification.dart';
 import 'package:matrix/matrix.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -90,6 +91,10 @@ class MatrixService {
         return db;
       },
       nativeImplementations: const GloamNativeImplementations(),
+      verificationMethods: {
+        KeyVerificationMethod.emoji,
+        KeyVerificationMethod.numbers,
+      },
       supportedLoginTypes: {
         AuthenticationTypes.password,
         AuthenticationTypes.sso,
