@@ -125,7 +125,7 @@ class MatrixService {
       LoginType.mLoginPassword,
       identifier: AuthenticationUserIdentifier(user: username),
       password: password,
-      initialDeviceDisplayName: 'Gloam (macOS)',
+      initialDeviceDisplayName: 'Gloam (${Platform.operatingSystem})',
     );
     Logs().i('Login: success, userID=${_client!.userID}');
 
