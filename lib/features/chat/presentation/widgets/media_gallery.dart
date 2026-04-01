@@ -107,10 +107,13 @@ class _MediaGalleryState extends ConsumerState<MediaGallery> {
                   ),
                 ),
                 const Spacer(),
-                GestureDetector(
-                  onTap: widget.onClose,
-                  child: Icon(Icons.close,
+                IconButton(
+                  onPressed: widget.onClose,
+                  icon: Icon(Icons.close,
                       size: 16, color: colors.textTertiary),
+                  hoverColor: colors.border.withValues(alpha: 0.5),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                 ),
               ],
             ),

@@ -63,10 +63,13 @@ class RoomInfoPanel extends ConsumerWidget {
                   ),
                 ),
                 const Spacer(),
-                GestureDetector(
-                  onTap: onClose,
-                  child: Icon(Icons.close,
+                IconButton(
+                  onPressed: onClose,
+                  icon: Icon(Icons.close,
                       size: 16, color: context.gloam.textTertiary),
+                  hoverColor: context.gloam.border.withValues(alpha: 0.5),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                 ),
               ],
             ),

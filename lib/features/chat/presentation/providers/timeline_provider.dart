@@ -72,10 +72,12 @@ class ReactionGroup {
   final String emoji;
   final int count;
   final bool includesMe;
+  final List<String> reactorNames;
   const ReactionGroup({
     required this.emoji,
     required this.count,
     required this.includesMe,
+    this.reactorNames = const [],
   });
 }
 
@@ -386,6 +388,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     );
     final reactionCounts = <String, int>{};
     final reactionIncludesMe = <String, bool>{};
+    final reactionNames = <String, List<String>>{};
 
     for (final reaction in aggregatedEvents) {
       final relatesToMap =
@@ -393,6 +396,12 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
       final emoji = relatesToMap?.tryGet<String>('key') ?? '';
       if (emoji.isEmpty) continue;
       reactionCounts[emoji] = (reactionCounts[emoji] ?? 0) + 1;
+      // Resolve reactor display name
+      final reactor = _room?.unsafeGetUserFromMemoryOrFallback(reaction.senderId);
+      final name = reaction.senderId == myUserId
+          ? 'you'
+          : (reactor?.calcDisplayname() ?? reaction.senderId);
+      (reactionNames[emoji] ??= []).add(name);
       if (reaction.senderId == myUserId) {
         reactionIncludesMe[emoji] = true;
       }
@@ -402,6 +411,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
         emoji: entry.key,
         count: entry.value,
         includesMe: reactionIncludesMe[entry.key] ?? false,
+        reactorNames: reactionNames[entry.key] ?? [],
       );
     }
 
@@ -534,10 +544,30 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
   }
 
   /// Send a reply within a thread using proper m.thread relation.
-  Future<void> sendThreadReply(String text, String rootEventId) async {
+  Future<void> sendThreadReply(
+    String text,
+    String rootEventId, {
+    String? inReplyToEventId,
+  }) async {
     final room = _room;
     if (room == null) return;
-    await room.sendTextEvent(text, threadRootEventId: rootEventId);
+
+    Event? replyEvent;
+    if (inReplyToEventId != null) {
+      try {
+        replyEvent = _timeline?.events.firstWhere(
+          (e) => e.eventId == inReplyToEventId,
+        );
+      } catch (_) {
+        replyEvent = await room.getEventById(inReplyToEventId);
+      }
+    }
+
+    await room.sendTextEvent(
+      text,
+      threadRootEventId: rootEventId,
+      inReplyTo: replyEvent,
+    );
   }
 
   /// Edit a message.
@@ -686,6 +716,85 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
         'size': bytes.length,
         if (width != null) 'w': width,
         if (height != null) 'h': height,
+      },
+    };
+
+    await room.sendEvent(content);
+  }
+
+  /// Send a file/image in a thread.
+  Future<void> sendThreadFile(MatrixFile file, String rootEventId) async {
+    final room = _room;
+    if (room == null) return;
+    await room.sendFileEvent(file, threadRootEventId: rootEventId);
+  }
+
+  /// Send a GIF/sticker in a thread with known dimensions.
+  Future<void> sendThreadGif(
+    Uint8List bytes,
+    String filename,
+    String rootEventId, {
+    int? width,
+    int? height,
+  }) async {
+    final room = _room;
+    if (room == null) return;
+
+    final mimeType = filename.endsWith('.webp')
+        ? 'image/webp'
+        : filename.endsWith('.gif')
+            ? 'image/gif'
+            : 'image/png';
+
+    Uri uploadUri;
+    Map<String, dynamic>? fileBlock;
+
+    if (room.encrypted && _client.fileEncryptionEnabled) {
+      final plain = MatrixImageFile(bytes: bytes, name: filename, mimeType: mimeType);
+      final encrypted = await plain.encrypt();
+      final encFile = encrypted.toMatrixFile();
+      uploadUri = await _client.uploadContent(
+        encFile.bytes,
+        filename: encFile.name,
+        contentType: encFile.mimeType,
+      );
+      fileBlock = {
+        'url': uploadUri.toString(),
+        'mimetype': mimeType,
+        'v': 'v2',
+        'key': {
+          'alg': 'A256CTR',
+          'ext': true,
+          'k': encrypted.k,
+          'key_ops': ['encrypt', 'decrypt'],
+          'kty': 'oct',
+        },
+        'iv': encrypted.iv,
+        'hashes': {'sha256': encrypted.sha256},
+      };
+    } else {
+      uploadUri = await _client.uploadContent(
+        bytes,
+        filename: filename,
+        contentType: mimeType,
+      );
+    }
+
+    final content = <String, dynamic>{
+      'msgtype': MessageTypes.Image,
+      'body': filename,
+      'filename': filename,
+      if (fileBlock != null) 'file': fileBlock,
+      if (fileBlock == null) 'url': uploadUri.toString(),
+      'info': {
+        'mimetype': mimeType,
+        'size': bytes.length,
+        if (width != null) 'w': width,
+        if (height != null) 'h': height,
+      },
+      'm.relates_to': {
+        'rel_type': RelationshipTypes.thread,
+        'event_id': rootEventId,
       },
     };
 

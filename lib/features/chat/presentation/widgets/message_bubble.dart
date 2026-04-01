@@ -222,7 +222,9 @@ class _MessageBubbleState extends State<MessageBubble> {
                 onReply: () => widget.onReply?.call(),
                 onEdit: widget.isOwnMessage ? () => widget.onEdit?.call() : null,
                 onDelete: widget.isOwnMessage ? () => widget.onDelete?.call() : null,
-                onThread: () => widget.onThread?.call(),
+                onThread: widget.onThread != null
+                    ? () => widget.onThread!.call()
+                    : null,
                 onCopy: () => widget.onCopy?.call(),
                 onPinChanged: (pinned) =>
                     setState(() => _toolbarPinned = pinned),
@@ -332,39 +334,63 @@ class _ReactionPill extends StatelessWidget {
   final ReactionGroup reaction;
   final VoidCallback? onTap;
 
+  String _buildTooltip() {
+    final names = reaction.reactorNames;
+    if (names.isEmpty) return reaction.emoji;
+    if (names.length == 1) return '${names[0]} reacted with ${reaction.emoji}';
+    if (names.length == 2) {
+      return '${names[0]} and ${names[1]} reacted with ${reaction.emoji}';
+    }
+    final first = names.take(3).join(', ');
+    final remaining = names.length - 3;
+    if (remaining <= 0) return '$first reacted with ${reaction.emoji}';
+    return '$first, and $remaining ${remaining == 1 ? 'other' : 'others'} reacted with ${reaction.emoji}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.gloam;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(
-          color: reaction.includesMe
-              ? colors.accentDim.withValues(alpha: 0.3)
-              : colors.bgElevated,
+    return Tooltip(
+      message: _buildTooltip(),
+      waitDuration: const Duration(milliseconds: 300),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          mouseCursor: SystemMouseCursors.click,
+          hoverColor: colors.border.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: reaction.includesMe
-                ? colors.accentDim
-                : colors.border,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(reaction.emoji, style: const TextStyle(fontSize: 13)),
-            const SizedBox(width: 4),
-            Text(
-              '${reaction.count}',
-              style: GoogleFonts.jetBrainsMono(
-                fontSize: 11,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: reaction.includesMe
+                  ? colors.accentDim.withValues(alpha: 0.3)
+                  : colors.bgElevated,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
                 color: reaction.includesMe
-                    ? colors.accent
-                    : colors.textSecondary,
+                    ? colors.accentDim
+                    : colors.border,
               ),
             ),
-          ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(reaction.emoji, style: const TextStyle(fontSize: 13)),
+                const SizedBox(width: 4),
+                Text(
+                  '${reaction.count}',
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 11,
+                    color: reaction.includesMe
+                        ? colors.accent
+                        : colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
