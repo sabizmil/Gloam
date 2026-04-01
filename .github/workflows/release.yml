@@ -271,6 +271,11 @@ jobs:
           $version = "${{ steps.version.outputs.version }}"
           Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "build\Gloam-${version}-windows.zip"
 
+      - name: Download VC++ Redistributable
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://aka.ms/vs/17/release/vc_redist.x64.exe" -OutFile "build\vcredist_x64.exe"
+
       - name: Create installer
         shell: pwsh
         run: |

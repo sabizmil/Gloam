@@ -24,6 +24,8 @@ WizardStyle=modern
 
 [Files]
 Source: "..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+; VC++ Redistributable bundled for machines that don't have it
+Source: "..\build\vcredist_x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: not VCRedistInstalled
 
 [Icons]
 Name: "{group}\Gloam"; Filename: "{app}\gloam.exe"
@@ -33,4 +35,17 @@ Name: "{autodesktop}\Gloam"; Filename: "{app}\gloam.exe"; Tasks: desktopicon
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional options:"; Flags: unchecked
 
 [Run]
+; Install VC++ Redistributable silently if needed (before launching app)
+Filename: "{tmp}\vcredist_x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing Visual C++ Runtime..."; Flags: waituntilterminated; Check: not VCRedistInstalled
 Filename: "{app}\gloam.exe"; Description: "Launch Gloam"; Flags: nowait postinstall skipifsilent
+
+[Code]
+function VCRedistInstalled: Boolean;
+var
+  Version: String;
+begin
+  // Check for VC++ 2015-2022 Redistributable (14.x) in registry
+  Result :=
+    RegQueryStringValue(HKLM, 'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64', 'Version', Version) or
+    RegQueryStringValue(HKLM, 'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\x64', 'Version', Version);
+end;
