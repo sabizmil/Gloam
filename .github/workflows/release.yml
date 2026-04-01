@@ -311,25 +311,11 @@ jobs:
           name: windows-build
           path: artifacts/
 
-      - name: Create Release
+      - name: Upload artifacts to release
         uses: softprops/action-gh-release@v2
         with:
-          name: Gloam ${{ needs.build-macos.outputs.version }}
-          body: |
-            ## Gloam ${{ needs.build-macos.outputs.version }}
-
-            ### Installation
-
-            **macOS:**
-            1. Download `Gloam-${{ needs.build-macos.outputs.version }}-macos.zip`
-            2. Extract and move `gloam.app` to your Applications folder
-            3. Double-click to launch
-
-            **Windows:**
-            - **Installer (recommended):** Download `Gloam-${{ needs.build-macos.outputs.version }}-windows-setup.exe` and run it
-            - **Portable:** Download `Gloam-${{ needs.build-macos.outputs.version }}-windows.zip`, extract, and run `gloam.exe`
-
-            Future updates will be delivered automatically.
+          # Don't set name or body — preserve the changelog we wrote
+          # via `gh release create` before tagging.
           files: artifacts/*
           draft: false
           prerelease: false
