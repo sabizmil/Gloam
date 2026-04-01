@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -76,7 +77,6 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
     }
 
     return Container(
-      width: GloamSpacing.threadPanelWidth,
       decoration: BoxDecoration(
         color: colors.bgSurface,
         border: Border(
@@ -335,28 +335,39 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
                     BorderRadius.circular(GloamSpacing.radiusSm),
                 border: Border.all(color: colors.border),
               ),
-              child: TextField(
-                controller: _controller,
-                focusNode: _focusNode,
-                maxLines: 6,
-                minLines: 1,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: colors.textPrimary,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Reply in thread...',
-                  hintStyle: GoogleFonts.inter(
+              child: Focus(
+                onKeyEvent: (node, event) {
+                  if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                  // Enter to send (without shift), shift+enter for newline
+                  if (event.logicalKey == LogicalKeyboardKey.enter &&
+                      !HardwareKeyboard.instance.isShiftPressed) {
+                    _send();
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  maxLines: 6,
+                  minLines: 1,
+                  style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: colors.textTertiary,
+                    color: colors.textPrimary,
                   ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
+                  decoration: InputDecoration(
+                    hintText: 'Reply in thread...',
+                    hintStyle: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: colors.textTertiary,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                   ),
                 ),
-                onSubmitted: (_) => _send(),
               ),
             ),
           ),

@@ -59,15 +59,12 @@ class RightPanel extends ConsumerWidget {
           roomId: roomId,
           onClose: close,
         ),
-      RightPanelView.search => SizedBox(
-          width: 380,
-          child: SearchScreen(
-            onClose: close,
-            onSelectResult: (roomId, eventId) {
-              ref.read(selectedRoomProvider.notifier).state = roomId;
-              close();
-            },
-          ),
+      RightPanelView.search => SearchScreen(
+          onClose: close,
+          onSelectResult: (roomId, eventId) {
+            ref.read(selectedRoomProvider.notifier).state = roomId;
+            close();
+          },
         ),
     };
   }

@@ -63,7 +63,6 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
     final selectedSpace = ref.watch(selectedSpaceProvider);
 
     return Container(
-      width: GloamSpacing.roomListWidth,
       decoration: BoxDecoration(
         color: context.gloam.bgSurface,
         border: Border(
