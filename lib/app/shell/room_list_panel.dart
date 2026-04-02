@@ -13,12 +13,14 @@ import '../../features/chat/presentation/screens/chat_screen.dart';
 import '../../features/rooms/presentation/providers/room_list_provider.dart';
 import '../../features/rooms/presentation/providers/space_hierarchy_provider.dart';
 import '../../features/rooms/presentation/widgets/create_room_dialog.dart';
+import '../../features/rooms/presentation/widgets/invite_dialog.dart';
 import '../../features/rooms/presentation/widgets/invite_tile.dart';
 import '../../features/rooms/presentation/widgets/room_list_tile.dart';
 import '../../services/matrix_service.dart';
 import '../../services/voice_service.dart';
 import '../../widgets/section_header.dart';
 import 'right_panel.dart';
+import 'space_management_modal.dart';
 import 'space_rail.dart';
 
 /// Room list panel — shows rooms filtered by the selected space.
@@ -32,6 +34,99 @@ class RoomListPanel extends ConsumerStatefulWidget {
 class _RoomListPanelState extends ConsumerState<RoomListPanel> {
   String _searchQuery = '';
   _RoomFilter _filter = _RoomFilter.all;
+
+  void _showRoomContextMenu(
+      BuildContext ctx, RoomListItem room, Offset position) {
+    final colors = ctx.gloam;
+    final overlay =
+        Overlay.of(ctx).context.findRenderObject() as RenderBox;
+    final relPos = RelativeRect.fromLTRB(
+      position.dx, position.dy,
+      overlay.size.width - position.dx,
+      overlay.size.height - position.dy,
+    );
+
+    final client = ref.read(matrixServiceProvider).client;
+    final matrixRoom = client?.getRoomById(room.roomId);
+    final canInvite = matrixRoom?.canInvite ?? false;
+
+    showMenu<String>(
+      context: ctx,
+      position: relPos,
+      color: colors.bgSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.border),
+      ),
+      items: [
+        if (canInvite)
+          PopupMenuItem(
+            value: 'invite',
+            height: 36,
+            child: Row(children: [
+              Icon(Icons.person_add, size: 14, color: colors.accent),
+              const SizedBox(width: 10),
+              Text('Invite people',
+                  style: TextStyle(fontSize: 13, color: colors.textPrimary)),
+            ]),
+          ),
+        PopupMenuItem(
+          value: 'info',
+          height: 36,
+          child: Row(children: [
+            Icon(Icons.info_outline, size: 14, color: colors.textPrimary),
+            const SizedBox(width: 10),
+            Text('Room info',
+                style: TextStyle(fontSize: 13, color: colors.textPrimary)),
+          ]),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'leave',
+          height: 36,
+          child: Row(children: [
+            Icon(Icons.logout, size: 14, color: colors.danger),
+            const SizedBox(width: 10),
+            Text('Leave room',
+                style: TextStyle(fontSize: 13, color: colors.danger)),
+          ]),
+        ),
+      ],
+    ).then((value) async {
+      if (value == null) return;
+      switch (value) {
+        case 'invite':
+          if (ctx.mounted) showInviteDialog(ctx, room.roomId);
+        case 'info':
+          _selectRoom(room.roomId);
+          ref.read(rightPanelProvider.notifier).state =
+              const RightPanelState(view: RightPanelView.roomInfo);
+        case 'leave':
+          if (ctx.mounted) {
+            final confirmed = await showDialog<bool>(
+              context: ctx,
+              builder: (c) => AlertDialog(
+                title: Text('Leave ${room.displayName}?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(c, false),
+                    child: const Text('cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(c, true),
+                    child: const Text('leave'),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed == true) {
+              await matrixRoom?.leave();
+              ref.read(selectedRoomProvider.notifier).state = null;
+            }
+          }
+      }
+    });
+  }
 
   void _selectRoom(String roomId) {
     ref.read(selectedRoomProvider.notifier).state = roomId;
@@ -188,6 +283,8 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
                             room: room,
                             isActive: room.roomId == selectedRoom,
                             onTap: () => _selectRoom(room.roomId),
+                            onSecondaryTap: (pos) =>
+                                _showRoomContextMenu(context, room, pos),
                           )),
                     ],
                     if (channels.isNotEmpty) ...[
@@ -196,6 +293,8 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
                             room: room,
                             isActive: room.roomId == selectedRoom,
                             onTap: () => _selectRoom(room.roomId),
+                            onSecondaryTap: (pos) =>
+                                _showRoomContextMenu(context, room, pos),
                           )),
                     ],
                     if (voiceChannels.isNotEmpty) ...[
@@ -510,15 +609,33 @@ class _PanelHeader extends ConsumerWidget {
               ),
             ),
           ),
+          if (selectedSpace != null)
+            GestureDetector(
+              onTap: () =>
+                  showSpaceManagementModal(context, selectedSpace!),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Icon(Icons.settings,
+                    size: 16, color: context.gloam.textSecondary),
+              ),
+            ),
+          if (selectedSpace != null) const SizedBox(width: 12),
           GestureDetector(
             onTap: () async {
-              final roomId = await showCreateRoomDialog(context);
+              final spaceId = ref.read(selectedSpaceProvider);
+              final roomId = await showCreateRoomDialog(
+                context,
+                parentSpaceId: spaceId,
+              );
               if (roomId != null) {
                 ref.read(selectedRoomProvider.notifier).state = roomId;
               }
             },
-            child: Icon(Icons.add,
-                size: 18, color: context.gloam.textSecondary),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Icon(Icons.add,
+                  size: 18, color: context.gloam.textSecondary),
+            ),
           ),
         ],
       ),

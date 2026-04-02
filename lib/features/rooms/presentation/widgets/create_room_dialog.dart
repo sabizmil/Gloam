@@ -27,7 +27,10 @@ class _KnownUser {
 
 /// Create room dialog with type-adaptive fields and user autocomplete for DMs.
 class CreateRoomDialog extends ConsumerStatefulWidget {
-  const CreateRoomDialog({super.key});
+  const CreateRoomDialog({super.key, this.parentSpaceId});
+
+  /// If set, the new room will be added to this space after creation.
+  final String? parentSpaceId;
 
   @override
   ConsumerState<CreateRoomDialog> createState() => _CreateRoomDialogState();
@@ -40,6 +43,7 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
   final _userController = TextEditingController();
   bool _encrypted = false;
   bool _creating = false;
+  String? _selectedSpaceId;
 
   // User search state
   List<_KnownUser> _knownUsers = [];
@@ -51,6 +55,7 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
   @override
   void initState() {
     super.initState();
+    _selectedSpaceId = widget.parentSpaceId;
     _buildKnownUsers();
     _userController.addListener(_onUserSearchChanged);
   }
@@ -243,6 +248,14 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
         );
       }
 
+      // Add to selected space if specified
+      if (_selectedSpaceId != null) {
+        final space = client.getRoomById(_selectedSpaceId!);
+        if (space != null) {
+          await space.setSpaceChild(roomId);
+        }
+      }
+
       if (mounted) Navigator.pop(context, roomId);
     } catch (e) {
       if (mounted) {
@@ -365,6 +378,21 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
                     ],
                   ],
 
+                  // Space picker (for channel/private, not DM)
+                  if (!isDm) ...[
+                    Text(
+                      '// add to space',
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 10,
+                        color: colors.textTertiary,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildSpacePicker(colors),
+                    const SizedBox(height: 16),
+                  ],
+
                   // Channel / Private: name + topic
                   if (!isDm) ...[
                     Text(
@@ -478,6 +506,64 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSpacePicker(dynamic colors) {
+    final client = ref.read(matrixServiceProvider).client;
+    final spaces = client?.rooms
+            .where((r) => r.isSpace && r.membership == Membership.join)
+            .toList() ??
+        [];
+
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: colors.bgElevated,
+        borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
+        border: Border.all(color: colors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String?>(
+          value: _selectedSpaceId,
+          isExpanded: true,
+          dropdownColor: colors.bgSurface,
+          icon: Icon(Icons.expand_more, size: 18, color: colors.textTertiary),
+          style: GoogleFonts.inter(fontSize: 13, color: colors.textPrimary),
+          hint: Text(
+            'no space (standalone)',
+            style: GoogleFonts.inter(fontSize: 13, color: colors.textTertiary),
+          ),
+          items: [
+            DropdownMenuItem<String?>(
+              value: null,
+              child: Text('no space (standalone)',
+                  style: GoogleFonts.inter(
+                      fontSize: 13, color: colors.textSecondary)),
+            ),
+            ...spaces.map((s) => DropdownMenuItem<String?>(
+                  value: s.id,
+                  child: Row(
+                    children: [
+                      Icon(Icons.workspaces,
+                          size: 14, color: colors.accent),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          s.getLocalizedDisplayname(),
+                          style: GoogleFonts.inter(
+                              fontSize: 13, color: colors.textPrimary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+          ],
+          onChanged: (value) => setState(() => _selectedSpaceId = value),
         ),
       ),
     );
@@ -710,10 +796,13 @@ class _TypeCard extends StatelessWidget {
 }
 
 /// Shows the create room dialog and returns the new room ID (if created).
-Future<String?> showCreateRoomDialog(BuildContext context) {
+Future<String?> showCreateRoomDialog(
+  BuildContext context, {
+  String? parentSpaceId,
+}) {
   return showDialog<String>(
     context: context,
     barrierColor: context.gloam.overlay,
-    builder: (_) => const CreateRoomDialog(),
+    builder: (_) => CreateRoomDialog(parentSpaceId: parentSpaceId),
   );
 }

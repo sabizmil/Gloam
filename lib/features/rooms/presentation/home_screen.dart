@@ -149,7 +149,12 @@ class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
       );
       _verificationService!.start();
 
-      _notificationService = NotificationService(client);
+      _notificationService = NotificationService(
+        client,
+        onSelectRoom: (roomId) {
+          ref.read(selectedRoomProvider.notifier).state = roomId;
+        },
+      );
       _notificationService!.initialize().then((_) {
         _notificationService!.start();
       });

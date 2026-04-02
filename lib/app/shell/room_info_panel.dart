@@ -7,6 +7,7 @@ import '../theme/gloam_theme_ext.dart';
 import '../theme/spacing.dart';
 import '../../features/chat/presentation/providers/timeline_provider.dart';
 import '../../features/profile/presentation/user_profile_modal.dart';
+import '../../features/rooms/presentation/widgets/invite_dialog.dart';
 import '../../services/matrix_service.dart';
 import '../../widgets/gloam_avatar.dart';
 import 'right_panel.dart';
@@ -137,63 +138,144 @@ class RoomInfoPanel extends ConsumerWidget {
                 const SizedBox(height: 24),
 
                 // Members section
-                Text(
-                  '// members \u2014 ${members.length}',
-                  style: GoogleFonts.jetBrainsMono(
-                    fontSize: 10,
-                    color: context.gloam.textTertiary,
-                    letterSpacing: 1,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      '// members \u2014 ${members.length}',
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 10,
+                        color: context.gloam.textTertiary,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (room.canInvite)
+                      IconButton(
+                        onPressed: () => showInviteDialog(context, roomId),
+                        icon: Icon(Icons.person_add,
+                            size: 14, color: context.gloam.accent),
+                        tooltip: 'Invite',
+                        hoverColor: context.gloam.border.withValues(alpha: 0.5),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                            minWidth: 24, minHeight: 24),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 12),
-                ...members.take(20).map((m) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: () => showUserProfile(context, ref,
-                              userId: m.id, roomId: roomId),
-                          child: Row(
+                ...members.take(20).map((m) => _MemberRow(
+                      member: m,
+                      room: room,
+                      roomId: roomId,
+                      myPowerLevel: room.ownPowerLevel,
+                    )),
+
+                // Space rooms section (only for spaces)
+                if (room.isSpace) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    '// rooms in space',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 10,
+                      color: context.gloam.textTertiary,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ...room.spaceChildren
+                      .where((c) => c.roomId != null)
+                      .map((child) {
+                    final childRoom = client?.getRoomById(child.roomId!);
+                    final childName = childRoom?.getLocalizedDisplayname() ??
+                        child.roomId ?? 'Unknown';
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
                         children: [
-                          GloamAvatar(
-                            displayName: m.calcDisplayname(),
-                            mxcUrl: m.avatarUrl,
-                            size: 28,
-                          ),
-                          const SizedBox(width: 10),
+                          Text('#',
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 14,
+                                color: context.gloam.textTertiary,
+                              )),
+                          const SizedBox(width: 8),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  m.calcDisplayname(),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    color: context.gloam.textPrimary,
-                                  ),
-                                ),
-                                if (m.powerLevel >= 100)
-                                  Text(
-                                    'admin',
-                                    style: GoogleFonts.jetBrainsMono(
-                                      fontSize: 10,
-                                      color: context.gloam.accent,
-                                    ),
-                                  )
-                                else if (m.powerLevel >= 50)
-                                  Text(
-                                    'moderator',
-                                    style: GoogleFonts.jetBrainsMono(
-                                      fontSize: 10,
-                                      color: context.gloam.textTertiary,
-                                    ),
-                                  ),
-                              ],
+                            child: Text(
+                              childName,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: context.gloam.textPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (room.ownPowerLevel >= 50)
+                            IconButton(
+                              onPressed: () async {
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: Text('Remove $childName?'),
+                                    content: const Text(
+                                        'This room will be unlinked from the space.'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, false),
+                                        child: const Text('cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, true),
+                                        child: const Text('remove'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirmed == true && child.roomId != null) {
+                                  await room.removeSpaceChild(child.roomId!);
+                                }
+                              },
+                              icon: Icon(Icons.close,
+                                  size: 12,
+                                  color: context.gloam.danger),
+                              hoverColor:
+                                  context.gloam.border.withValues(alpha: 0.5),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                  minWidth: 24, minHeight: 24),
+                              tooltip: 'Remove from space',
+                            ),
                         ],
                       ),
-                    )))),
+                    );
+                  }),
+                ],
+
+                // Room settings (if admin/mod)
+                if (room.ownPowerLevel >= 50) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    '// settings',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 10,
+                      color: context.gloam.textTertiary,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _SettingsButton(
+                    icon: Icons.edit,
+                    label: 'edit room name',
+                    onTap: () => _editRoomName(context, room),
+                  ),
+                  const SizedBox(height: 4),
+                  _SettingsButton(
+                    icon: Icons.short_text,
+                    label: 'edit topic',
+                    onTap: () => _editRoomTopic(context, room),
+                  ),
+                ],
 
                 // Leave room
                 const SizedBox(height: 24),
@@ -206,6 +288,16 @@ class RoomInfoPanel extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
+                if (room.canInvite)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: _SettingsButton(
+                      icon: Icons.person_add,
+                      label: 'invite people',
+                      color: context.gloam.accent,
+                      onTap: () => showInviteDialog(context, roomId),
+                    ),
+                  ),
                 _LeaveRoomButton(roomId: roomId),
               ],
             ),
@@ -534,6 +626,353 @@ class _LeaveRoomButton extends ConsumerWidget {
                     fontSize: 12, color: colors.textPrimary)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+Future<void> _editRoomName(BuildContext context, dynamic room) async {
+  final controller = TextEditingController(text: room.getLocalizedDisplayname());
+  final result = await showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Edit room name'),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        decoration: const InputDecoration(hintText: 'Room name'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+          child: const Text('save'),
+        ),
+      ],
+    ),
+  );
+  if (result != null && result.isNotEmpty) {
+    await room.setName(result);
+  }
+}
+
+Future<void> _editRoomTopic(BuildContext context, dynamic room) async {
+  final controller = TextEditingController(text: room.topic);
+  final result = await showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Edit topic'),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        maxLines: 3,
+        decoration: const InputDecoration(hintText: 'Room topic'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+          child: const Text('save'),
+        ),
+      ],
+    ),
+  );
+  if (result != null) {
+    await room.setDescription(result);
+  }
+}
+
+class _SettingsButton extends StatelessWidget {
+  const _SettingsButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? context.gloam.textSecondary;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        hoverColor: context.gloam.border.withValues(alpha: 0.3),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            children: [
+              Icon(icon, size: 14, color: c),
+              const SizedBox(width: 10),
+              Text(label,
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 12,
+                    color: c,
+                    letterSpacing: 0.5,
+                  )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MemberRow extends ConsumerWidget {
+  const _MemberRow({
+    required this.member,
+    required this.room,
+    required this.roomId,
+    required this.myPowerLevel,
+  });
+
+  final dynamic member;
+  final dynamic room;
+  final String roomId;
+  final int myPowerLevel;
+
+  void _showContextMenu(BuildContext context, WidgetRef ref, Offset position) {
+    final colors = context.gloam;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final relPos = RelativeRect.fromLTRB(
+      position.dx, position.dy,
+      overlay.size.width - position.dx,
+      overlay.size.height - position.dy,
+    );
+
+    final canKick = room.canKick && member.powerLevel < myPowerLevel;
+    final canBan = room.canBan && member.powerLevel < myPowerLevel;
+    final canChangeRole =
+        room.canChangePowerLevel && member.powerLevel < myPowerLevel;
+
+    showMenu<String>(
+      context: context,
+      position: relPos,
+      color: colors.bgSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.border),
+      ),
+      items: [
+        PopupMenuItem(
+          value: 'profile',
+          height: 36,
+          child: Row(children: [
+            Icon(Icons.person, size: 14, color: colors.textPrimary),
+            const SizedBox(width: 10),
+            Text('View profile',
+                style: TextStyle(fontSize: 13, color: colors.textPrimary)),
+          ]),
+        ),
+        if (canChangeRole) ...[
+          const PopupMenuDivider(),
+          if (member.powerLevel < 50)
+            PopupMenuItem(
+              value: 'mod',
+              height: 36,
+              child: Row(children: [
+                Icon(Icons.shield_outlined, size: 14, color: colors.textPrimary),
+                const SizedBox(width: 10),
+                Text('Make moderator',
+                    style: TextStyle(fontSize: 13, color: colors.textPrimary)),
+              ]),
+            ),
+          if (member.powerLevel < 100)
+            PopupMenuItem(
+              value: 'admin',
+              height: 36,
+              child: Row(children: [
+                Icon(Icons.admin_panel_settings_outlined,
+                    size: 14, color: colors.textPrimary),
+                const SizedBox(width: 10),
+                Text('Make admin',
+                    style: TextStyle(fontSize: 13, color: colors.textPrimary)),
+              ]),
+            ),
+          if (member.powerLevel >= 50)
+            PopupMenuItem(
+              value: 'demote',
+              height: 36,
+              child: Row(children: [
+                Icon(Icons.arrow_downward, size: 14, color: colors.textPrimary),
+                const SizedBox(width: 10),
+                Text('Remove role',
+                    style: TextStyle(fontSize: 13, color: colors.textPrimary)),
+              ]),
+            ),
+        ],
+        if (canKick || canBan) ...[
+          const PopupMenuDivider(),
+          if (canKick)
+            PopupMenuItem(
+              value: 'kick',
+              height: 36,
+              child: Row(children: [
+                Icon(Icons.person_remove, size: 14, color: colors.warning),
+                const SizedBox(width: 10),
+                Text('Kick',
+                    style: TextStyle(fontSize: 13, color: colors.warning)),
+              ]),
+            ),
+          if (canBan)
+            PopupMenuItem(
+              value: 'ban',
+              height: 36,
+              child: Row(children: [
+                Icon(Icons.block, size: 14, color: colors.danger),
+                const SizedBox(width: 10),
+                Text('Ban',
+                    style: TextStyle(fontSize: 13, color: colors.danger)),
+              ]),
+            ),
+        ],
+      ],
+    ).then((value) async {
+      if (value == null) return;
+      switch (value) {
+        case 'profile':
+          if (context.mounted) {
+            showUserProfile(context, ref,
+                userId: member.id, roomId: roomId);
+          }
+        case 'mod':
+          await room.setPower(member.id, 50);
+        case 'admin':
+          await room.setPower(member.id, 100);
+        case 'demote':
+          await room.setPower(member.id, 0);
+        case 'kick':
+          if (context.mounted) {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text('Kick ${member.calcDisplayname()}?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('kick'),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed == true) await room.kick(member.id);
+          }
+        case 'ban':
+          if (context.mounted) {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text('Ban ${member.calcDisplayname()}?'),
+                content: const Text(
+                    'This user will be removed and unable to rejoin.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('ban'),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed == true) await room.ban(member.id);
+          }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.gloam;
+    final name = member.calcDisplayname();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6),
+          hoverColor: colors.border.withValues(alpha: 0.3),
+          onTap: () => showUserProfile(context, ref,
+              userId: member.id, roomId: roomId),
+          onSecondaryTapUp: (details) =>
+              _showContextMenu(context, ref, details.globalPosition),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Row(
+              children: [
+                GloamAvatar(
+                  displayName: name,
+                  mxcUrl: member.avatarUrl,
+                  size: 28,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    name,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: colors.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (member.powerLevel >= 100)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: colors.accentDim,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text('admin',
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 9,
+                          color: colors.accent,
+                          letterSpacing: 0.5,
+                        )),
+                  )
+                else if (member.powerLevel >= 50)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A2540),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text('mod',
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 9,
+                          color: colors.info,
+                          letterSpacing: 0.5,
+                        )),
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

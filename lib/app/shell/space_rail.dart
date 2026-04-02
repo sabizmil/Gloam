@@ -8,9 +8,11 @@ import '../theme/spacing.dart';
 import '../../features/explore/presentation/explore_modal.dart';
 import '../../features/rooms/presentation/providers/room_list_provider.dart';
 import '../../features/rooms/presentation/providers/space_hierarchy_provider.dart';
+import '../../features/rooms/presentation/widgets/invite_dialog.dart';
 import '../../features/settings/presentation/settings_modal.dart';
 import '../../services/matrix_service.dart';
 import '../../widgets/gloam_avatar.dart';
+import 'space_management_modal.dart';
 
 /// Currently selected space ID — null means "all / DMs".
 final selectedSpaceProvider = StateProvider<String?>((ref) => null);
@@ -148,7 +150,11 @@ class SpaceRail extends ConsumerWidget {
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 4),
-                    child: Stack(
+                    child: GestureDetector(
+                      onSecondaryTapUp: (details) =>
+                          _showSpaceContextMenu(
+                            context, ref, space, details.globalPosition),
+                      child: Stack(
                       clipBehavior: Clip.none,
                       children: [
                         _SpaceIcon(
@@ -177,6 +183,7 @@ class SpaceRail extends ConsumerWidget {
                             ),
                           ),
                       ],
+                    ),
                     ),
                   );
                 },
@@ -297,4 +304,105 @@ class _SpaceIcon extends StatelessWidget {
       ),
     );
   }
+}
+
+void _showSpaceContextMenu(
+  BuildContext context,
+  WidgetRef ref,
+  Room space,
+  Offset position,
+) {
+  final colors = context.gloam;
+  final overlay =
+      Overlay.of(context).context.findRenderObject() as RenderBox;
+  final relPos = RelativeRect.fromLTRB(
+    position.dx, position.dy,
+    overlay.size.width - position.dx,
+    overlay.size.height - position.dy,
+  );
+
+  final canInvite = space.canInvite;
+  final canManage = space.ownPowerLevel >= 50;
+
+  showMenu<String>(
+    context: context,
+    position: relPos,
+    color: colors.bgSurface,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(8),
+      side: BorderSide(color: colors.border),
+    ),
+    items: [
+      if (canInvite)
+        PopupMenuItem(
+          value: 'invite',
+          height: 36,
+          child: Row(children: [
+            Icon(Icons.person_add, size: 14, color: colors.accent),
+            const SizedBox(width: 10),
+            Text('Invite to space',
+                style: TextStyle(fontSize: 13, color: colors.textPrimary)),
+          ]),
+        ),
+      if (canManage)
+        PopupMenuItem(
+          value: 'settings',
+          height: 36,
+          child: Row(children: [
+            Icon(Icons.settings, size: 14, color: colors.textPrimary),
+            const SizedBox(width: 10),
+            Text('Space info',
+                style: TextStyle(fontSize: 13, color: colors.textPrimary)),
+          ]),
+        ),
+      const PopupMenuDivider(),
+      PopupMenuItem(
+        value: 'leave',
+        height: 36,
+        child: Row(children: [
+          Icon(Icons.logout, size: 14, color: colors.danger),
+          const SizedBox(width: 10),
+          Text('Leave space',
+              style: TextStyle(fontSize: 13, color: colors.danger)),
+        ]),
+      ),
+    ],
+  ).then((value) async {
+    if (value == null) return;
+    switch (value) {
+      case 'invite':
+        if (context.mounted) {
+          showInviteDialog(context, space.id);
+        }
+      case 'settings':
+        if (context.mounted) {
+          showSpaceManagementModal(context, space.id);
+        }
+      case 'leave':
+        if (context.mounted) {
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text('Leave ${space.getLocalizedDisplayname()}?'),
+              content: const Text(
+                  'You will lose access to all rooms in this space.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('leave'),
+                ),
+              ],
+            ),
+          );
+          if (confirmed == true) {
+            await space.leave();
+            ref.read(selectedSpaceProvider.notifier).state = null;
+          }
+        }
+    }
+  });
 }

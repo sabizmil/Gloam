@@ -12,9 +12,16 @@ import '../../chat/presentation/providers/timeline_provider.dart';
 
 /// Full search view — replaces the chat area on desktop, pushed screen on mobile.
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key, this.onSelectResult, this.onClose});
+  const SearchScreen({
+    super.key,
+    this.onSelectResult,
+    this.onClose,
+    this.scopeRoomId,
+  });
   final void Function(String roomId, String eventId)? onSelectResult;
   final VoidCallback? onClose;
+  /// If set, search is scoped to this room only.
+  final String? scopeRoomId;
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -31,7 +38,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   void initState() {
     super.initState();
-    _focusNode.requestFocus();
+    // Delay focus to win the race against the composer's postFrameCallback
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
     _loadHistory();
   }
 
@@ -67,7 +77,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final service = ref.read(searchServiceProvider);
 
     // Parse filters from query
-    String? roomFilter;
+    String? roomFilter = widget.scopeRoomId;
     String? senderFilter;
     var searchText = query;
 
@@ -147,7 +157,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             color: context.gloam.textPrimary,
                           ),
                           decoration: InputDecoration(
-                            hintText: 'search messages...',
+                            hintText: widget.scopeRoomId != null
+                                ? 'search this conversation...'
+                                : 'search messages...',
                             hintStyle: GoogleFonts.inter(
                               fontSize: 15,
                               color: context.gloam.textTertiary,

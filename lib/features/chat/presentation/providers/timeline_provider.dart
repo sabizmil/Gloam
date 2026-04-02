@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:matrix/matrix.dart';
 
+import '../../../../services/debug_server.dart';
 import '../../../../services/matrix_service.dart';
 import '../../../../services/search_service.dart';
 
@@ -32,6 +33,7 @@ class TimelineMessage {
   final int? imageWidth;
   final int? imageHeight;
   final String? fileSendingStatus; // generatingThumbnail, encrypting, uploading
+  final Uri? thumbnailUrl;
   final bool isThreadReply;
   final String? threadRootEventId;
 
@@ -59,6 +61,7 @@ class TimelineMessage {
     this.imageWidth,
     this.imageHeight,
     this.fileSendingStatus,
+    this.thumbnailUrl,
     this.isThreadReply = false,
     this.threadRootEventId,
   });
@@ -92,10 +95,29 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
   final SearchService _searchService;
 
   TimelineNotifier(this._client, this._roomId, this._searchService) : super([]) {
+    DebugServer.timelineRegistry[_roomId] = () => timelineDebugState;
     _init();
   }
 
   Room? get _room => _client.getRoomById(_roomId);
+
+  void _log(String msg) => DebugServer.logs.add('[timeline:$_roomId] $msg');
+
+  /// Expose timeline state for debug endpoints.
+  Map<String, dynamic> get timelineDebugState => {
+    'roomId': _roomId,
+    'eventCount': _timeline?.events.length ?? 0,
+    'isFragmented': isFragmented,
+    'allowNewEvent': _timeline?.allowNewEvent ?? true,
+    'canRequestHistory': _timeline?.canRequestHistory ?? false,
+    'canRequestFuture': _timeline?.canRequestFuture ?? false,
+    'jumpTargetEventId': _jumpTargetEventId,
+    'stateMessageCount': state.length,
+    if (_timeline != null && _timeline!.events.isNotEmpty) ...{
+      'firstEventId': _timeline!.events.first.eventId,
+      'lastEventId': _timeline!.events.last.eventId,
+    },
+  };
 
   Future<void> _init() async {
     final room = _room;
@@ -497,6 +519,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
           event.content.tryGetMap<String, Object?>('info')?.tryGet<int>('h'),
       fileSendingStatus:
           event.unsigned?[fileSendingStatusKey] as String?,
+      thumbnailUrl: event.thumbnailMxcUrl,
     );
   }
 
@@ -514,6 +537,135 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
       }
     } finally {
       _loadingMore = false;
+    }
+  }
+
+  /// Whether the timeline is viewing historical context (not live).
+  /// True when we jumped to an event and haven't caught up to the present yet.
+  /// Once forward pagination closes the gap (allowNewEvent flips to true),
+  /// this returns false even though the SDK's isFragmentedTimeline stays true.
+  bool get isFragmented =>
+      _timeline != null &&
+      _timeline!.isFragmentedTimeline &&
+      !_timeline!.allowNewEvent;
+
+  /// The event ID we're currently jumping to (for highlight after load).
+  String? _jumpTargetEventId;
+  String? get jumpTargetEventId => _jumpTargetEventId;
+
+  /// Jump the timeline to center around a specific event.
+  /// Destroys the current timeline and creates a fragmented one.
+  Future<void> jumpToEvent(String eventId) async {
+    final room = _room;
+    if (room == null) {
+      _log('jumpToEvent: room is null');
+      return;
+    }
+
+    _log('jumpToEvent: target=$eventId, old timeline had ${_timeline?.events.length ?? 0} events');
+    _jumpTargetEventId = eventId;
+
+    // Tear down old timeline
+    _syncSub?.cancel();
+    _timeline?.cancelSubscriptions();
+
+    try {
+      // Create new timeline centered on the target event
+      _timeline = await room.getTimeline(
+        onChange: (_) => _rebuild(),
+        onInsert: (_) => _rebuild(),
+        onRemove: (_) => _rebuild(),
+        eventContextId: eventId,
+      );
+
+      final eventCount = _timeline!.events.length;
+      final isFragmented = _timeline!.isFragmentedTimeline;
+      final targetFound = _timeline!.events.any((e) => e.eventId == eventId);
+      final targetIndex = _timeline!.events.indexWhere((e) => e.eventId == eventId);
+      _log('jumpToEvent: new timeline loaded, events=$eventCount, isFragmented=$isFragmented, targetFound=$targetFound, targetIndex=$targetIndex');
+
+      if (eventCount > 0) {
+        _log('jumpToEvent: first=${_timeline!.events.first.eventId.substring(0, 20)}... last=${_timeline!.events.last.eventId.substring(0, 20)}...');
+      }
+
+      _rebuild();
+
+      // Index the new page for search
+      _searchService.indexTimeline(_roomId, _timeline!.events);
+    } catch (e) {
+      _log('jumpToEvent: ERROR $e');
+    }
+
+    // Re-listen for member state updates
+    _syncSub = _client.onSync.stream.listen((syncUpdate) {
+      final roomUpdate = syncUpdate.rooms?.join?[_roomId];
+      if (roomUpdate == null) return;
+      final hasMemberState = roomUpdate.state
+              ?.any((e) => e.type == EventTypes.RoomMember) ??
+          false;
+      if (hasMemberState) _rebuild();
+    });
+  }
+
+  /// Return to the live present timeline.
+  /// Destroys the fragmented timeline and loads from the latest.
+  Future<void> jumpToPresent() async {
+    final room = _room;
+    if (room == null) return;
+
+    _jumpTargetEventId = null;
+
+    // Tear down fragmented timeline
+    _syncSub?.cancel();
+    _timeline?.cancelSubscriptions();
+
+    // Create fresh timeline from the present
+    _timeline = await room.getTimeline(
+      onChange: (_) => _rebuild(),
+      onInsert: (_) => _rebuild(),
+      onRemove: (_) => _rebuild(),
+    );
+    _rebuild();
+
+    _timeline!.requestKeys(onlineKeyBackupOnly: false);
+
+    _syncSub = _client.onSync.stream.listen((syncUpdate) {
+      final roomUpdate = syncUpdate.rooms?.join?[_roomId];
+      if (roomUpdate == null) return;
+      final hasMemberState = roomUpdate.state
+              ?.any((e) => e.type == EventTypes.RoomMember) ??
+          false;
+      if (hasMemberState) _rebuild();
+    });
+
+    await _ensureMinimumMessages(30);
+
+    if (_timeline != null) {
+      _searchService.indexTimeline(_roomId, _timeline!.events);
+    }
+  }
+
+  /// Load newer messages (forward pagination on fragmented timelines).
+  bool _loadingNewer = false;
+
+  Future<void> loadNewer() async {
+    if (_loadingNewer || !isFragmented) return;
+    _loadingNewer = true;
+    try {
+      await _timeline?.requestFuture(historyCount: 30);
+      if (_timeline != null) {
+        _searchService.indexTimeline(_roomId, _timeline!.events);
+      }
+      // If forward pagination caught up to the present, the SDK flips
+      // allowNewEvent=true and the timeline is no longer fragmented.
+      // Force-emit state so the "viewing older messages" banner disappears,
+      // even if the message list itself didn't change.
+      if (!isFragmented) {
+        _jumpTargetEventId = null;
+        state = List.of(state); // Force new reference to trigger rebuild
+      }
+    } finally {
+      _loadingNewer = false;
     }
   }
 
@@ -726,7 +878,19 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
   Future<void> sendThreadFile(MatrixFile file, String rootEventId) async {
     final room = _room;
     if (room == null) return;
-    await room.sendFileEvent(file, threadRootEventId: rootEventId);
+    // Pass thread relation via extraContent so the SDK's local echo
+    // (fake event) includes it — otherwise the preview shows in the
+    // main chat instead of the thread.
+    await room.sendFileEvent(
+      file,
+      threadRootEventId: rootEventId,
+      extraContent: {
+        'm.relates_to': {
+          'rel_type': RelationshipTypes.thread,
+          'event_id': rootEventId,
+        },
+      },
+    );
   }
 
   /// Send a GIF/sticker in a thread with known dimensions.
@@ -838,6 +1002,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
 
   @override
   void dispose() {
+    DebugServer.timelineRegistry.remove(_roomId);
     _sub?.cancel();
     _syncSub?.cancel();
     _timeline?.cancelSubscriptions();

@@ -12,11 +12,13 @@ class RoomListTile extends StatelessWidget {
     required this.room,
     this.isActive = false,
     this.onTap,
+    this.onSecondaryTap,
   });
 
   final RoomListItem room;
   final bool isActive;
   final VoidCallback? onTap;
+  final void Function(Offset position)? onSecondaryTap;
 
   String _formatTimestamp(DateTime? ts) {
     if (ts == null) return '';
@@ -34,6 +36,10 @@ class RoomListTile extends StatelessWidget {
     return Semantics(
       button: true,
       label: '${room.displayName}. ${room.unreadCount > 0 ? '${room.unreadCount} unread.' : ''} ${room.lastMessagePreview ?? ''}',
+      child: GestureDetector(
+      onSecondaryTapUp: onSecondaryTap != null
+          ? (details) => onSecondaryTap!(details.globalPosition)
+          : null,
       child: Material(
       color: isActive ? context.gloam.bgElevated : Colors.transparent,
       borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
@@ -152,6 +158,7 @@ class RoomListTile extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     ));
   }

@@ -67,6 +67,12 @@ class FollowingNotifier extends StateNotifier<List<FollowingUser>> {
 
       // User's latest receipt matches the room's latest event = following
       if (receipt.eventId == latestEventId) {
+        // Only include users who are actually online
+        final presence = _client.presences[userId];
+        final isOnline = presence?.currentlyActive == true ||
+            presence?.presence == PresenceType.online;
+        if (!isOnline) continue;
+
         final user = room.unsafeGetUserFromMemoryOrFallback(userId);
         followers.add(FollowingUser(
           userId: userId,

@@ -241,11 +241,37 @@ class _TabletShell extends ConsumerWidget {
     final panelState = ref.watch(rightPanelProvider);
     final showPanel =
         panelState.view != RightPanelView.none && selectedRoom != null;
+    final layout = ref.watch(panelLayoutProvider);
+    final layoutNotifier = ref.read(panelLayoutProvider.notifier);
+
+    final roomListWidth = layout.roomListWidth.clamp(
+      PanelLayout.minRoomListWidth,
+      PanelLayout.maxRoomListWidth,
+    );
 
     return Row(
       children: [
         const SpaceRail(),
-        const SizedBox(width: 260, child: RoomListPanel()),
+        SizedBox(
+          width: roomListWidth,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Positioned.fill(child: RoomListPanel()),
+              Positioned(
+                top: 0,
+                bottom: 0,
+                right: -6,
+                child: ResizeDivider(
+                  onDrag: (dx) => layoutNotifier.setRoomListWidth(
+                    layout.roomListWidth + dx,
+                  ),
+                  onDragEnd: () => layoutNotifier.save(),
+                ),
+              ),
+            ],
+          ),
+        ),
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {

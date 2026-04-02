@@ -14,6 +14,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/clipboard_paste_service.dart';
+import '../../../../services/debug_server.dart';
 import 'package:matrix/matrix.dart' show EventTypes, Membership;
 
 import '../../../../services/matrix_service.dart';
@@ -108,9 +109,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             _scrollController.position.maxScrollExtent - 200) {
       ref.read(timelineProvider(widget.roomId).notifier).loadMore();
     }
+
+    // Load newer when near the bottom on fragmented timelines
+    final notifier = ref.read(timelineProvider(widget.roomId).notifier);
+    if (notifier.isFragmented &&
+        _scrollController.hasClients &&
+        _scrollController.position.pixels <= 200) {
+      notifier.loadNewer();
+    }
   }
 
   void _scrollToBottom() {
+    final notifier = ref.read(timelineProvider(widget.roomId).notifier);
+    if (notifier.isFragmented) {
+      // On fragmented timeline, jump back to the present
+      notifier.jumpToPresent();
+      return;
+    }
     _scrollController.animateTo(
       0,
       duration: const Duration(milliseconds: 300),
@@ -118,10 +133,60 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
+  Future<void> _jumpToEvent(String eventId) async {
+    DebugServer.logs.add('[jump] _jumpToEvent called: $eventId');
+    final notifier = ref.read(timelineProvider(widget.roomId).notifier);
+    await notifier.jumpToEvent(eventId);
+    DebugServer.logs.add('[jump] jumpToEvent completed, scheduling scroll');
+
+    // Find the target's index in the messages list and scroll to it.
+    // We need to use index-based scrolling because the target may be
+    // off-screen and its widget (GlobalKey) won't have a context yet.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final messages = ref.read(timelineProvider(widget.roomId))
+          .where((m) => !m.isThreadReply)
+          .toList();
+      final msgIndex = messages.indexWhere((m) => m.eventId == eventId);
+      DebugServer.logs.add('[jump] target index in messages: $msgIndex / ${messages.length}');
+
+      if (msgIndex < 0) {
+        DebugServer.logs.add('[jump] target not found in state messages');
+        return;
+      }
+
+      // In a reverse ListView, index 0 = newest (bottom).
+      // Message at msgIndex maps to ListView index (messages.length - 1 - msgIndex).
+      final listIndex = messages.length - 1 - msgIndex;
+
+      // Estimate scroll position. Each message is roughly 60-80px.
+      // Scroll to bring the target into view, then use GlobalKey to fine-tune.
+      final estimatedOffset = listIndex * 70.0;
+      DebugServer.logs.add('[jump] listIndex=$listIndex, estimatedOffset=$estimatedOffset');
+
+      _scrollController.jumpTo(
+        estimatedOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
+      );
+
+      // After scrolling, the target widget should be rendered.
+      // Wait a frame, register key, and do precise scroll + highlight.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _scrollTargetKeys.putIfAbsent(eventId, () => GlobalKey());
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _scrollToMessage(eventId);
+        });
+      });
+    });
+  }
+
   /// Scroll to a specific message and briefly highlight it.
   void _scrollToMessage(String eventId) {
     final key = _scrollTargetKeys[eventId];
     final ctx = key?.currentContext;
+    DebugServer.logs.add('[scroll] _scrollToMessage: eventId=${eventId.substring(0, 20)}... keyExists=${key != null} contextExists=${ctx != null} totalKeys=${_scrollTargetKeys.length}');
     if (ctx == null) return;
 
     Scrollable.ensureVisible(
@@ -388,6 +453,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         room.membership == Membership.join &&
         room.getState(EventTypes.RoomCreate) == null;
 
+    // Check for pending jump-to-event from search results
+    final pendingEventId = ref.read(pendingScrollToEventProvider);
+    if (pendingEventId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.read(pendingScrollToEventProvider.notifier).state = null;
+        _jumpToEvent(pendingEventId);
+      });
+    }
+
+    // After a jumpToEvent, the target event should be in the loaded messages.
+    // Register a GlobalKey for it and scroll after the frame renders.
+    final jumpTarget = ref.read(timelineProvider(widget.roomId).notifier).jumpTargetEventId;
+    if (jumpTarget != null) {
+      _scrollTargetKeys.putIfAbsent(jumpTarget, () => GlobalKey());
+    }
+
     // Filter out thread replies from the main timeline
     final messages = allMessages
         .where((m) => !m.isThreadReply)
@@ -516,11 +598,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           3 &&
                       !prevMsg.isRedacted;
 
-                  // Register a GlobalKey only for messages that are
-                  // reply targets — needed for _scrollToMessage.
+                  // Register GlobalKeys for messages that need _scrollToMessage:
+                  // reply targets and pending search scroll targets.
                   if (msg.replyToEventId != null) {
                     _scrollTargetKeys.putIfAbsent(
                       msg.replyToEventId!,
+                      () => GlobalKey(),
+                    );
+                  }
+                  if (pendingEventId != null && msg.eventId == pendingEventId) {
+                    _scrollTargetKeys.putIfAbsent(
+                      pendingEventId,
+                      () => GlobalKey(),
+                    );
+                  }
+                  if (jumpTarget != null && msg.eventId == jumpTarget) {
+                    _scrollTargetKeys.putIfAbsent(
+                      jumpTarget,
                       () => GlobalKey(),
                     );
                   }
@@ -583,7 +677,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               );
                             },
                             onReplyTap: msg.replyToEventId != null
-                                ? () => _scrollToMessage(msg.replyToEventId!)
+                                ? () {
+                                    // Try scrolling first; if the message isn't loaded, jump to it
+                                    final key = _scrollTargetKeys[msg.replyToEventId!];
+                                    if (key?.currentContext != null) {
+                                      _scrollToMessage(msg.replyToEventId!);
+                                    } else {
+                                      _jumpToEvent(msg.replyToEventId!);
+                                    }
+                                  }
                                 : null,
                           ),
                         ),
@@ -604,6 +706,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   );
                 },
               ),
+
+              // "Jump to Present" banner on fragmented timelines
+              if (ref.watch(timelineProvider(widget.roomId).notifier).isFragmented)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: GestureDetector(
+                    onTap: _scrollToBottom,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: context.gloam.accentDim,
+                        border: Border(
+                          top: BorderSide(color: context.gloam.accent),
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'viewing older messages — tap to jump to present',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 11,
+                            color: context.gloam.accent,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
 
               // Scroll-to-bottom FAB — rebuilds independently via
               // ValueListenableBuilder, not via ChatScreen setState.

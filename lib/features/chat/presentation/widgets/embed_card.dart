@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -5,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pasteboard/pasteboard.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 import '../../../../app/theme/gloam_color_extension.dart';
 import '../../../../app/theme/gloam_theme_ext.dart';
@@ -27,9 +30,11 @@ class EmbedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.gloam;
-    return Container(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Container(
       margin: const EdgeInsets.only(top: 6),
-      constraints: const BoxConstraints(maxWidth: 400),
+      constraints: BoxConstraints(maxWidth: constraints.maxWidth.clamp(0.0, 400.0)),
       decoration: BoxDecoration(
         color: colors.bgElevated,
         borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
@@ -79,6 +84,8 @@ class EmbedCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+      },
     );
   }
 }
@@ -168,13 +175,16 @@ class ImageEmbed extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.gloam;
-    return GestureDetector(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxW = constraints.maxWidth.clamp(0.0, 400.0);
+        return GestureDetector(
       onSecondaryTapUp: (details) =>
           _showContextMenu(context, details.globalPosition),
       child: EmbedCard(
         info: info,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 300),
+          constraints: BoxConstraints(maxWidth: maxW, maxHeight: 300),
           child: Image.network(
             info.mediaUrl,
             fit: BoxFit.contain,
@@ -196,6 +206,8 @@ class ImageEmbed extends StatelessWidget {
         ),
       ),
     );
+      },
+    );
   }
 
   Widget _fallback(GloamColorExtension colors) {
@@ -214,55 +226,124 @@ class ImageEmbed extends StatelessWidget {
   }
 }
 
-/// Renders a YouTube video as thumbnail + play button overlay.
-class YouTubeEmbed extends StatelessWidget {
+/// Renders a YouTube video with inline playback via WebView on supported
+/// platforms, falling back to thumbnail + open-in-browser elsewhere.
+class YouTubeEmbed extends StatefulWidget {
   const YouTubeEmbed({super.key, required this.info});
   final MediaEmbedInfo info;
+
+  @override
+  State<YouTubeEmbed> createState() => _YouTubeEmbedState();
+}
+
+class _YouTubeEmbedState extends State<YouTubeEmbed> {
+  bool _playing = false;
+  WebViewController? _webController;
+
+  String? get _videoId {
+    final uri = Uri.tryParse(widget.info.originalUrl);
+    if (uri == null) return null;
+    // youtube.com/watch?v=ID
+    if (uri.host.contains('youtube.com')) {
+      return uri.queryParameters['v'];
+    }
+    // youtu.be/ID
+    if (uri.host.contains('youtu.be') && uri.pathSegments.isNotEmpty) {
+      return uri.pathSegments.first;
+    }
+    return null;
+  }
+
+  bool get _supportsWebView => Platform.isMacOS || Platform.isIOS;
+
+  void _startPlaying() {
+    final id = _videoId;
+    if (id == null) return;
+
+    if (_supportsWebView) {
+      final html = '''
+<!DOCTYPE html>
+<html style="width:100%;height:100%;margin:0;padding:0;">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+</head>
+<body style="width:100%;height:100%;margin:0;padding:0;background:#000;overflow:hidden;">
+<iframe
+  style="width:100%;height:100%;border:none;position:absolute;top:0;left:0;"
+  src="https://www.youtube.com/embed/$id?autoplay=1&playsinline=1&rel=0&origin=https://gloam.chat"
+  allow="autoplay; encrypted-media; picture-in-picture"
+  referrerpolicy="strict-origin-when-cross-origin"
+  allowfullscreen>
+</iframe>
+</body>
+</html>
+''';
+      // Configure WKWebView for inline media playback
+      late final PlatformWebViewControllerCreationParams params;
+      if (WebViewPlatform.instance is WebKitWebViewPlatform) {
+        params = WebKitWebViewControllerCreationParams(
+          allowsInlineMediaPlayback: true,
+          mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
+        );
+      } else {
+        params = const PlatformWebViewControllerCreationParams();
+      }
+      _webController = WebViewController.fromPlatformCreationParams(params)
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..loadHtmlString(html, baseUrl: 'https://gloam.chat');
+      setState(() => _playing = true);
+    } else {
+      // Fallback: open in browser
+      launchUrl(
+        Uri.parse(widget.info.originalUrl),
+        mode: LaunchMode.externalApplication,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.gloam;
     return EmbedCard(
-      info: info,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: () => launchUrl(
-            Uri.parse(info.originalUrl),
-            mode: LaunchMode.externalApplication,
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Thumbnail
-              Image.network(
-                info.mediaUrl,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: 225,
-                errorBuilder: (_, __, ___) => Container(
-                  height: 225,
-                  color: colors.bg,
-                  child: Center(
-                    child: Icon(Icons.play_circle_outline,
-                        size: 48, color: colors.textTertiary),
+      info: widget.info,
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: _playing && _webController != null
+            ? WebViewWidget(controller: _webController!)
+            : MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: _startPlaying,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Image.network(
+                        widget.info.mediaUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: colors.bg,
+                          child: Center(
+                            child: Icon(Icons.play_circle_outline,
+                                size: 48, color: colors.textTertiary),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.play_arrow,
+                            size: 32, color: Colors.white),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              // Play button overlay
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.play_arrow,
-                    size: 32, color: Colors.white),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

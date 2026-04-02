@@ -15,6 +15,10 @@ class DebugServer {
   HttpServer? _server;
   static final List<String> logs = [];
 
+  /// Registry for active TimelineNotifiers — populated by the provider.
+  /// Key is roomId, value is the notifier's debugState getter.
+  static final Map<String, Map<String, dynamic> Function()> timelineRegistry = {};
+
   /// Start the debug server. No-op in release mode.
   Future<void> start({int port = 9999}) async {
     if (!kDebugMode) return;
@@ -42,6 +46,8 @@ class DebugServer {
         '/debug/logs' => {'logs': logs},
         '/debug/hierarchy' => await _hierarchy(),
         '/debug/logs/clear' => () { logs.clear(); return {'cleared': true}; }(),
+        '/debug/timelines' => Map.fromEntries(
+            timelineRegistry.entries.map((e) => MapEntry(e.key, e.value()))),
         _ when segments.length == 3 &&
             segments[0] == 'debug' &&
             segments[1] == 'room' =>

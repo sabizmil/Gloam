@@ -42,7 +42,7 @@ class NotificationDiagnostic {
         requestSoundPermission: true,
       );
       const settings = InitializationSettings(macOS: macOS);
-      final initResult = await plugin.initialize(settings);
+      final initResult = await plugin.initialize(settings: settings);
       _log('Step 3: initialize() returned: $initResult');
     } catch (e) {
       _log('Step 3: FAIL — initialize() threw: $e');
@@ -90,10 +90,10 @@ class NotificationDiagnostic {
         ),
       );
       await plugin.show(
-        99999,
-        'Gloam Diagnostic',
-        'If you see this, notifications work! Time: ${DateTime.now()}',
-        details,
+        id: 99999,
+        title: 'Gloam Diagnostic',
+        body: 'If you see this, notifications work! Time: ${DateTime.now()}',
+        notificationDetails: details,
       );
       _log('Step 6: plugin.show() completed without error');
     } catch (e) {

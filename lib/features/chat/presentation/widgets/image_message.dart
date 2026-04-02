@@ -117,10 +117,10 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
   }
 
   /// Compute a stable size for the image container so the layout
-  /// doesn't shift when the image loads. Uses server-provided
-  /// width/height metadata when available.
-  Size _stableSize() {
-    const maxW = 400.0;
+  /// doesn't shift when the image loads. Respects available width
+  /// so images scale down in narrow panels instead of clipping.
+  Size _stableSize(double availableWidth) {
+    final maxW = availableWidth.clamp(0.0, 400.0);
     const maxH = 300.0;
     final w = widget.message.imageWidth;
     final h = widget.message.imageHeight;
@@ -128,15 +128,16 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
       final scale = (maxW / w).clamp(0.0, 1.0).clamp(0.0, maxH / h);
       return Size(w * scale, h * scale);
     }
-    // Fallback — use a fixed size so at least it doesn't jump.
-    return const Size(240, 160);
+    return Size(maxW.clamp(0.0, 240.0), 160);
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.gloam;
-    final size = _stableSize();
-    return GestureDetector(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = _stableSize(constraints.maxWidth);
+        return GestureDetector(
       onTap: (_imageBytes != null || _httpUrl != null) ? () => _openFullscreen(context) : null,
       onSecondaryTapUp: (details) => _showImageContextMenu(
         context, details.globalPosition,
@@ -144,7 +145,6 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
       child: Container(
         width: size.width,
         height: size.height,
-        constraints: const BoxConstraints(maxWidth: 400, maxHeight: 300),
         decoration: BoxDecoration(
           color: colors.bgElevated,
           borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
@@ -153,6 +153,8 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
         clipBehavior: Clip.antiAlias,
         child: _buildContent(),
       ),
+    );
+      },
     );
   }
 

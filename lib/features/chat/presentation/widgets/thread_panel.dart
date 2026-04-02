@@ -11,6 +11,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
+import '../../../../services/clipboard_paste_service.dart';
 import '../../../../services/klipy_service.dart';
 import '../../../../services/matrix_service.dart';
 import '../../../../services/upload_service.dart';
@@ -54,11 +55,26 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
   TimelineMessage? _replyTo;
+  String _prePasteText = '';
 
   @override
   void initState() {
     super.initState();
-    _focusNode.requestFocus();
+    // Focus after the first frame so the widget tree is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant ThreadPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Re-focus when switching to a different thread
+    if (oldWidget.rootMessage.eventId != widget.rootMessage.eventId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _focusNode.requestFocus();
+      });
+    }
   }
 
   @override
@@ -444,6 +460,41 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
     }();
   }
 
+  Future<void> _handlePaste() async {
+    try {
+      final files = await ClipboardPasteService.getClipboardFiles();
+      if (files.isNotEmpty) {
+        _controller.text = _prePasteText;
+        for (final file in files) {
+          ref.read(timelineProvider(widget.roomId).notifier)
+              .sendThreadFile(file, widget.rootMessage.eventId);
+        }
+        return;
+      }
+
+      final imageFile = await ClipboardPasteService.getClipboardImage();
+      if (imageFile != null) {
+        final sizeError = UploadService.validateFileSize(imageFile.bytes.length);
+        if (sizeError != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(sizeError), backgroundColor: context.gloam.danger),
+          );
+          return;
+        }
+        _controller.text = _prePasteText;
+        ref.read(timelineProvider(widget.roomId).notifier)
+            .sendThreadFile(imageFile, widget.rootMessage.eventId);
+        return;
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Paste failed: $e'), backgroundColor: context.gloam.danger),
+        );
+      }
+    }
+  }
+
   Widget _buildComposer() {
     final colors = context.gloam;
     return Column(
@@ -526,10 +577,20 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
               child: Focus(
                 onKeyEvent: (node, event) {
                   if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                  // Enter to send
                   if (event.logicalKey == LogicalKeyboardKey.enter &&
                       !HardwareKeyboard.instance.isShiftPressed) {
                     _send();
                     return KeyEventResult.handled;
+                  }
+                  // Cmd/Ctrl+V paste handling
+                  final isPaste = event.logicalKey == LogicalKeyboardKey.keyV &&
+                      (HardwareKeyboard.instance.isMetaPressed ||
+                          HardwareKeyboard.instance.isControlPressed);
+                  if (isPaste) {
+                    _handlePaste();
+                  } else {
+                    _prePasteText = _controller.text;
                   }
                   return KeyEventResult.ignored;
                 },

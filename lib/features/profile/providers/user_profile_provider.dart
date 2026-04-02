@@ -113,7 +113,13 @@ final userProfileProvider =
   try {
     final p = client.presences[userId];
     if (p != null) {
-      presence = p.currentlyActive == true ? 'online' : 'offline';
+      presence = switch (p.presence) {
+        PresenceType.online => 'online',
+        PresenceType.unavailable => 'unavailable',
+        PresenceType.offline => 'offline',
+      };
+      // Override to online if server explicitly signals active
+      if (p.currentlyActive == true) presence = 'online';
     }
   } catch (_) {}
 

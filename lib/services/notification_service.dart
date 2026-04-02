@@ -26,24 +26,43 @@ class NotificationService with WidgetsBindingObserver {
   final _notifiedEventIds = <String>{};
   final _notifiedInviteIds = <String>{};
 
-  NotificationService(this.client);
+  /// Called when the user taps a notification. Payload is the room ID.
+  final void Function(String roomId)? onSelectRoom;
+
+  NotificationService(this.client, {this.onSelectRoom});
 
   Future<void> initialize() async {
     const initMacOS = DarwinInitializationSettings();
     const initLinux =
         LinuxInitializationSettings(defaultActionName: 'Open');
+    const initWindows = WindowsInitializationSettings(
+      appName: 'Gloam',
+      appUserModelId: 'chat.gloam.gloam',
+      guid: 'd3b5b5e0-8c9a-4e7f-b5d1-a2c3e4f5a6b7',
+    );
     const initSettings = InitializationSettings(
       macOS: initMacOS,
       linux: initLinux,
+      windows: initWindows,
     );
 
-    await _plugin.initialize(initSettings);
+    await _plugin.initialize(
+      settings: initSettings,
+      onDidReceiveNotificationResponse: _onNotificationTapped,
+    );
 
     if (Platform.isMacOS) {
       await _plugin
           .resolvePlatformSpecificImplementation<
               MacOSFlutterLocalNotificationsPlugin>()
           ?.requestPermissions(alert: true, badge: true, sound: true);
+    }
+  }
+
+  void _onNotificationTapped(NotificationResponse response) {
+    final roomId = response.payload;
+    if (roomId != null && roomId.isNotEmpty) {
+      onSelectRoom?.call(roomId);
     }
   }
 
@@ -164,16 +183,22 @@ class NotificationService with WidgetsBindingObserver {
       const initMacOS = DarwinInitializationSettings();
       const initLinux =
           LinuxInitializationSettings(defaultActionName: 'Open');
+      const initWindows = WindowsInitializationSettings(
+        appName: 'Gloam',
+        appUserModelId: 'chat.gloam.gloam',
+        guid: 'd3b5b5e0-8c9a-4e7f-b5d1-a2c3e4f5a6b7',
+      );
       const initSettings = InitializationSettings(
         macOS: initMacOS,
         linux: initLinux,
+        windows: initWindows,
       );
-      await plugin.initialize(initSettings);
+      await plugin.initialize(settings: initSettings);
       await plugin.show(
-        0,
-        'Gloam',
-        'Notifications are working.',
-        const NotificationDetails(
+        id: 0,
+        title: 'Gloam',
+        body: 'Notifications are working.',
+        notificationDetails: const NotificationDetails(
           macOS: DarwinNotificationDetails(
             presentAlert: true,
             presentSound: true,
@@ -181,6 +206,7 @@ class NotificationService with WidgetsBindingObserver {
             presentList: true,
           ),
           linux: LinuxNotificationDetails(),
+          windows: WindowsNotificationDetails(),
         ),
       );
       return true;
@@ -201,17 +227,19 @@ class NotificationService with WidgetsBindingObserver {
     final title = room.isDirectChat ? sender : '$sender in $roomName';
 
     await _plugin.show(
-      room.id.hashCode, // Same room = replace previous notification
-      title,
-      body,
-      NotificationDetails(
+      id: room.id.hashCode,
+      title: title,
+      body: body,
+      payload: room.id, // Passed to onDidReceiveNotificationResponse
+      notificationDetails: NotificationDetails(
         macOS: DarwinNotificationDetails(
           presentAlert: true,
-          presentSound: isMention, // Only mentions play sound
+          presentSound: isMention,
           presentBanner: true,
           presentList: true,
         ),
         linux: const LinuxNotificationDetails(),
+        windows: const WindowsNotificationDetails(),
       ),
     );
   }

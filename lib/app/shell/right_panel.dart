@@ -27,6 +27,9 @@ final rightPanelProvider = StateProvider<RightPanelState>((ref) {
   return RightPanelState.closed;
 });
 
+/// Set by search to scroll to a specific event after the panel closes.
+final pendingScrollToEventProvider = StateProvider<String?>((ref) => null);
+
 /// Renders the appropriate right panel based on state.
 class RightPanel extends ConsumerWidget {
   const RightPanel({super.key, required this.roomId});
@@ -60,9 +63,11 @@ class RightPanel extends ConsumerWidget {
           onClose: close,
         ),
       RightPanelView.search => SearchScreen(
+          scopeRoomId: roomId,
           onClose: close,
-          onSelectResult: (roomId, eventId) {
-            ref.read(selectedRoomProvider.notifier).state = roomId;
+          onSelectResult: (resultRoomId, eventId) {
+            ref.read(selectedRoomProvider.notifier).state = resultRoomId;
+            ref.read(pendingScrollToEventProvider.notifier).state = eventId;
             close();
           },
         ),
