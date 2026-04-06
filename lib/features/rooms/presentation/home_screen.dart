@@ -16,6 +16,7 @@ import '../../../features/settings/presentation/settings_modal.dart';
 import '../../../services/debug_server.dart';
 import '../../../services/matrix_service.dart';
 import '../../../services/update_service.dart';
+import '../../../services/badge_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/notification_sound_preferences.dart';
 import '../../../services/search_service.dart';
@@ -137,6 +138,7 @@ class _AuthenticatedHome extends ConsumerStatefulWidget {
 class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
   VerificationService? _verificationService;
   NotificationService? _notificationService;
+  BadgeService? _badgeService;
   DebugServer? _debugServer;
 
   @override
@@ -163,6 +165,9 @@ class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
         _notificationService!.start();
       });
 
+      _badgeService = BadgeService(client);
+      _badgeService!.start();
+
       // Initialize search indexing
       final searchService = ref.read(searchServiceProvider);
       searchService.initialize().then((_) {
@@ -182,6 +187,7 @@ class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
   void dispose() {
     _verificationService?.dispose();
     _notificationService?.dispose();
+    _badgeService?.dispose();
     _debugServer?.dispose();
     super.dispose();
   }

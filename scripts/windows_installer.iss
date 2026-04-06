@@ -34,8 +34,8 @@ Source: "..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: recurs
 Source: "..\build\vcredist_x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: not VCRedistInstalled
 
 [Icons]
-Name: "{group}\Gloam"; Filename: "{app}\gloam.exe"
-Name: "{autodesktop}\Gloam"; Filename: "{app}\gloam.exe"; Tasks: desktopicon
+Name: "{group}\Gloam"; Filename: "{app}\gloam.exe"; AppUserModelID: "chat.gloam.gloam"
+Name: "{autodesktop}\Gloam"; Filename: "{app}\gloam.exe"; Tasks: desktopicon; AppUserModelID: "chat.gloam.gloam"
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional options:"; Flags: unchecked
