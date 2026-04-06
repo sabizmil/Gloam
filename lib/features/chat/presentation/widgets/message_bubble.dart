@@ -23,6 +23,7 @@ class MessageBubble extends StatefulWidget {
     required this.isGrouped,
     this.roomId,
     this.isOwnMessage = false,
+    this.selfUserId,
     this.onAvatarTap,
     this.onReply,
     this.onEdit,
@@ -31,12 +32,15 @@ class MessageBubble extends StatefulWidget {
     this.onThread,
     this.onCopy,
     this.onReplyTap,
+    this.onMentionTap,
   });
 
   final TimelineMessage message;
   final String? roomId;
   final bool isOwnMessage;
+  final String? selfUserId;
   final VoidCallback? onAvatarTap;
+  final void Function(String userId)? onMentionTap;
 
   /// True if this message is from the same sender as the previous one
   /// within the grouping window (no avatar/name shown).
@@ -184,7 +188,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                     ),
 
                   // Message body
-                  _MessageContent(message: message, roomId: widget.roomId),
+                  _MessageContent(message: message, roomId: widget.roomId, selfUserId: widget.selfUserId, onMentionTap: widget.onMentionTap),
 
                   // Reactions
                   if (message.reactions.isNotEmpty)
@@ -253,9 +257,11 @@ class _MessageBubbleState extends State<MessageBubble> {
 }
 
 class _MessageContent extends StatelessWidget {
-  const _MessageContent({required this.message, this.roomId});
+  const _MessageContent({required this.message, this.roomId, this.selfUserId, this.onMentionTap});
   final TimelineMessage message;
   final String? roomId;
+  final String? selfUserId;
+  final void Function(String userId)? onMentionTap;
 
   @override
   Widget build(BuildContext context) {
@@ -308,6 +314,8 @@ class _MessageContent extends StatelessWidget {
               MarkdownBody(
                 text: message.body,
                 formattedBody: message.formattedBody,
+                selfUserId: selfUserId,
+                onMentionTap: onMentionTap,
               ),
             if (_hasUrl(message.body))
               LinkPreview(body: message.body),

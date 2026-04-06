@@ -591,8 +591,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       _isDifferentDay(prevMsg.timestamp, msg.timestamp);
 
                   // Group: same sender, within 3 minutes, same day
+                  // State events break grouping.
                   final isGrouped = prevMsg != null &&
                       !showDateSep &&
+                      msg.type != 'state' &&
+                      prevMsg.type != 'state' &&
                       prevMsg.senderId == msg.senderId &&
                       msg.timestamp.difference(prevMsg.timestamp).inMinutes <
                           3 &&
@@ -629,6 +632,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     children: [
                       if (showDateSep)
                         DateSeparator(date: msg.timestamp),
+                      if (msg.type == 'state')
+                        _StateEventRow(body: msg.body)
+                      else
                       GestureDetector(
                         onLongPress: () => _showMessageActions(context, msg,
                             isOwnMessage: msg.senderId == myUserId),
@@ -649,9 +655,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             isGrouped: isGrouped,
                             roomId: widget.roomId,
                             isOwnMessage: msg.senderId == myUserId,
+                            selfUserId: myUserId,
                             onAvatarTap: () => showUserProfile(
                               context, ref,
                               userId: msg.senderId,
+                              roomId: widget.roomId,
+                            ),
+                            onMentionTap: (userId) => showUserProfile(
+                              context, ref,
+                              userId: userId,
                               roomId: widget.roomId,
                             ),
                             onReply: () => _handleReplyAction(msg),
@@ -776,10 +788,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         MessageComposer(
           key: _composerKey,
           roomName: roomName,
+          roomId: widget.roomId,
           composerState: _composerState,
-          onSend: (text) => ref
-              .read(timelineProvider(widget.roomId).notifier)
-              .sendTextMessage(text),
+          onSend: (text) async {
+            try {
+              await ref
+                  .read(timelineProvider(widget.roomId).notifier)
+                  .sendTextMessage(text);
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$e'),
+                    backgroundColor: context.gloam.danger,
+                  ),
+                );
+              }
+            }
+          },
           onReply: (text, eventId) => ref
               .read(timelineProvider(widget.roomId).notifier)
               .sendReply(text, eventId),
@@ -1368,6 +1394,67 @@ class _PendingStep extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Compact centered row for state/system events (joins, leaves, name changes).
+class _StateEventRow extends StatelessWidget {
+  const _StateEventRow({required this.body});
+  final String body;
+
+  /// Pick an icon based on keywords in the localized body text.
+  IconData _icon() {
+    final b = body.toLowerCase();
+    if (b.contains('joined') || b.contains('accepted the invitation')) {
+      return Icons.login;
+    }
+    if (b.contains('left') || b.contains('rejected')) return Icons.logout;
+    if (b.contains('invited')) return Icons.person_add_outlined;
+    if (b.contains('kicked')) return Icons.person_remove_outlined;
+    if (b.contains('banned')) return Icons.block;
+    if (b.contains('unbanned')) return Icons.lock_open;
+    if (b.contains('changed the chat name') || b.contains('room name')) {
+      return Icons.tag;
+    }
+    if (b.contains('changed the chat description') || b.contains('topic')) {
+      return Icons.subject;
+    }
+    if (b.contains('avatar')) return Icons.image_outlined;
+    if (b.contains('permissions') || b.contains('power')) {
+      return Icons.admin_panel_settings_outlined;
+    }
+    if (b.contains('join rule')) return Icons.lock_outlined;
+    if (b.contains('encryption') || b.contains('end-to-end')) {
+      return Icons.lock_outlined;
+    }
+    if (b.contains('displayname') || b.contains('display name')) {
+      return Icons.edit_outlined;
+    }
+    return Icons.info_outline;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.gloam;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      child: Row(
+        children: [
+          Icon(_icon(), size: 14, color: colors.textTertiary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              body,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: colors.textTertiary,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

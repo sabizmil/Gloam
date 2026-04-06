@@ -15,7 +15,13 @@ class UploadService {
     required Uint8List bytes,
     required String name,
   }) {
-    final mimeType = lookupMimeType(name, headerBytes: bytes) ?? 'application/octet-stream';
+    // Prioritise extension-based detection. The mime package's header-byte
+    // detector shares magic bytes for Matroska containers (WebM / WebA) and
+    // returns audio/weba for video-only .webm files. Fall back to header
+    // bytes only when the extension is unrecognised.
+    final mimeType = lookupMimeType(name) ??
+        lookupMimeType(name, headerBytes: bytes) ??
+        'application/octet-stream';
 
     if (mimeType.startsWith('image/')) {
       return MatrixImageFile(

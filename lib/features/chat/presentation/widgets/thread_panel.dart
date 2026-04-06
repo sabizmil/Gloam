@@ -21,6 +21,7 @@ import '../providers/timeline_provider.dart';
 import 'drop_overlay.dart';
 import 'emoji_picker.dart';
 import 'gif_picker.dart';
+import 'mention_autocomplete.dart';
 import 'message_bubble.dart';
 
 Future<Uint8List> _downloadBytes(String url) async {
@@ -51,9 +52,10 @@ class ThreadPanel extends ConsumerStatefulWidget {
 }
 
 class _ThreadPanelState extends ConsumerState<ThreadPanel> {
-  final _controller = TextEditingController();
+  final _controller = MentionTextController();
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
+  final _autocompleteKey = GlobalKey<MentionAutocompleteState>();
   TimelineMessage? _replyTo;
   String _prePasteText = '';
 
@@ -236,9 +238,15 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
       isGrouped: isGrouped,
       roomId: widget.roomId,
       isOwnMessage: isOwn,
+      selfUserId: myUserId,
       onAvatarTap: () => showUserProfile(
         context, ref,
         userId: msg.senderId,
+        roomId: widget.roomId,
+      ),
+      onMentionTap: (userId) => showUserProfile(
+        context, ref,
+        userId: userId,
         roomId: widget.roomId,
       ),
       onReact: (emoji) => notifier.react(msg.eventId, emoji),
@@ -567,7 +575,12 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
 
           // Text field with GIF + emoji suffix
           Expanded(
-            child: Container(
+            child: MentionAutocomplete(
+              key: _autocompleteKey,
+              roomId: widget.roomId,
+              controller: _controller,
+              focusNode: _focusNode,
+              child: Container(
               decoration: BoxDecoration(
                 color: colors.bgSurface,
                 borderRadius:
@@ -576,6 +589,13 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
               ),
               child: Focus(
                 onKeyEvent: (node, event) {
+                  if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+                    return KeyEventResult.ignored;
+                  }
+                  // Let mention autocomplete handle keys first
+                  if (_autocompleteKey.currentState?.handleKeyEvent(event) == true) {
+                    return KeyEventResult.handled;
+                  }
                   if (event is! KeyDownEvent) return KeyEventResult.ignored;
                   // Enter to send
                   if (event.logicalKey == LogicalKeyboardKey.enter &&
@@ -657,6 +677,7 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
                   ),
                 ),
               ),
+            ),
             ),
           ),
           const SizedBox(width: 8),

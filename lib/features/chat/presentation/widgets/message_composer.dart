@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../app/theme/gloam_theme_ext.dart';
 import 'emoji_picker.dart';
 import 'gif_picker.dart';
+import 'mention_autocomplete.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/klipy_service.dart';
 
@@ -31,6 +32,7 @@ class MessageComposer extends StatefulWidget {
   const MessageComposer({
     super.key,
     required this.roomName,
+    required this.roomId,
     required this.onSend,
     this.onReply,
     this.onEdit,
@@ -43,6 +45,7 @@ class MessageComposer extends StatefulWidget {
   });
 
   final String roomName;
+  final String roomId;
   final void Function(String text) onSend;
   final void Function(String text, String eventId)? onReply;
   final void Function(String text, String eventId)? onEdit;
@@ -58,8 +61,9 @@ class MessageComposer extends StatefulWidget {
 }
 
 class MessageComposerState extends State<MessageComposer> {
-  final _controller = TextEditingController();
+  final _controller = MentionTextController();
   final _focusNode = FocusNode();
+  final _autocompleteKey = GlobalKey<MentionAutocompleteState>();
   bool _hasText = false;
   bool _isTyping = false;
 
@@ -161,6 +165,15 @@ class MessageComposerState extends State<MessageComposer> {
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    // Let the mention autocomplete handle navigation keys first
+    if (_autocompleteKey.currentState?.handleKeyEvent(event) == true) {
+      return KeyEventResult.handled;
+    }
+
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
     // Enter to send (without shift)
@@ -232,7 +245,12 @@ class MessageComposerState extends State<MessageComposer> {
 
                 // Text field
                 Expanded(
-                  child: Container(
+                  child: MentionAutocomplete(
+                    key: _autocompleteKey,
+                    roomId: widget.roomId,
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    child: Container(
                     decoration: BoxDecoration(
                       color: colors.bgSurface,
                       borderRadius:
@@ -309,6 +327,7 @@ class MessageComposerState extends State<MessageComposer> {
                         ),
                       ),
                     ),
+                  ),
                   ),
                 ),
                 const SizedBox(width: 8),

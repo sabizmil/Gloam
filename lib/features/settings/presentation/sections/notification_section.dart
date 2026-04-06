@@ -1,23 +1,28 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/theme/gloam_theme_ext.dart';
+import '../../../../data/notification_sounds.dart';
 import '../../../../services/notification_diagnostic.dart';
 import '../../../../services/notification_service.dart';
+import '../../../../services/notification_sound_preferences.dart';
 import '../widgets/settings_tile.dart';
+import '../widgets/sound_picker.dart';
 
-class NotificationSection extends StatefulWidget {
+class NotificationSection extends ConsumerStatefulWidget {
   const NotificationSection({super.key});
 
   @override
-  State<NotificationSection> createState() => _NotificationSectionState();
+  ConsumerState<NotificationSection> createState() =>
+      _NotificationSectionState();
 }
 
 enum _TestResult { none, sending, success, failure }
 
-class _NotificationSectionState extends State<NotificationSection> {
+class _NotificationSectionState extends ConsumerState<NotificationSection> {
   _TestResult _result = _TestResult.none;
   Timer? _resetTimer;
 
@@ -31,7 +36,9 @@ class _NotificationSectionState extends State<NotificationSection> {
     if (_result == _TestResult.sending) return;
     setState(() => _result = _TestResult.sending);
 
-    final ok = await NotificationService.sendTestNotification();
+    final prefs = ref.read(notificationSoundPrefsProvider);
+    final soundName = prefs.enabled ? prefs.globalSound : null;
+    final ok = await NotificationService.sendTestNotification(soundName: soundName);
 
     if (!mounted) return;
     setState(() => _result = ok ? _TestResult.success : _TestResult.failure);
@@ -42,11 +49,67 @@ class _NotificationSectionState extends State<NotificationSection> {
     });
   }
 
+  String _soundDisplayName(String soundId) {
+    for (final s in builtInSounds) {
+      if (s.id == soundId) return s.displayName;
+    }
+    if (soundId == 'silent') return 'Silent';
+    // Custom sound — show filename
+    final name = soundId.split('/').last.split('\\').last;
+    return name;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final soundPrefs = ref.watch(notificationSoundPrefsProvider);
+    final soundNotifier =
+        ref.read(notificationSoundPrefsProvider.notifier);
+
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
+        // ── Sounds ──
+        const SettingsSectionHeader('sounds'),
+        SettingsTile(
+          icon: Icons.volume_up_outlined,
+          label: 'notification sounds',
+          trailing: Switch(
+            value: soundPrefs.enabled,
+            onChanged: (v) => soundNotifier.setEnabled(v),
+            activeColor: context.gloam.accentBright,
+            activeTrackColor: context.gloam.accentDim,
+            inactiveTrackColor: context.gloam.bgSurface,
+            inactiveThumbColor: context.gloam.textTertiary,
+          ),
+        ),
+        if (soundPrefs.enabled) ...[
+          SettingsTile(
+            icon: Icons.music_note_outlined,
+            label: 'sound',
+            value: _soundDisplayName(soundPrefs.globalSound),
+            onTap: () async {
+              final picked = await showSoundPicker(
+                context,
+                currentSound: soundPrefs.globalSound,
+              );
+              if (picked != null) {
+                soundNotifier.setGlobalSound(picked);
+              }
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(42, 0, 12, 0),
+            child: Text(
+              'Per-room sounds can be configured in each room\'s info panel.',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: context.gloam.textTertiary,
+              ),
+            ),
+          ),
+        ],
+
+        // ── Test ──
         const SettingsSectionHeader('test'),
         SettingsTile(
           icon: Icons.notifications_active_outlined,

@@ -53,6 +53,13 @@ if [ -f "$LIBCRYPTO_REAL" ]; then
   codesign --force --sign "$SIGN_IDENTITY" "$DEST/libcrypto.3.dylib"
 fi
 
+# Copy notification sound files into app bundle Resources
+SOUNDS_SRC="macos/Runner/Resources/Sounds"
+SOUNDS_DEST="$APP/Contents/Resources"
+if [ -d "$SOUNDS_SRC" ]; then
+  cp "$SOUNDS_SRC"/*.aiff "$SOUNDS_DEST/" 2>/dev/null || true
+fi
+
 # Re-sign the app with developer identity + entitlements
 codesign --force --deep --sign "$SIGN_IDENTITY" --entitlements "$ENTITLEMENTS" "$APP"
 

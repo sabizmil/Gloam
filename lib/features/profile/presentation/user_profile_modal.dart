@@ -1037,7 +1037,7 @@ class _SelfProfileModalState extends ConsumerState<_SelfProfileModal> {
               children: [
                 _DetailField(label: 'homeserver', value: homeserver),
                 const SizedBox(height: 12),
-                _DetailField(label: 'device', value: 'Gloam (macOS)'),
+                _DetailField(label: 'device', value: ref.read(matrixServiceProvider).client?.deviceName ?? 'Gloam'),
               ],
             )),
           ],

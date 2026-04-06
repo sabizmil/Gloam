@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:matrix/matrix.dart';
@@ -14,7 +16,7 @@ import 'package:matrix/matrix.dart';
 /// - Never notify for muted rooms (PushRuleState.dontNotify)
 /// - Foreground + other room: only DMs and mentions break through
 /// - Background: all non-muted rooms with unreads notify
-/// - Mentions play sound, regular messages don't
+/// - Sound controlled by NotificationSoundPrefs (global + per-room)
 /// - Invites always notify
 class NotificationService with WidgetsBindingObserver {
   final Client client;
@@ -28,6 +30,9 @@ class NotificationService with WidgetsBindingObserver {
 
   /// Called when the user taps a notification. Payload is the room ID.
   final void Function(String roomId)? onSelectRoom;
+
+  /// Resolves the effective sound for a room. Set by the app shell.
+  String? Function(String roomId)? resolveSoundForRoom;
 
   NotificationService(this.client, {this.onSelectRoom});
 
@@ -174,7 +179,8 @@ class NotificationService with WidgetsBindingObserver {
   }
 
   /// Fire a single test notification to verify system configuration.
-  static Future<bool> sendTestNotification() async {
+  /// If [soundName] is provided, plays that sound alongside the notification.
+  static Future<bool> sendTestNotification({String? soundName}) async {
     if (!Platform.isMacOS && !Platform.isLinux && !Platform.isWindows) {
       return false;
     }
@@ -194,6 +200,12 @@ class NotificationService with WidgetsBindingObserver {
         windows: initWindows,
       );
       await plugin.initialize(settings: initSettings);
+
+      // Play sound via audioplayers (independent of native notification)
+      if (soundName != null && soundName != 'silent') {
+        _playSound(soundName);
+      }
+
       await plugin.show(
         id: 0,
         title: 'Gloam',
@@ -201,7 +213,7 @@ class NotificationService with WidgetsBindingObserver {
         notificationDetails: const NotificationDetails(
           macOS: DarwinNotificationDetails(
             presentAlert: true,
-            presentSound: true,
+            presentSound: false,
             presentBanner: true,
             presentList: true,
           ),
@@ -226,21 +238,43 @@ class NotificationService with WidgetsBindingObserver {
     final roomName = room.getLocalizedDisplayname();
     final title = room.isDirectChat ? sender : '$sender in $roomName';
 
+    // Resolve and play sound via audioplayers
+    final soundName = resolveSoundForRoom?.call(room.id);
+    if (soundName != null && soundName != 'silent') {
+      _playSound(soundName);
+    }
+
     await _plugin.show(
       id: room.id.hashCode,
       title: title,
       body: body,
-      payload: room.id, // Passed to onDidReceiveNotificationResponse
-      notificationDetails: NotificationDetails(
+      payload: room.id,
+      notificationDetails: const NotificationDetails(
         macOS: DarwinNotificationDetails(
           presentAlert: true,
-          presentSound: isMention,
+          presentSound: false, // sound played via audioplayers
           presentBanner: true,
           presentList: true,
         ),
-        linux: const LinuxNotificationDetails(),
-        windows: const WindowsNotificationDetails(),
+        linux: LinuxNotificationDetails(),
+        windows: WindowsNotificationDetails(),
       ),
     );
+  }
+
+  /// Play a notification sound via audioplayers.
+  static void _playSound(String soundName) {
+    final player = AudioPlayer();
+    if (soundName.contains('/') || soundName.contains('\\')) {
+      // Custom sound — play from file path
+      player.play(DeviceFileSource(soundName)).then((_) {
+        player.onPlayerComplete.first.then((_) => player.dispose());
+      }).catchError((_) => player.dispose());
+    } else {
+      // Built-in sound — play from assets
+      player.play(AssetSource('sounds/$soundName.wav')).then((_) {
+        player.onPlayerComplete.first.then((_) => player.dispose());
+      }).catchError((_) => player.dispose());
+    }
   }
 }

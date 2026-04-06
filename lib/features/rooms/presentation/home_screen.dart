@@ -17,6 +17,7 @@ import '../../../services/debug_server.dart';
 import '../../../services/matrix_service.dart';
 import '../../../services/update_service.dart';
 import '../../../services/notification_service.dart';
+import '../../../services/notification_sound_preferences.dart';
 import '../../../services/search_service.dart';
 import '../../../services/verification_service.dart';
 import '../../../services/voice_service.dart';
@@ -155,6 +156,9 @@ class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
           ref.read(selectedRoomProvider.notifier).state = roomId;
         },
       );
+      _notificationService!.resolveSoundForRoom = (roomId) {
+        return ref.read(notificationSoundPrefsProvider).getEffectiveSound(roomId);
+      };
       _notificationService!.initialize().then((_) {
         _notificationService!.start();
       });

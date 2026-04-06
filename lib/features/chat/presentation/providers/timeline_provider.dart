@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:matrix/matrix.dart';
 
+import '../../../../data/slash_commands.dart';
 import '../../../../services/debug_server.dart';
 import '../../../../services/matrix_service.dart';
 import '../../../../services/search_service.dart';
@@ -286,21 +287,26 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
       // Deduplicate — an edit can cause the same event to appear twice
       if (!seenEventIds.add(displayEvent.eventId)) continue;
 
-      // Only display actual content events — skip redaction protocol events,
-      // state events, and everything else. Redacted messages are handled by
-      // the `redacted` flag on the original event, not by displaying the
-      // m.room.redaction event itself.
+      // Content events
       if (displayEvent.type == EventTypes.Message ||
           displayEvent.type == EventTypes.Encrypted ||
           displayEvent.type == EventTypes.Sticker) {
         messages.add(_mapEvent(displayEvent, myUserId));
+        continue;
+      }
+
+      // State events — show selected types as compact system messages
+      final stateMsg = _mapStateEvent(displayEvent);
+      if (stateMsg != null) {
+        messages.add(stateMsg);
       }
     }
 
     // SDK returns newest first — reverse for display (oldest at top)
     final reversed = messages.reversed.toList();
 
-    // Collapse consecutive redacted messages into a single entry
+    // Collapse consecutive redacted messages and consecutive identical
+    // state events (e.g., 5 "joined the room" in a row) into single entries.
     final collapsed = <TimelineMessage>[];
     for (final msg in reversed) {
       if (msg.isRedacted &&
@@ -318,6 +324,21 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
           body: prev.body,
           isRedacted: true,
           redactedCount: prev.redactedCount + 1,
+        );
+      } else if (msg.type == 'state' &&
+          collapsed.isNotEmpty &&
+          collapsed.last.type == 'state' &&
+          _sameStateAction(collapsed.last.body, msg.body)) {
+        // Collapse consecutive same-action state events
+        final prev = collapsed.last;
+        final mergedBody = _mergeStateBody(prev.body, msg.body);
+        collapsed[collapsed.length - 1] = TimelineMessage(
+          eventId: prev.eventId,
+          senderId: prev.senderId,
+          senderName: prev.senderName,
+          timestamp: prev.timestamp,
+          type: 'state',
+          body: mergedBody,
         );
       } else {
         collapsed.add(msg);
@@ -523,6 +544,97 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     );
   }
 
+  /// State event types to include in the timeline.
+  static const _visibleStateTypes = {
+    EventTypes.RoomMember,
+    EventTypes.RoomName,
+    EventTypes.RoomTopic,
+    EventTypes.RoomAvatar,
+    EventTypes.RoomPowerLevels,
+    EventTypes.RoomJoinRules,
+    EventTypes.Encryption,
+  };
+
+  /// Map a state event to a lightweight TimelineMessage, or null to skip.
+  TimelineMessage? _mapStateEvent(Event event) {
+    if (!_visibleStateTypes.contains(event.type)) return null;
+
+    // Filter out noisy member events (avatar changes)
+    if (event.type == EventTypes.RoomMember) {
+      try {
+        final changeType = event.roomMemberChangeType;
+        if (changeType == RoomMemberChangeType.avatar) return null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final body = event.calcLocalizedBodyFallback(
+      MatrixDefaultLocalizations(),
+      withSenderNamePrefix: false,
+    );
+
+    return TimelineMessage(
+      eventId: event.eventId,
+      senderId: event.senderId,
+      senderName: event.senderFromMemoryOrFallback.calcDisplayname(),
+      timestamp: event.originServerTs,
+      type: 'state',
+      body: body,
+    );
+  }
+
+  /// Check if two state event bodies describe the same action
+  /// (e.g., both end with "joined the chat").
+  static bool _sameStateAction(String a, String b) {
+    final suffixA = _stateActionSuffix(a);
+    final suffixB = _stateActionSuffix(b);
+    return suffixA.isNotEmpty && suffixA == suffixB;
+  }
+
+  static String _stateActionSuffix(String body) {
+    // Match the action part after the user name
+    // e.g., "Alice joined the chat" → "joined the chat"
+    const actions = [
+      'joined the chat',
+      'left the chat',
+      'accepted the invitation',
+      'rejected the invitation',
+    ];
+    for (final action in actions) {
+      if (body.endsWith(action)) return action;
+    }
+    return '';
+  }
+
+  /// Merge two state event bodies with the same action.
+  static String _mergeStateBody(String existing, String newBody) {
+    final suffix = _stateActionSuffix(existing);
+    if (suffix.isEmpty) return existing;
+
+    // Extract name from newBody
+    final newName = newBody.substring(0, newBody.length - suffix.length).trim();
+    // Extract existing names part
+    final existingNames = existing.substring(0, existing.length - suffix.length).trim();
+
+    // Check if it already has "and N others"
+    final othersMatch = RegExp(r'^(.+) and (\d+) others$').firstMatch(existingNames);
+    if (othersMatch != null) {
+      final count = int.parse(othersMatch.group(2)!) + 1;
+      return '${othersMatch.group(1)} and $count others $suffix';
+    }
+
+    // Check if it has "and Name"
+    final andMatch = RegExp(r'^(.+) and (.+)$').firstMatch(existingNames);
+    if (andMatch != null) {
+      // Already two names → switch to "Name1, Name2, and 1 others"
+      return '${andMatch.group(1)}, ${andMatch.group(2)}, and $newName $suffix';
+    }
+
+    // First merge — combine two names
+    return '$existingNames and $newName $suffix';
+  }
+
   /// Request older messages from the server.
   bool _loadingMore = false;
 
@@ -670,9 +782,47 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
   }
 
   /// Send a text message. Returns immediately (optimistic).
+  ///
+  /// Intercepts Gloam-specific commands (/shrug, /nick, /topic, /spoiler, etc.)
+  /// before falling through to the SDK's built-in command parser.
   Future<void> sendTextMessage(String text) async {
     final room = _room;
     if (room == null) return;
+
+    // Gloam text-append commands (/shrug, /tableflip, /unflip, /lenny)
+    final transformed = handleGloamCommand(text);
+    if (transformed != null) {
+      await room.sendTextEvent(transformed, parseCommands: false);
+      return;
+    }
+
+    // /spoiler — needs formatted_body with data-mx-spoiler
+    final spoilerBody = parseSpoilerCommand(text);
+    if (spoilerBody != null) {
+      await room.sendEvent({
+        'msgtype': 'm.text',
+        'body': spoilerBody,
+        'format': 'org.matrix.custom.html',
+        'formatted_body': '<span data-mx-spoiler>$spoilerBody</span>',
+      });
+      return;
+    }
+
+    // /nick — set global display name
+    final newNick = parseNickCommand(text);
+    if (newNick != null) {
+      await _client.setDisplayName(_client.userID!, newNick);
+      return;
+    }
+
+    // /topic — set room topic
+    final newTopic = parseTopicCommand(text);
+    if (newTopic != null) {
+      await room.setDescription(newTopic);
+      return;
+    }
+
+    // Everything else — SDK handles it (including /me, /join, /leave, etc.)
     await room.sendTextEvent(text);
   }
 

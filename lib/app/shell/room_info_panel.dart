@@ -5,6 +5,9 @@ import 'package:matrix/matrix.dart' show PushRuleState;
 
 import '../theme/gloam_theme_ext.dart';
 import '../theme/spacing.dart';
+import '../../data/notification_sounds.dart';
+import '../../services/notification_sound_preferences.dart';
+import '../../features/settings/presentation/widgets/sound_picker.dart';
 import '../../features/chat/presentation/providers/timeline_provider.dart';
 import '../../features/profile/presentation/user_profile_modal.dart';
 import '../../features/rooms/presentation/widgets/invite_dialog.dart';
@@ -135,6 +138,8 @@ class RoomInfoPanel extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 _NotificationSettingRow(room: room),
+                const SizedBox(height: 8),
+                _SoundOverrideRow(roomId: room.id),
                 const SizedBox(height: 24),
 
                 // Members section
@@ -350,6 +355,57 @@ class _NotificationSettingRowState extends State<_NotificationSettingRow> {
         label: 'notifications',
         value: label,
         icon: icon,
+        trailing: Icon(Icons.chevron_right,
+            size: 14, color: context.gloam.textTertiary),
+      ),
+    );
+  }
+}
+
+class _SoundOverrideRow extends ConsumerWidget {
+  const _SoundOverrideRow({required this.roomId});
+  final String roomId;
+
+  String _displayName(NotificationSoundPrefs prefs) {
+    final override = prefs.perRoom[roomId];
+    if (override == null) {
+      // Show "default (SoundName)"
+      for (final s in builtInSounds) {
+        if (s.id == prefs.globalSound) return 'default';
+      }
+      return 'default';
+    }
+    if (override == 'silent') return 'silent';
+    for (final s in builtInSounds) {
+      if (s.id == override) return s.displayName;
+    }
+    return override.split('/').last.split('\\').last;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final prefs = ref.watch(notificationSoundPrefsProvider);
+    if (!prefs.enabled) return const SizedBox.shrink();
+
+    return GestureDetector(
+      onTap: () async {
+        final current = prefs.perRoom[roomId] ?? 'default';
+        final picked = await showSoundPicker(
+          context,
+          currentSound: current,
+          showUseDefault: true,
+        );
+        if (picked != null) {
+          ref.read(notificationSoundPrefsProvider.notifier).setRoomSound(
+                roomId,
+                picked == 'default' ? null : picked,
+              );
+        }
+      },
+      child: _DetailRow(
+        label: 'sound',
+        value: _displayName(prefs),
+        icon: Icons.music_note_outlined,
         trailing: Icon(Icons.chevron_right,
             size: 14, color: context.gloam.textTertiary),
       ),
