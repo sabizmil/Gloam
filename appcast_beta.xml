@@ -3,18 +3,18 @@
   <channel>
     <title>Gloam Updates (Beta)</title>
     <link>https://github.com/sabizmil/Gloam/releases</link>
-    <description>Most recent updates for Gloam (beta channel)</description>
+    <description>Most recent updates for Gloam</description>
     <language>en</language>
     <item>
-      <title>Version 0.4.5</title>
-      <sparkle:version>17</sparkle:version>
-      <sparkle:shortVersionString>0.4.5</sparkle:shortVersionString>
+      <title>Version 0.5.1-beta.1</title>
+      <sparkle:version>19</sparkle:version>
+      <sparkle:shortVersionString>0.5.1-beta.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
-      <pubDate>Thu, 02 Apr 2026 21:22:32 +0000</pubDate>
+      <pubDate>Tue, 07 Apr 2026 19:57:12 +0000</pubDate>
       <enclosure
-        url="https://github.com/sabizmil/Gloam/releases/download/v0.4.5/Gloam-0.4.5-macos.zip"
-        sparkle:edSignature="KnqCR7X82ZAWF1Gc4KTEPjG8IeshC3m7PmU2itUgvZbB/8OSkbtyWyBDNmg8f4g27Nf8oAXi0WT29ZvZkEPhCg=="
-        length="65928496"
+        url="https://github.com/sabizmil/Gloam/releases/download/v0.5.1-beta.1/Gloam-0.5.1-beta.1-macos.zip"
+        sparkle:edSignature="RcV/pXjyuRdCbfAI9cDYQ7RwgyX/raRceIMHosjagPzszxJ0lFs/z14+3OQMKp++4HEm6uSHSBvtUX5ihc8ODw=="
+        length="67977397"
         type="application/octet-stream" />
     </item>
   </channel>
