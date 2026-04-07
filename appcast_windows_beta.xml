@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Gloam Updates — Windows (Beta)</title>
+    <link>https://github.com/sabizmil/Gloam/releases</link>
+    <description>Most recent updates for Gloam on Windows (beta channel)</description>
+    <language>en</language>
+    <item>
+      <title>Version 0.4.5</title>
+      <sparkle:version>0.4.5</sparkle:version>
+      <sparkle:shortVersionString>0.4.5</sparkle:shortVersionString>
+      <pubDate>Thu, 02 Apr 2026 21:22:32 +0000</pubDate>
+      <enclosure
+        url="https://github.com/sabizmil/Gloam/releases/download/v0.4.5/Gloam-0.4.5-windows-setup.exe"
+        length="0"
+        type="application/octet-stream" />
+    </item>
+  </channel>
+</rss>

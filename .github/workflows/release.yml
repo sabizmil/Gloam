@@ -9,6 +9,7 @@ permissions:
 
 env:
   FLUTTER_VERSION: '3.41.5'
+  IS_BETA: ${{ contains(github.ref_name, '-beta') }}
 
 jobs:
   build-macos:
@@ -318,7 +319,7 @@ jobs:
           # via `gh release create` before tagging.
           files: artifacts/*
           draft: false
-          prerelease: false
+          prerelease: ${{ env.IS_BETA == 'true' }}
 
       - name: Update appcast files
         run: |
@@ -329,22 +330,24 @@ jobs:
           WIN_URL="https://github.com/sabizmil/Gloam/releases/download/${TAG}/Gloam-${VERSION}-windows-setup.exe"
           SPARKLE_SIG="${{ needs.build-macos.outputs.sparkle_signature }}"
           SPARKLE_LEN="${{ needs.build-macos.outputs.sparkle_length }}"
+          IS_BETA="${{ env.IS_BETA }}"
 
-          # Extract build number from pubspec.yaml (the +N part)
-          # Sparkle compares sparkle:version against CFBundleVersion (build number)
           BUILD_NUM=$(grep 'version:' pubspec.yaml | head -1 | sed 's/.*+//')
-          echo "Version: $VERSION, Build: $BUILD_NUM, Signature: ${SPARKLE_SIG:0:20}..., Length: $SPARKLE_LEN"
+          echo "Version: $VERSION, Build: $BUILD_NUM, Beta: $IS_BETA, Signature: ${SPARKLE_SIG:0:20}..., Length: $SPARKLE_LEN"
 
           if [ -z "$SPARKLE_SIG" ]; then
             echo "::error::Sparkle signature is missing — appcast would be invalid"
             exit 1
           fi
 
-          cat > appcast.xml << APPCAST_EOF
+          # Helper to generate a macOS appcast file
+          write_mac_appcast() {
+            local file="$1" title="$2"
+            cat > "$file" << APPCAST_EOF
           <?xml version="1.0" encoding="utf-8"?>
           <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
             <channel>
-              <title>Gloam Updates</title>
+              <title>${title}</title>
               <link>https://github.com/sabizmil/Gloam/releases</link>
               <description>Most recent updates for Gloam</description>
               <language>en</language>
@@ -363,12 +366,16 @@ jobs:
             </channel>
           </rss>
           APPCAST_EOF
+          }
 
-          cat > appcast_windows.xml << APPCAST_WIN_EOF
+          # Helper to generate a Windows appcast file
+          write_win_appcast() {
+            local file="$1" title="$2"
+            cat > "$file" << APPCAST_WIN_EOF
           <?xml version="1.0" encoding="utf-8"?>
           <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
             <channel>
-              <title>Gloam Updates (Windows)</title>
+              <title>${title}</title>
               <link>https://github.com/sabizmil/Gloam/releases</link>
               <description>Most recent updates for Gloam on Windows</description>
               <language>en</language>
@@ -385,14 +392,29 @@ jobs:
             </channel>
           </rss>
           APPCAST_WIN_EOF
+          }
+
+          if [ "$IS_BETA" = "true" ]; then
+            # Beta release — only update beta feeds
+            write_mac_appcast "appcast_beta.xml" "Gloam Updates (Beta)"
+            write_win_appcast "appcast_windows_beta.xml" "Gloam Updates — Windows (Beta)"
+            echo "✓ Beta appcast files updated"
+          else
+            # Production release — update BOTH production and beta feeds
+            # (so beta users also get promoted to the stable release)
+            write_mac_appcast "appcast.xml" "Gloam Updates"
+            write_win_appcast "appcast_windows.xml" "Gloam Updates (Windows)"
+            write_mac_appcast "appcast_beta.xml" "Gloam Updates (Beta)"
+            write_win_appcast "appcast_windows_beta.xml" "Gloam Updates — Windows (Beta)"
+            echo "✓ Production + beta appcast files updated"
+          fi
 
       - name: Commit updated appcast
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Checkout main branch (tag checkout leaves us in detached HEAD)
           git fetch origin main
           git checkout main
-          git add appcast.xml appcast_windows.xml
+          git add appcast.xml appcast_windows.xml appcast_beta.xml appcast_windows_beta.xml
           git diff --cached --quiet || git commit -m "Update appcast for ${{ github.ref_name }}"
           git push origin main || echo "Push failed — appcast update skipped"

@@ -18,20 +18,31 @@ class AboutSection extends StatefulWidget {
 
 class _AboutSectionState extends State<AboutSection> {
   String _version = '...';
+  bool _isBeta = false;
 
   @override
   void initState() {
     super.initState();
     _loadVersion();
+    _loadChannel();
   }
 
   Future<void> _loadVersion() async {
     final info = await PackageInfo.fromPlatform();
     if (mounted) {
-      // Strip build number suffix if present (e.g. "0.4.2+14" → "0.4.2")
       final v = info.version.split('+').first;
       setState(() => _version = v);
     }
+  }
+
+  Future<void> _loadChannel() async {
+    final beta = await UpdateService.isBetaChannel();
+    if (mounted) setState(() => _isBeta = beta);
+  }
+
+  Future<void> _toggleChannel(bool beta) async {
+    setState(() => _isBeta = beta);
+    await UpdateService.setBetaChannel(beta);
   }
 
   void _openUrl(String url) {
@@ -92,12 +103,19 @@ class _AboutSectionState extends State<AboutSection> {
 
         const SettingsSectionHeader('app info'),
         SettingsTile(icon: Icons.tag, label: 'version', value: _version),
-        if (Platform.isMacOS || Platform.isWindows)
+        if (Platform.isMacOS || Platform.isWindows) ...[
+          SettingsTile(
+            icon: Icons.science_outlined,
+            label: 'update channel',
+            value: _isBeta ? 'beta' : 'stable',
+            onTap: () => _toggleChannel(!_isBeta),
+          ),
           SettingsTile(
             icon: Icons.system_update,
             label: 'check for updates',
             onTap: () => UpdateService.checkNow(),
           ),
+        ],
 
         const SettingsSectionHeader('links'),
         SettingsTile(
