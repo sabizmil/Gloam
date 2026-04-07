@@ -23,6 +23,7 @@ import '../../../../services/upload_service.dart';
 import '../../../../widgets/gloam_avatar.dart';
 import '../providers/timeline_provider.dart';
 import '../../../rooms/presentation/providers/space_hierarchy_provider.dart';
+import '../widgets/connection_status_bar.dart';
 import '../widgets/date_separator.dart';
 import '../widgets/drop_overlay.dart';
 import '../widgets/following_bar.dart';
@@ -538,6 +539,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         // Following the conversation bar
         if (!widget.compact) FollowingBar(roomId: widget.roomId),
 
+        // Connection status bar (hidden when online)
+        if (!widget.compact) const ConnectionStatusBar(),
+
         // Pending state: joined but room has no state (restricted join pending sync)
         if (isPartiallyJoined && messages.isEmpty && !widget.compact)
           Expanded(
@@ -573,7 +577,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         Expanded(
           child: Stack(
             children: [
-              ListView.builder(
+              SelectionArea(
+              child: ListView.builder(
                 controller: _scrollController,
                 reverse: true,
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
@@ -717,6 +722,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     ],
                   );
                 },
+              ),
               ),
 
               // "Jump to Present" banner on fragmented timelines

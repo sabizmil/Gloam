@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../data/syntax_themes.dart';
 import 'theme_variants.dart';
 
 /// Persisted user preferences for theming.
@@ -9,12 +10,14 @@ class ThemePreferences {
   final AccentColor accentColor;
   final DensityMode density;
   final double fontScale;
+  final String syntaxThemeId;
 
   const ThemePreferences({
     this.variant = ThemeVariant.gloamDark,
     this.accentColor = AccentColor.green,
     this.density = DensityMode.comfortable,
     this.fontScale = 1.0,
+    this.syntaxThemeId = defaultSyntaxTheme,
   });
 
   ThemePreferences copyWith({
@@ -22,12 +25,14 @@ class ThemePreferences {
     AccentColor? accentColor,
     DensityMode? density,
     double? fontScale,
+    String? syntaxThemeId,
   }) {
     return ThemePreferences(
       variant: variant ?? this.variant,
       accentColor: accentColor ?? this.accentColor,
       density: density ?? this.density,
       fontScale: fontScale ?? this.fontScale,
+      syntaxThemeId: syntaxThemeId ?? this.syntaxThemeId,
     );
   }
 }
@@ -45,12 +50,14 @@ class ThemePreferencesNotifier extends StateNotifier<ThemePreferences> {
     final accentIndex = _prefs.getInt('theme_accent') ?? 0;
     final densityIndex = _prefs.getInt('theme_density') ?? 1; // comfortable
     final fontScale = _prefs.getDouble('theme_font_scale') ?? 1.0;
+    final syntaxThemeId = _prefs.getString('syntax_theme') ?? defaultSyntaxTheme;
 
     state = ThemePreferences(
       variant: ThemeVariant.values[variantIndex.clamp(0, ThemeVariant.values.length - 1)],
       accentColor: AccentColor.values[accentIndex.clamp(0, AccentColor.values.length - 1)],
       density: DensityMode.values[densityIndex.clamp(0, DensityMode.values.length - 1)],
       fontScale: fontScale.clamp(0.85, 1.25),
+      syntaxThemeId: syntaxThemeId,
     );
   }
 
@@ -73,6 +80,11 @@ class ThemePreferencesNotifier extends StateNotifier<ThemePreferences> {
     final clamped = scale.clamp(0.85, 1.25);
     state = state.copyWith(fontScale: clamped);
     _prefs.setDouble('theme_font_scale', clamped);
+  }
+
+  void setSyntaxTheme(String id) {
+    state = state.copyWith(syntaxThemeId: id);
+    _prefs.setString('syntax_theme', id);
   }
 }
 

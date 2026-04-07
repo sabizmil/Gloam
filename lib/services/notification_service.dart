@@ -210,15 +210,17 @@ class NotificationService with WidgetsBindingObserver {
         id: 0,
         title: 'Gloam',
         body: 'Notifications are working.',
-        notificationDetails: const NotificationDetails(
-          macOS: DarwinNotificationDetails(
+        notificationDetails: NotificationDetails(
+          macOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentSound: false,
             presentBanner: true,
             presentList: true,
           ),
-          linux: LinuxNotificationDetails(),
-          windows: WindowsNotificationDetails(),
+          linux: const LinuxNotificationDetails(),
+          windows: WindowsNotificationDetails(
+            audio: WindowsNotificationAudio.silent(),
+          ),
         ),
       );
       return true;
@@ -249,15 +251,17 @@ class NotificationService with WidgetsBindingObserver {
       title: title,
       body: body,
       payload: room.id,
-      notificationDetails: const NotificationDetails(
-        macOS: DarwinNotificationDetails(
+      notificationDetails: NotificationDetails(
+        macOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentSound: false, // sound played via audioplayers
           presentBanner: true,
           presentList: true,
         ),
-        linux: LinuxNotificationDetails(),
-        windows: WindowsNotificationDetails(),
+        linux: const LinuxNotificationDetails(),
+        windows: WindowsNotificationDetails(
+          audio: WindowsNotificationAudio.silent(), // sound played via audioplayers
+        ),
       ),
     );
   }

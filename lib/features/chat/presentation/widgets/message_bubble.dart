@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/theme/gloam_color_extension.dart';
@@ -7,6 +8,7 @@ import '../../../../widgets/gloam_avatar.dart';
 import '../providers/timeline_provider.dart';
 import 'delivery_indicator.dart';
 import 'file_message.dart' hide VideoMessage;
+import 'file_preview_modal.dart';
 import 'video_message.dart';
 import 'hover_toolbar.dart';
 import 'image_message.dart';
@@ -287,7 +289,7 @@ class _MessageContent extends StatelessWidget {
         ),
       'm.image' => ImageMessage(message: message, roomId: roomId),
       'm.video' => VideoMessage(message: message, roomId: roomId),
-      'm.file' => FileMessage(message: message, roomId: roomId),
+      'm.file' => _FileMessagePreviewWrapper(message: message, roomId: roomId, selfUserId: selfUserId, onMentionTap: onMentionTap),
       'm.audio' => VoiceMessage(message: message),
       'm.bad_encrypted' => Row(
           mainAxisSize: MainAxisSize.min,
@@ -316,6 +318,7 @@ class _MessageContent extends StatelessWidget {
                 formattedBody: message.formattedBody,
                 selfUserId: selfUserId,
                 onMentionTap: onMentionTap,
+                selectable: false, // SelectionArea on chat ListView handles selection
               ),
             if (_hasUrl(message.body))
               LinkPreview(body: message.body),
@@ -474,6 +477,38 @@ class _HoverableAvatarState extends State<_HoverableAvatar> {
           mxcUrl: widget.mxcUrl,
           size: widget.size,
         ),
+      ),
+    );
+  }
+}
+
+/// Wraps FileMessage to add click-to-preview behavior.
+/// Clicking the file row opens the preview modal.
+/// The download icon inside FileMessage handles direct download.
+class _FileMessagePreviewWrapper extends ConsumerWidget {
+  const _FileMessagePreviewWrapper({
+    required this.message,
+    this.roomId,
+    this.selfUserId,
+    this.onMentionTap,
+  });
+
+  final TimelineMessage message;
+  final String? roomId;
+  final String? selfUserId;
+  final void Function(String userId)? onMentionTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          if (roomId == null) return;
+          showFilePreview(context, ref, message: message, roomId: roomId!);
+        },
+        child: FileMessage(message: message, roomId: roomId),
       ),
     );
   }

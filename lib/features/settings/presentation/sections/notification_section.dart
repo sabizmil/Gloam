@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../data/notification_sounds.dart';
+import '../../../../services/connection_status_provider.dart';
 import '../../../../services/notification_diagnostic.dart';
 import '../../../../services/notification_service.dart';
 import '../../../../services/notification_sound_preferences.dart';
@@ -177,6 +179,46 @@ class _NotificationSectionState extends ConsumerState<NotificationSection> {
             ),
           ),
         ),
+
+        // Debug-only connection status simulator
+        if (kDebugMode) ...[
+          const SettingsSectionHeader('debug — connection status'),
+          SettingsTile(
+            icon: Icons.wifi,
+            label: 'simulate: online',
+            onTap: () => ref
+                .read(connectionStatusProvider.notifier)
+                .debugOverride(ConnectionStatus.online),
+          ),
+          SettingsTile(
+            icon: Icons.wifi_find,
+            label: 'simulate: connecting',
+            onTap: () => ref
+                .read(connectionStatusProvider.notifier)
+                .debugOverride(ConnectionStatus.connecting),
+          ),
+          SettingsTile(
+            icon: Icons.sync_problem,
+            label: 'simulate: reconnecting',
+            onTap: () => ref
+                .read(connectionStatusProvider.notifier)
+                .debugOverride(ConnectionStatus.reconnecting),
+          ),
+          SettingsTile(
+            icon: Icons.wifi_off,
+            label: 'simulate: disconnected',
+            onTap: () => ref
+                .read(connectionStatusProvider.notifier)
+                .debugOverride(ConnectionStatus.disconnected),
+          ),
+          SettingsTile(
+            icon: Icons.restore,
+            label: 'clear override (use real status)',
+            onTap: () => ref
+                .read(connectionStatusProvider.notifier)
+                .debugClearOverride(),
+          ),
+        ],
       ],
     );
   }
