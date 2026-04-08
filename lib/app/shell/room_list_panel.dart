@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:matrix/matrix.dart' show EventTypes;
+import 'package:matrix/matrix.dart' show EventTypes, Membership;
 
 import '../theme/gloam_theme_ext.dart';
 import '../theme/spacing.dart';
@@ -16,8 +16,10 @@ import '../../features/rooms/presentation/widgets/create_room_dialog.dart';
 import '../../features/rooms/presentation/widgets/invite_dialog.dart';
 import '../../features/rooms/presentation/widgets/invite_tile.dart';
 import '../../features/rooms/presentation/widgets/room_list_tile.dart';
+import '../../features/settings/presentation/bootstrap_dialog.dart';
 import '../../services/matrix_service.dart';
 import '../../services/voice_service.dart';
+import '../../widgets/gloam_avatar.dart';
 import '../../widgets/section_header.dart';
 import 'right_panel.dart';
 import 'space_management_modal.dart';
@@ -159,6 +161,16 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
     final selectedRoom = ref.watch(selectedRoomProvider);
     final selectedSpace = ref.watch(selectedSpaceProvider);
 
+    // Check if the selected space is an invite
+    final isSpaceInvite = selectedSpace != null &&
+        (() {
+          final client = ref.read(matrixServiceProvider).client;
+          final room = client?.getRoomById(selectedSpace);
+          return room != null &&
+              room.isSpace &&
+              room.membership == Membership.invite;
+        })();
+
     return Container(
       decoration: BoxDecoration(
         color: context.gloam.bgSurface,
@@ -166,7 +178,9 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
           right: BorderSide(color: context.gloam.border),
         ),
       ),
-      child: Column(
+      child: isSpaceInvite
+          ? _SpaceInviteCard(spaceId: selectedSpace!)
+          : Column(
         children: [
           // Header with homeserver name
           _PanelHeader(selectedSpace: selectedSpace),
@@ -272,6 +286,9 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 4),
                   children: [
+                    // Encryption setup banner
+                    _EncryptionBanner(ref: ref),
+
                     if (invites.isNotEmpty) ...[
                       SectionHeader('invites (${invites.length})',
                           color: context.gloam.accent),
@@ -342,7 +359,7 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
           if (hr.name != null) hierarchyNames[hr.roomId] = hr.name!;
         }
         result = result
-            .where((r) => childIds.contains(r.roomId))
+            .where((r) => r.isInvite || childIds.contains(r.roomId))
             .map((r) {
               // Fix "Empty chat" names using hierarchy data
               if (r.displayName == 'Empty chat' &&
@@ -360,7 +377,7 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
           final localIds =
               space.spaceChildren.map((c) => c.roomId).toSet();
           result = result
-              .where((r) => localIds.contains(r.roomId))
+              .where((r) => r.isInvite || localIds.contains(r.roomId))
               .toList();
         }
       }
@@ -388,9 +405,9 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
       case _RoomFilter.all:
         break;
       case _RoomFilter.unread:
-        result = result.where((r) => r.unreadCount > 0).toList();
+        result = result.where((r) => r.isInvite || r.unreadCount > 0).toList();
       case _RoomFilter.mentions:
-        result = result.where((r) => r.mentionCount > 0).toList();
+        result = result.where((r) => r.isInvite || r.mentionCount > 0).toList();
     }
 
     return result;
@@ -578,6 +595,345 @@ enum _RoomFilter {
 
   const _RoomFilter(this.label);
   final String label;
+}
+
+/// Rich invite card shown when an invited space is selected in the space rail.
+class _SpaceInviteCard extends ConsumerStatefulWidget {
+  const _SpaceInviteCard({required this.spaceId});
+  final String spaceId;
+
+  @override
+  ConsumerState<_SpaceInviteCard> createState() => _SpaceInviteCardState();
+}
+
+class _SpaceInviteCardState extends ConsumerState<_SpaceInviteCard> {
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.gloam;
+    final client = ref.watch(matrixServiceProvider).client;
+    final room = client?.getRoomById(widget.spaceId);
+
+    if (room == null || client == null) return const SizedBox.shrink();
+
+    final spaceName = room.getLocalizedDisplayname();
+    final topic = room.topic;
+
+    // Resolve inviter from the membership event
+    final myMemberEvent =
+        room.getState(EventTypes.RoomMember, client.userID!);
+    final inviterId = myMemberEvent?.senderId;
+    String? inviterName;
+    Uri? inviterAvatar;
+    if (inviterId != null) {
+      final inviter = room.unsafeGetUserFromMemoryOrFallback(inviterId);
+      inviterName = inviter.calcDisplayname();
+      inviterAvatar = inviter.avatarUrl;
+    }
+
+    // Member count from summary
+    final memberCount = room.summary.mJoinedMemberCount ?? 0;
+
+    // Best-effort channel preview via hierarchy
+    final hierarchyAsync = ref.watch(spaceHierarchyProvider(widget.spaceId));
+
+    return Column(
+      children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: colors.border),
+            ),
+          ),
+          child: Row(
+            children: [
+              Text(
+                'space invite',
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 11,
+                  color: colors.accent,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Card content
+        Expanded(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Large space avatar
+                  GloamAvatar(
+                    displayName: spaceName,
+                    mxcUrl: room.avatar,
+                    size: 72,
+                    borderRadius: 16,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Space name
+                  Text(
+                    spaceName,
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: colors.textPrimary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
+                  // Topic
+                  if (topic != null && topic.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      topic,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: colors.textSecondary,
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+
+                  const SizedBox(height: 16),
+
+                  // Inviter row
+                  if (inviterName != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: colors.bgElevated,
+                        borderRadius:
+                            BorderRadius.circular(GloamSpacing.radiusSm),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GloamAvatar(
+                            displayName: inviterName,
+                            mxcUrl: inviterAvatar,
+                            size: 24,
+                            borderRadius: 12,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text.rich(
+                              TextSpan(children: [
+                                TextSpan(
+                                  text: inviterName,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: colors.textPrimary,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: ' invited you',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    color: colors.textSecondary,
+                                  ),
+                                ),
+                              ]),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  const SizedBox(height: 12),
+
+                  // Member count
+                  if (memberCount > 0)
+                    Text(
+                      '$memberCount ${memberCount == 1 ? 'member' : 'members'}',
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 11,
+                        color: colors.textTertiary,
+                      ),
+                    ),
+
+                  // Channel preview (best-effort)
+                  hierarchyAsync.when(
+                    loading: () => Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Text(
+                        '// loading channels...',
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 11,
+                          color: colors.textTertiary,
+                        ),
+                      ),
+                    ),
+                    error: (_, __) => const SizedBox.shrink(),
+                    data: (channels) {
+                      if (channels.isEmpty) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${channels.length} ${channels.length == 1 ? 'channel' : 'channels'}',
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 10,
+                                color: colors.textTertiary,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ...channels.take(8).map((ch) => Padding(
+                                  padding:
+                                      const EdgeInsets.only(bottom: 4),
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        '#',
+                                        style: GoogleFonts.jetBrainsMono(
+                                          fontSize: 12,
+                                          color: colors.textTertiary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          ch.name ?? ch.roomId,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            color: colors.textSecondary,
+                                          ),
+                                          overflow:
+                                              TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                            if (channels.length > 8)
+                              Text(
+                                '+ ${channels.length - 8} more',
+                                style: GoogleFonts.jetBrainsMono(
+                                  fontSize: 11,
+                                  color: colors.textTertiary,
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Accept button (prominent)
+                  SizedBox(
+                    width: double.infinity,
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        onTap: _loading ? null : () => _accept(room),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: colors.accent,
+                            borderRadius: BorderRadius.circular(
+                                GloamSpacing.radiusSm),
+                          ),
+                          child: Center(
+                            child: _loading
+                                ? SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: colors.bg,
+                                    ),
+                                  )
+                                : Text(
+                                    'Join Space',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: colors.bg,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Decline link (subtle)
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: _loading ? null : () => _decline(room),
+                      child: Text(
+                        'Decline',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: colors.textTertiary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _accept(dynamic room) async {
+    setState(() => _loading = true);
+    try {
+      await room.join();
+      // Stay selected — panel will transition to normal channel list
+      // once the sync picks up the joined state
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to join: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _decline(dynamic room) async {
+    setState(() => _loading = true);
+    try {
+      await room.leave();
+      // Reset selection back to DMs
+      ref.read(selectedSpaceProvider.notifier).state = null;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to decline: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 }
 
 class _PanelHeader extends ConsumerWidget {
@@ -906,6 +1262,89 @@ class _UnjoinedRoomTileState extends State<_UnjoinedRoomTile> {
         fontSize: 9,
         color: color,
         fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+}
+
+/// Banner prompting encryption setup. Hidden when already bootstrapped
+/// or explicitly dismissed.
+class _EncryptionBanner extends ConsumerStatefulWidget {
+  const _EncryptionBanner({required this.ref});
+  final WidgetRef ref;
+
+  @override
+  ConsumerState<_EncryptionBanner> createState() => _EncryptionBannerState();
+}
+
+class _EncryptionBannerState extends ConsumerState<_EncryptionBanner> {
+  bool _dismissed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_dismissed) return const SizedBox.shrink();
+
+    final client = ref.watch(matrixServiceProvider).client;
+    if (client == null) return const SizedBox.shrink();
+
+    // Already bootstrapped — cross-signing is set up
+    final crossSigningEnabled = client.encryption?.crossSigning.enabled ?? false;
+    if (crossSigningEnabled) return const SizedBox.shrink();
+
+    // Not logged in yet
+    if (!client.isLogged()) return const SizedBox.shrink();
+
+    final colors = context.gloam;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: colors.accentDim,
+          borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.lock_outlined, size: 14, color: colors.accentBright),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Set up encryption to secure your messages',
+                style: GoogleFonts.inter(
+                  fontSize: 12, color: colors.accentBright,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () => showBootstrapDialog(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: colors.accent,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Set up',
+                    style: GoogleFonts.inter(
+                      fontSize: 11, fontWeight: FontWeight.w600, color: colors.bg,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () => setState(() => _dismissed = true),
+                child: Icon(Icons.close, size: 14, color: colors.accentBright),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

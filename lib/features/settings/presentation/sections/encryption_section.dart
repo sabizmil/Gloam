@@ -4,6 +4,7 @@ import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/router.dart';
 import '../../../../services/matrix_service.dart';
 import '../../../../services/verification_service.dart';
+import '../bootstrap_dialog.dart';
 import '../recovery_key_dialog.dart';
 import '../widgets/settings_tile.dart';
 
@@ -37,6 +38,12 @@ class EncryptionSection extends ConsumerWidget {
         ),
 
         const SettingsSectionHeader('recovery'),
+        if (client?.encryption?.crossSigning.enabled != true)
+          SettingsTile(
+            icon: Icons.lock_outlined,
+            label: 'set up encryption',
+            onTap: () => showBootstrapDialog(context),
+          ),
         SettingsTile(
           icon: Icons.key,
           label: 'enter recovery key',
