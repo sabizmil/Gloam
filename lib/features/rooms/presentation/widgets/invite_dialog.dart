@@ -94,20 +94,39 @@ class _InviteDialogState extends ConsumerState<InviteDialog> {
 
   void _onSearchChanged() {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 100), () {
+    _debounce = Timer(const Duration(milliseconds: 250), () async {
       final query = _controller.text.trim().toLowerCase();
       if (query.isEmpty) {
         setState(() => _results = _knownUsers.take(20).toList());
         return;
       }
-      setState(() {
-        _results = _knownUsers
-            .where((u) =>
-                (u.displayName?.toLowerCase().contains(query) ?? false) ||
-                u.userId.toLowerCase().contains(query))
-            .take(20)
-            .toList();
-      });
+
+      final localResults = _knownUsers
+          .where((u) =>
+              (u.displayName?.toLowerCase().contains(query) ?? false) ||
+              u.userId.toLowerCase().contains(query))
+          .take(20)
+          .toList();
+
+      // Also search the server's user directory
+      final client = ref.read(matrixServiceProvider).client;
+      if (client != null && query.length >= 2) {
+        try {
+          final serverResults = await client.searchUserDirectory(query, limit: 10);
+          final localIds = localResults.map((u) => u.userId).toSet();
+          for (final user in serverResults.results) {
+            if (user.userId == client.userID) continue;
+            if (localIds.contains(user.userId)) continue;
+            localResults.add(_KnownUser(
+              userId: user.userId,
+              displayName: user.displayName,
+              avatarUrl: user.avatarUrl,
+            ));
+          }
+        } catch (_) {}
+      }
+
+      if (mounted) setState(() => _results = localResults.take(20).toList());
     });
   }
 

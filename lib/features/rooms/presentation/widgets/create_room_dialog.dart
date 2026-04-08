@@ -117,21 +117,42 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
       }
     }
 
-    _searchDebounce = Timer(const Duration(milliseconds: 100), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 250), () async {
       final query = _userController.text.trim().toLowerCase();
       if (query.isEmpty || _selectedUser != null) {
         setState(() => _searchResults = []);
         return;
       }
 
-      final results = _knownUsers
+      // Search local known users first
+      final localResults = _knownUsers
           .where((u) =>
               (u.displayName?.toLowerCase().contains(query) ?? false) ||
               u.userId.toLowerCase().contains(query))
           .take(6)
           .toList();
 
-      setState(() => _searchResults = results);
+      // Also search the server's user directory for users not in any joined room
+      final client = ref.read(matrixServiceProvider).client;
+      if (client != null && query.length >= 2) {
+        try {
+          final serverResults = await client.searchUserDirectory(query, limit: 6);
+          final localIds = localResults.map((u) => u.userId).toSet();
+          for (final user in serverResults.results) {
+            if (user.userId == client.userID) continue;
+            if (localIds.contains(user.userId)) continue;
+            localResults.add(_KnownUser(
+              userId: user.userId,
+              displayName: user.displayName,
+              avatarUrl: user.avatarUrl,
+            ));
+          }
+        } catch (_) {
+          // Server directory search is best-effort
+        }
+      }
+
+      if (mounted) setState(() => _searchResults = localResults.take(8).toList());
     });
   }
 

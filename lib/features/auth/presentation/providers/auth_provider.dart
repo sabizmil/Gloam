@@ -46,6 +46,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Register a new account.
+  Future<void> register({
+    required String homeserver,
+    required String username,
+    required String password,
+    String? registrationToken,
+  }) async {
+    state = AuthState.loading;
+    try {
+      await _matrixService.register(
+        homeserver: homeserver,
+        username: username,
+        password: password,
+        registrationToken: registrationToken,
+      );
+      state = AuthState.authenticated;
+    } catch (_) {
+      state = AuthState.error;
+      rethrow;
+    }
+  }
+
   /// Logout.
   Future<void> logout() async {
     await _matrixService.logout();

@@ -234,7 +234,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {},
+                        onTap: () => context.go('/sign-up'),
                         child: Text(
                           'create one',
                           style: GoogleFonts.inter(

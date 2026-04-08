@@ -132,28 +132,67 @@ class MatrixService {
     _connectionState = GloamConnectionState.connected;
   }
 
-  /// Register a new account.
+  /// Register a new account with optional registration token.
+  ///
+  /// If the server requires a registration token (`m.login.registration_token`),
+  /// pass it via [registrationToken]. The method handles the interactive auth
+  /// flow automatically.
   Future<void> register({
     required String homeserver,
     required String username,
     required String password,
+    String? registrationToken,
   }) async {
     _connectionState = GloamConnectionState.connecting;
 
     await _ensureClient();
 
-    await _client!.checkHomeserver(
-      _normalizeHomeserver(homeserver),
-      checkWellKnown: true,
-    );
+    final hsUri = _normalizeHomeserver(homeserver);
+    await _client!.checkHomeserver(hsUri, checkWellKnown: true);
 
-    await _client!.uiaRequestBackground(
-      (auth) => _client!.register(
+    // Probe the server for required auth flows by sending an empty register
+    String? sessionId;
+    try {
+      await _client!.register(
         username: username,
         password: password,
-        auth: auth,
-      ),
-    );
+        initialDeviceDisplayName: 'Gloam (${Platform.operatingSystem})',
+      );
+      // If this somehow succeeds with no auth, we're done
+      _connectionState = GloamConnectionState.connected;
+      return;
+    } on MatrixException catch (e) {
+      if (e.requireAdditionalAuthentication) {
+        sessionId = e.session;
+      } else {
+        _connectionState = GloamConnectionState.disconnected;
+        rethrow;
+      }
+    }
+
+    // Complete registration with the appropriate auth
+    if (registrationToken != null && registrationToken.isNotEmpty) {
+      await _client!.register(
+        username: username,
+        password: password,
+        auth: _RegistrationTokenAuth(
+          session: sessionId,
+          token: registrationToken,
+        ),
+        initialDeviceDisplayName: 'Gloam (${Platform.operatingSystem})',
+      );
+    } else {
+      // Try dummy auth (for servers with open registration)
+      await _client!.register(
+        username: username,
+        password: password,
+        auth: AuthenticationData(
+          type: 'm.login.dummy',
+          session: sessionId,
+        ),
+        initialDeviceDisplayName: 'Gloam (${Platform.operatingSystem})',
+      );
+    }
 
     _connectionState = GloamConnectionState.connected;
   }
@@ -177,6 +216,21 @@ class MatrixService {
       // Best-effort server logout
     }
     _connectionState = GloamConnectionState.disconnected;
+  }
+}
+
+/// AuthenticationData subclass that includes a registration token.
+class _RegistrationTokenAuth extends AuthenticationData {
+  final String token;
+
+  _RegistrationTokenAuth({super.session, required this.token})
+      : super(type: 'm.login.registration_token');
+
+  @override
+  Map<String, Object?> toJson() {
+    final json = super.toJson();
+    json['token'] = token;
+    return json;
   }
 }
 
