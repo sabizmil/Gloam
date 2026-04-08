@@ -36,6 +36,25 @@ final spacesProvider = StreamProvider<List<Room>>((ref) async* {
   }
 });
 
+/// Provides the list of pending space invites.
+final spaceInvitesProvider = StreamProvider<List<Room>>((ref) async* {
+  final client = ref.watch(matrixServiceProvider).client;
+  if (client == null) {
+    yield [];
+    return;
+  }
+
+  List<Room> getInvites() => client.rooms
+      .where((r) => r.isSpace && r.membership == Membership.invite)
+      .toList();
+
+  yield getInvites();
+
+  await for (final _ in client.onSync.stream) {
+    yield getInvites();
+  }
+});
+
 /// Vertical space rail — 64px wide, shows DMs button + space icons.
 class SpaceRail extends ConsumerWidget {
   const SpaceRail({super.key});
@@ -43,6 +62,7 @@ class SpaceRail extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final spacesAsync = ref.watch(spacesProvider);
+    final invitesAsync = ref.watch(spaceInvitesProvider);
     final selectedSpace = ref.watch(selectedSpaceProvider);
 
     return Container(
@@ -125,16 +145,60 @@ class SpaceRail extends ConsumerWidget {
             ),
           ),
 
-          // Spaces list
+          // Space invites + joined spaces list
           Expanded(
-            child: spacesAsync.when(
-              loading: () => const SizedBox.shrink(),
-              error: (e, s) => const SizedBox.shrink(),
-              data: (spaces) => ListView.builder(
+            child: Builder(builder: (context) {
+              final invites = invitesAsync.valueOrNull ?? [];
+              final spaces = spacesAsync.valueOrNull ?? [];
+              final totalCount = invites.length + spaces.length;
+
+              if (totalCount == 0) return const SizedBox.shrink();
+
+              return ListView.builder(
                 padding: const EdgeInsets.symmetric(vertical: 2),
-                itemCount: spaces.length,
+                itemCount: totalCount,
                 itemBuilder: (context, index) {
-                  final space = spaces[index];
+                  // Invites first, then joined spaces
+                  if (index < invites.length) {
+                    final invite = invites[index];
+                    final isActive = invite.id == selectedSpace;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          _SpaceIcon(
+                            child: GloamAvatar(
+                              displayName: invite.getLocalizedDisplayname(),
+                              size: 40,
+                              borderRadius: isActive ? 12 : 20,
+                            ),
+                            isActive: isActive,
+                            isDashed: true,
+                            tooltip: '${invite.getLocalizedDisplayname()} (invite)',
+                            onTap: () => ref
+                                .read(selectedSpaceProvider.notifier)
+                                .state = invite.id,
+                          ),
+                          Positioned(
+                            right: -2,
+                            top: -2,
+                            child: Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: context.gloam.accent,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  // Joined spaces
+                  final space = spaces[index - invites.length];
                   final isActive = space.id == selectedSpace;
 
                   // Count unread using hierarchy child IDs
@@ -187,8 +251,8 @@ class SpaceRail extends ConsumerWidget {
                     ),
                   );
                 },
-              ),
-            ),
+              );
+            }),
           ),
 
           // Divider

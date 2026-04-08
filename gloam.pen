@@ -40793,6 +40793,509 @@
           "fontWeight": "normal"
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "kcuXj",
+      "x": 5000,
+      "y": 1200,
+      "name": "Connection — Connecting",
+      "clip": true,
+      "width": 700,
+      "height": 200,
+      "fill": "$bg",
+      "cornerRadius": 12,
+      "stroke": {
+        "align": "inside",
+        "thickness": 1,
+        "fill": "$border"
+      },
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "fRl9L",
+          "name": "h1",
+          "width": "fill_container",
+          "height": 48,
+          "fill": "$bg",
+          "stroke": {
+            "align": "inside",
+            "thickness": {
+              "bottom": 1
+            },
+            "fill": "$border"
+          },
+          "gap": 8,
+          "padding": [
+            0,
+            20
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "C6AV1",
+              "name": "h1icon",
+              "fill": "$text-secondary",
+              "content": "#",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 16,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "4flKF",
+              "name": "h1col",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "I1VMA",
+                  "name": "h1name",
+                  "fill": "$text-primary",
+                  "content": "design",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "u8YuI",
+                  "name": "h1topic",
+                  "fill": "$text-tertiary",
+                  "content": "ux, product, and visual design",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "VcHSe",
+          "name": "bar1",
+          "width": "fill_container",
+          "height": 28,
+          "fill": "#7db88a1f",
+          "gap": 8,
+          "padding": [
+            0,
+            16
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "ellipse",
+              "id": "FXbBz",
+              "name": "dot1",
+              "fill": "$accent",
+              "width": 6,
+              "height": 6
+            },
+            {
+              "type": "text",
+              "id": "PUpaq",
+              "name": "bar1text",
+              "fill": "$accent",
+              "content": "Connecting...",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "r9cuj",
+          "name": "msg1",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "padding": 20,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "wX0S4",
+              "name": "msg1text",
+              "fill": "$text-tertiary",
+              "content": "Waiting for first sync...",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "FzIWB",
+      "x": 5740,
+      "y": 1200,
+      "name": "Connection — Reconnecting",
+      "clip": true,
+      "width": 700,
+      "height": 200,
+      "fill": "$bg",
+      "cornerRadius": 12,
+      "stroke": {
+        "align": "inside",
+        "thickness": 1,
+        "fill": "$border"
+      },
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "itUz8",
+          "name": "h2",
+          "width": "fill_container",
+          "height": 48,
+          "fill": "$bg",
+          "stroke": {
+            "align": "inside",
+            "thickness": {
+              "bottom": 1
+            },
+            "fill": "$border"
+          },
+          "gap": 8,
+          "padding": [
+            0,
+            20
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "iurV8",
+              "name": "h2icon",
+              "fill": "$text-secondary",
+              "content": "#",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 16,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "SThBg",
+              "name": "h2col",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "3vZdS",
+                  "name": "h2name",
+                  "fill": "$text-primary",
+                  "content": "design",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "zG3uh",
+                  "name": "h2topic",
+                  "fill": "$text-tertiary",
+                  "content": "ux, product, and visual design",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "663kW",
+          "name": "bar2",
+          "width": "fill_container",
+          "height": 28,
+          "fill": "#c4a35c1f",
+          "gap": 8,
+          "padding": [
+            0,
+            16
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "ellipse",
+              "id": "K45tN",
+              "name": "dot2",
+              "fill": "$warning",
+              "width": 6,
+              "height": 6
+            },
+            {
+              "type": "text",
+              "id": "KDqHn",
+              "name": "bar2text",
+              "fill": "$warning",
+              "content": "Reconnecting...",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "N9nW3",
+          "name": "msgs2",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": [
+            12,
+            20
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "89jK8",
+              "name": "m2a",
+              "width": "fill_container",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "Wh6pL",
+                  "name": "m2av",
+                  "fill": "$accent-dim",
+                  "width": 28,
+                  "height": 28
+                },
+                {
+                  "type": "frame",
+                  "id": "R3YnM",
+                  "name": "m2col",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 3,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "l2drO",
+                      "name": "m2name",
+                      "fill": "$text-secondary",
+                      "content": "mara voss  11:42 am",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "O82y8",
+                      "name": "m2body",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "I've been looking at the navigation patterns in the competitive analysis...",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "kTW3k",
+      "x": 6480,
+      "y": 1200,
+      "name": "Connection — Disconnected",
+      "clip": true,
+      "width": 700,
+      "height": 200,
+      "fill": "$bg",
+      "cornerRadius": 12,
+      "stroke": {
+        "align": "inside",
+        "thickness": 1,
+        "fill": "$border"
+      },
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "nkzQy",
+          "name": "h3",
+          "width": "fill_container",
+          "height": 48,
+          "fill": "$bg",
+          "stroke": {
+            "align": "inside",
+            "thickness": {
+              "bottom": 1
+            },
+            "fill": "$border"
+          },
+          "gap": 8,
+          "padding": [
+            0,
+            20
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "VhKsu",
+              "name": "h3icon",
+              "fill": "$text-secondary",
+              "content": "#",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 16,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "u6EMt",
+              "name": "h3col",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "CfGQe",
+                  "name": "h3name",
+                  "fill": "$text-primary",
+                  "content": "design",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "sVccW",
+                  "name": "h3topic",
+                  "fill": "$text-tertiary",
+                  "content": "ux, product, and visual design",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "eTzI9",
+          "name": "bar3",
+          "width": "fill_container",
+          "height": 28,
+          "fill": "#c45c5c1f",
+          "gap": 8,
+          "padding": [
+            0,
+            16
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "ellipse",
+              "id": "SbDJH",
+              "name": "dot3",
+              "fill": "$danger",
+              "width": 6,
+              "height": 6
+            },
+            {
+              "type": "text",
+              "id": "dwu5X",
+              "name": "bar3text",
+              "fill": "$danger",
+              "content": "Disconnected — check your connection",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "PhBKA",
+          "name": "msgs3",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": [
+            12,
+            20
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "KzPvw",
+              "name": "m3a",
+              "opacity": 0.5,
+              "width": "fill_container",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "mW7O3",
+                  "name": "m3av",
+                  "fill": "$accent-dim",
+                  "width": 28,
+                  "height": 28
+                },
+                {
+                  "type": "frame",
+                  "id": "c52TM",
+                  "name": "m3col",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 3,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "XvlbB",
+                      "name": "m3name",
+                      "fill": "$text-secondary",
+                      "content": "mara voss  11:42 am",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "KJ4oK",
+                      "name": "m3body",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "I've been looking at the navigation patterns in the competitive analysis...",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "variables": {

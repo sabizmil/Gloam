@@ -156,9 +156,15 @@ class _RecoveryKeyDialogState extends ConsumerState<RecoveryKeyDialog> {
         }
       }
 
-      // Invalidate all active timeline providers so they reload from DB
+      // Notify active timeline providers to re-attempt decryption
+      // with the newly available keys. Avoids ref.invalidate which can
+      // trigger defunct element crashes during provider recreation.
       for (final room in client.rooms) {
-        ref.invalidate(timelineProvider(room.id));
+        try {
+          ref.read(timelineProvider(room.id).notifier).retryDecryption();
+        } catch (_) {
+          // Provider not active for this room — skip
+        }
       }
 
       if (!mounted) return;

@@ -37,6 +37,7 @@ class TimelineMessage {
   final Uri? thumbnailUrl;
   final bool isThreadReply;
   final String? threadRootEventId;
+  final DecryptFailure decryptFailure;
 
   const TimelineMessage({
     required this.eventId,
@@ -65,12 +66,23 @@ class TimelineMessage {
     this.thumbnailUrl,
     this.isThreadReply = false,
     this.threadRootEventId,
+    this.decryptFailure = DecryptFailure.none,
   });
 
   bool get isLocalEcho => eventId.startsWith('~');
 }
 
 enum MessageSendState { sending, sent, error }
+
+/// Why a message couldn't be decrypted.
+enum DecryptFailure {
+  /// Not encrypted or decrypted successfully.
+  none,
+  /// Sent before the user joined — expected, keys were never shared.
+  preJoin,
+  /// Sent after the user joined — unexpected, key exchange failure.
+  postJoin,
+}
 
 class ReactionGroup {
   final String emoji;
@@ -222,6 +234,38 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     }
   }
 
+  /// Request the decryption key for a specific event from other devices.
+  void requestKeyForEvent(String eventId) {
+    final timeline = _timeline;
+    final encryption = _client.encryption;
+    if (timeline == null || encryption == null) return;
+
+    try {
+      final event = timeline.events.firstWhere(
+        (e) => e.eventId == eventId,
+      );
+      final sessionId = event.content.tryGet<String>('session_id');
+      final senderKey = event.content.tryGet<String>('sender_key');
+      if (sessionId != null && senderKey != null) {
+        encryption.keyManager.maybeAutoRequest(
+          _roomId,
+          sessionId,
+          senderKey,
+          tryOnlineBackup: true,
+          onlineKeyBackupOnly: false,
+        );
+      }
+    } catch (_) {
+      // Event not found in timeline
+    }
+  }
+
+  /// Re-attempt decryption after new keys become available (e.g., recovery key entry).
+  void retryDecryption() {
+    _decrypting = false;
+    _tryDecryptAndRebuild();
+  }
+
   Future<void> _tryDecryptAndRebuild() async {
     final timeline = _timeline;
     final encryption = _client.encryption;
@@ -270,6 +314,20 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     final myUserId = _client.userID;
     final seenEventIds = <String>{};
 
+    // Get user's join timestamp for classifying undecryptable messages.
+    // Look through timeline events for the user's join membership event.
+    DateTime? myJoinTimestamp;
+    if (myUserId != null) {
+      for (final event in timeline.events) {
+        if (event.type == EventTypes.RoomMember &&
+            event.stateKey == myUserId &&
+            event.content['membership'] == 'join') {
+          myJoinTimestamp = event.originServerTs;
+          break; // First (most recent) join event
+        }
+      }
+    }
+
     for (final event in timeline.events) {
       // Skip edit and reaction relation events — they're aggregated
       // into their parent events, not displayed standalone
@@ -291,7 +349,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
       if (displayEvent.type == EventTypes.Message ||
           displayEvent.type == EventTypes.Encrypted ||
           displayEvent.type == EventTypes.Sticker) {
-        messages.add(_mapEvent(displayEvent, myUserId));
+        messages.add(_mapEvent(displayEvent, myUserId, myJoinTimestamp));
         continue;
       }
 
@@ -382,7 +440,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     return event.calcUnlocalizedBody(hideReply: true, hideEdit: true);
   }
 
-  TimelineMessage _mapEvent(Event event, String? myUserId) {
+  TimelineMessage _mapEvent(Event event, String? myUserId, DateTime? myJoinTimestamp) {
     // Handle replies and threads
     String? replyToEventId;
     String? replyToSenderName;
@@ -469,8 +527,16 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     // Determine message type — if the event is still encrypted
     // (decryption failed), show as undecryptable rather than raw text.
     String type;
+    var decryptFailure = DecryptFailure.none;
     if (event.type == EventTypes.Encrypted) {
       type = 'm.bad_encrypted';
+      // Classify: pre-join (expected) vs post-join (unexpected)
+      if (myJoinTimestamp != null &&
+          event.originServerTs.isBefore(myJoinTimestamp)) {
+        decryptFailure = DecryptFailure.preJoin;
+      } else {
+        decryptFailure = DecryptFailure.postJoin;
+      }
     } else {
       final msgType = event.messageType;
       switch (msgType) {
@@ -541,6 +607,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
       fileSendingStatus:
           event.unsigned?[fileSendingStatusKey] as String?,
       thumbnailUrl: event.thumbnailMxcUrl,
+      decryptFailure: decryptFailure,
     );
   }
 
@@ -1172,6 +1239,18 @@ final timelineProvider = StateNotifierProvider.family<TimelineNotifier,
     return TimelineNotifier(client, roomId, searchService);
   },
 );
+
+/// Whether key backup exists but the recovery key hasn't been entered yet.
+/// When true, undecryptable pre-join messages may be recoverable.
+final canRecoverKeysProvider = Provider<bool>((ref) {
+  final client = ref.watch(matrixServiceProvider).client;
+  if (client?.encryption == null) return false;
+  final hasBackup = client!.encryption!.keyManager.enabled;
+  final crossSigningEnabled = client.encryption!.crossSigning.enabled;
+  // If backup exists but cross-signing isn't verified, the user likely
+  // hasn't entered their recovery key yet.
+  return hasBackup && !crossSigningEnabled;
+});
 
 /// Currently selected room ID.
 final selectedRoomProvider = StateProvider<String?>((ref) => null);

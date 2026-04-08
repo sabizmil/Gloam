@@ -526,8 +526,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           isDirect: room?.isDirectChat ?? false,
           roomId: widget.roomId,
           hasUndecryptable: messages.any((m) =>
-              m.body.contains('sender has not sent us the session key') ||
-              m.body == 'Encrypted message'),
+              m.decryptFailure != DecryptFailure.none),
           onSearchTap: () => ref.read(rightPanelProvider.notifier).state =
               const RightPanelState(view: RightPanelView.search),
           onInfoTap: () => ref.read(rightPanelProvider.notifier).state =
@@ -639,6 +638,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         DateSeparator(date: msg.timestamp),
                       if (msg.type == 'state')
                         _StateEventRow(body: msg.body)
+                      else if (msg.type == 'm.bad_encrypted')
+                        _EncryptedIndicator(
+                          message: msg,
+                          canRecover: ref.watch(canRecoverKeysProvider),
+                          onRecoveryTap: () => showRecoveryKeyDialog(context),
+                          onRequestKey: () => ref
+                              .read(timelineProvider(widget.roomId).notifier)
+                              .requestKeyForEvent(msg.eventId),
+                        )
                       else
                       GestureDetector(
                         onLongPress: () => _showMessageActions(context, msg,
@@ -1459,6 +1467,119 @@ class _StateEventRow extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact inline indicator for undecryptable messages.
+class _EncryptedIndicator extends StatefulWidget {
+  const _EncryptedIndicator({
+    required this.message,
+    required this.canRecover,
+    required this.onRecoveryTap,
+    required this.onRequestKey,
+  });
+
+  final TimelineMessage message;
+  final bool canRecover;
+  final VoidCallback onRecoveryTap;
+  final VoidCallback onRequestKey;
+
+  @override
+  State<_EncryptedIndicator> createState() => _EncryptedIndicatorState();
+}
+
+class _EncryptedIndicatorState extends State<_EncryptedIndicator> {
+  bool _keyRequested = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.gloam;
+    final isPreJoin = widget.message.decryptFailure == DecryptFailure.preJoin;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
+      child: Row(
+        children: [
+          Icon(
+            Icons.lock_outline,
+            size: 12,
+            color: isPreJoin ? colors.textTertiary : colors.warning,
+          ),
+          const SizedBox(width: 6),
+          if (isPreJoin) ...[
+            // Pre-join: expected
+            if (widget.canRecover) ...[
+              Text(
+                'Encrypted — ',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: colors.textTertiary,
+                ),
+              ),
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: widget.onRecoveryTap,
+                  child: Text(
+                    'enter your recovery key to view',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: colors.accent,
+                    ),
+                  ),
+                ),
+              ),
+            ] else
+              Text(
+                'Encrypted — sent before you joined',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: colors.textTertiary,
+                ),
+              ),
+          ] else ...[
+            // Post-join: unexpected
+            Text(
+              'Unable to decrypt',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: colors.warning,
+              ),
+            ),
+            if (!_keyRequested) ...[
+              const SizedBox(width: 8),
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: () {
+                    widget.onRequestKey();
+                    setState(() => _keyRequested = true);
+                  },
+                  child: Text(
+                    'Request key',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: colors.accent,
+                    ),
+                  ),
+                ),
+              ),
+            ] else
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Text(
+                  'Key requested...',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: colors.textTertiary,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+          ],
         ],
       ),
     );

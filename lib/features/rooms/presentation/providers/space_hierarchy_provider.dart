@@ -51,11 +51,37 @@ class SpaceRoom {
   bool get isInviteOnly => joinRule == 'invite' || joinRule == 'private';
 }
 
+/// Tracks the set of space child IDs for a given space.
+/// When a child is added or removed (via m.space.child state events in sync),
+/// the set changes, which invalidates the hierarchy cache.
+final _spaceChildCountProvider =
+    StreamProvider.family<int, String>((ref, spaceId) async* {
+  final client = ref.read(matrixServiceProvider).client;
+  if (client == null) {
+    yield 0;
+    return;
+  }
+
+  int getChildCount() {
+    final space = client.getRoomById(spaceId);
+    return space?.spaceChildren.length ?? 0;
+  }
+
+  yield getChildCount();
+
+  await for (final _ in client.onSync.stream) {
+    yield getChildCount();
+  }
+});
+
 /// Raw hierarchy data from the server — cached, only re-fetches on invalidate.
 final _rawSpaceHierarchyProvider =
     FutureProvider.family<List<SpaceRoom>, String>((ref, spaceId) async {
   final client = ref.read(matrixServiceProvider).client;
   if (client == null) return [];
+
+  // Watch space child count — refetch hierarchy when children change
+  ref.watch(_spaceChildCountProvider(spaceId));
 
   try {
     // maxDepth not set = unlimited depth, resolves nested sub-spaces fully
