@@ -1,7 +1,7 @@
 name: gloam
 description: A Matrix chat client built for the twilight.
 publish_to: 'none'
-version: 0.5.2+21
+version: 0.5.3+22
 
 environment:
   sdk: ^3.11.3
@@ -74,6 +74,8 @@ dependencies:
   windows_taskbar: ^1.1.2
   flutter_markdown: ^0.7.7+1
   flutter_highlight: ^0.7.0
+  flutter_widget_from_html_core: ^0.15.2
+  html: ^0.15.0
 
 dev_dependencies:
   flutter_test:
