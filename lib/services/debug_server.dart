@@ -1,23 +1,36 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:matrix/matrix.dart';
 
+/// Whether this is a dev build (set via --dart-define=IS_DEV=true).
+const _isDev = bool.fromEnvironment('IS_DEV');
+
 /// Lightweight HTTP server exposing app state for debugging.
 ///
 /// Only runs in debug mode. Listens on localhost:9999.
 /// Query with curl from the terminal to inspect rooms, voice state, etc.
+///
+/// Content-level endpoints (messages, event payloads) are only available
+/// when IS_DEV=true to prevent accidental exposure in production debug builds.
 class DebugServer {
   DebugServer({required Client client}) : _client = client;
 
   final Client _client;
   HttpServer? _server;
+  StreamSubscription? _syncSub;
   static final List<String> logs = [];
+
+  /// Rolling buffer of recent Matrix events (last 500).
+  static const _maxEvents = 500;
+  final List<Map<String, dynamic>> _eventBuffer = [];
 
   /// Registry for active TimelineNotifiers — populated by the provider.
   /// Key is roomId, value is the notifier's debugState getter.
-  static final Map<String, Map<String, dynamic> Function()> timelineRegistry = {};
+  static final Map<String, Map<String, dynamic> Function()> timelineRegistry =
+      {};
 
   /// Start the debug server. No-op in release mode.
   Future<void> start({int port = 9999}) async {
@@ -27,14 +40,94 @@ class DebugServer {
       _server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
       debugPrint('[debug-server] listening on http://localhost:$port');
       _server!.listen(_handleRequest);
+
+      // Tap into the sync stream to capture events
+      _syncSub = _client.onSync.stream.listen(_captureSyncEvents);
     } catch (e) {
       debugPrint('[debug-server] failed to start: $e');
     }
   }
 
+  /// Capture events from each sync response into the rolling buffer.
+  void _captureSyncEvents(SyncUpdate sync) {
+    // Room timeline events (join)
+    final joinRooms = sync.rooms?.join;
+    if (joinRooms != null) {
+      for (final entry in joinRooms.entries) {
+        final roomId = entry.key;
+        final room = _client.getRoomById(roomId);
+        final roomName = room?.getLocalizedDisplayname() ?? roomId;
+
+        // Timeline events
+        for (final event in entry.value.timeline?.events ?? <MatrixEvent>[]) {
+          _pushEvent(event, roomId, roomName, 'timeline');
+        }
+
+        // State events
+        for (final event in entry.value.state ?? <MatrixEvent>[]) {
+          _pushEvent(event, roomId, roomName, 'state');
+        }
+      }
+    }
+
+    // Invite events
+    final inviteRooms = sync.rooms?.invite;
+    if (inviteRooms != null) {
+      for (final entry in inviteRooms.entries) {
+        final roomId = entry.key;
+        for (final event in entry.value.inviteState ?? <StrippedStateEvent>[]) {
+          _eventBuffer.add({
+            'ts': DateTime.now().toIso8601String(),
+            'source': 'invite',
+            'roomId': roomId,
+            'roomName': roomId,
+            'type': event.type,
+            'stateKey': event.stateKey,
+            'sender': event.senderId,
+            'content': event.content,
+          });
+        }
+      }
+    }
+
+    // Leave events
+    final leaveRooms = sync.rooms?.leave;
+    if (leaveRooms != null) {
+      for (final entry in leaveRooms.entries) {
+        final roomId = entry.key;
+        for (final event
+            in entry.value.timeline?.events ?? <MatrixEvent>[]) {
+          _pushEvent(event, roomId, roomId, 'leave');
+        }
+      }
+    }
+
+    // Trim buffer
+    while (_eventBuffer.length > _maxEvents) {
+      _eventBuffer.removeAt(0);
+    }
+  }
+
+  void _pushEvent(
+      MatrixEvent event, String roomId, String roomName, String source) {
+    _eventBuffer.add({
+      'ts': event.originServerTs.toIso8601String(),
+      'eventId': event.eventId,
+      'source': source,
+      'roomId': roomId,
+      'roomName': roomName,
+      'type': event.type,
+      'sender': event.senderId,
+      'stateKey': event.stateKey,
+      'content': event.content,
+      'unsigned': event.unsigned,
+    });
+  }
+
   Future<void> _handleRequest(HttpRequest request) async {
     final path = request.uri.path;
     final segments = request.uri.pathSegments;
+    final params = request.uri.queryParameters;
 
     try {
       final result = switch (path) {
@@ -45,13 +138,37 @@ class DebugServer {
         '/debug/spaces' => _spaces(),
         '/debug/logs' => {'logs': logs},
         '/debug/hierarchy' => await _hierarchy(),
-        '/debug/logs/clear' => () { logs.clear(); return {'cleared': true}; }(),
+        '/debug/logs/clear' => () {
+            logs.clear();
+            return {'cleared': true};
+          }(),
         '/debug/timelines' => Map.fromEntries(
             timelineRegistry.entries.map((e) => MapEntry(e.key, e.value()))),
+
+        // --- Content-level endpoints (dev-only) ---
+        '/debug/events' => _isDev
+            ? _events(params)
+            : {'error': 'Content endpoints require IS_DEV=true'},
+        '/debug/invites' => _isDev
+            ? _invites()
+            : {'error': 'Content endpoints require IS_DEV=true'},
+
+        _ when _isDev &&
+            segments.length == 4 &&
+            segments[0] == 'debug' &&
+            segments[1] == 'room' &&
+            segments[3] == 'messages' =>
+          _roomMessages(Uri.decodeComponent(segments[2]), params),
+        _ when _isDev &&
+            segments.length == 3 &&
+            segments[0] == 'debug' &&
+            segments[1] == 'event' =>
+          _singleEvent(Uri.decodeComponent(segments[2])),
         _ when segments.length == 3 &&
             segments[0] == 'debug' &&
             segments[1] == 'room' =>
           _roomDetail(Uri.decodeComponent(segments[2])),
+
         _ => {'error': 'Unknown endpoint', 'endpoints': _endpoints()},
       };
 
@@ -70,16 +187,25 @@ class DebugServer {
   }
 
   List<String> _endpoints() => [
-        'GET /debug/rooms         — all rooms summary',
-        'GET /debug/room/{id}     — room detail + state events',
-        'GET /debug/voice         — voice connection state',
-        'GET /debug/user          — current user info',
-        'GET /debug/sync          — sync status',
-        'GET /debug/spaces        — space hierarchy',
+        'GET /debug/rooms              — all rooms summary',
+        'GET /debug/room/{id}          — room detail + state events',
+        'GET /debug/voice              — voice connection state',
+        'GET /debug/user               — current user info',
+        'GET /debug/sync               — sync status',
+        'GET /debug/spaces             — space hierarchy',
+        'GET /debug/timelines          — active timeline notifiers',
+        'GET /debug/logs               — app logs',
+        'GET /debug/logs/clear         — clear logs',
+        if (_isDev) ...[
+          'GET /debug/events            — recent events (?limit=N&sender=X&type=X&room=X)',
+          'GET /debug/room/{id}/messages — message content in room (?limit=N)',
+          'GET /debug/invites           — pending + recent invites',
+          'GET /debug/event/{id}        — single event by ID',
+        ],
       ];
 
   // ---------------------------------------------------------------------------
-  // Endpoints
+  // Core endpoints
   // ---------------------------------------------------------------------------
 
   List<Map<String, dynamic>> _rooms() {
@@ -118,7 +244,7 @@ class DebugServer {
     final room = _client.getRoomById(roomId);
     if (room == null) return {'error': 'Room not found', 'roomId': roomId};
 
-    final createEvent = r(room, EventTypes.RoomCreate);
+    final createEvent = _r(room, EventTypes.RoomCreate);
 
     return {
       'id': room.id,
@@ -147,7 +273,6 @@ class DebugServer {
   }
 
   Map<String, dynamic> _voice() {
-    // Scan all rooms for m.rtc.member or call.member state events
     final voiceRooms = <Map<String, dynamic>>[];
 
     for (final room in _client.rooms) {
@@ -232,12 +357,12 @@ class DebugServer {
       try {
         final resp = await _client.getSpaceHierarchy(space.id, maxDepth: 10);
         results[space.getLocalizedDisplayname()] = resp.rooms.map((r) => {
-          'roomId': r.roomId,
-          'name': r.name,
-          'roomType': r.roomType,
-          'numJoinedMembers': r.numJoinedMembers,
-          'joinRule': r.joinRule,
-        }).toList();
+              'roomId': r.roomId,
+              'name': r.name,
+              'roomType': r.roomType,
+              'numJoinedMembers': r.numJoinedMembers,
+              'joinRule': r.joinRule,
+            }).toList();
       } catch (e) {
         results[space.getLocalizedDisplayname()] = {'error': '$e'};
       }
@@ -246,11 +371,131 @@ class DebugServer {
   }
 
   // ---------------------------------------------------------------------------
+  // Content-level endpoints (dev-only)
+  // ---------------------------------------------------------------------------
+
+  /// Recent events from the rolling buffer with optional filters.
+  ///
+  /// Query params:
+  ///   ?limit=N       — max events to return (default 50)
+  ///   ?sender=@user  — filter by sender
+  ///   ?type=m.room.message — filter by event type
+  ///   ?room=!roomId  — filter by room ID
+  Map<String, dynamic> _events(Map<String, String> params) {
+    final limit = int.tryParse(params['limit'] ?? '') ?? 50;
+    final sender = params['sender'];
+    final type = params['type'];
+    final roomId = params['room'];
+
+    var events = _eventBuffer.reversed.toList();
+
+    if (sender != null) {
+      events = events.where((e) => e['sender'] == sender).toList();
+    }
+    if (type != null) {
+      events = events.where((e) => e['type'] == type).toList();
+    }
+    if (roomId != null) {
+      events = events.where((e) => e['roomId'] == roomId).toList();
+    }
+
+    final result = events.take(limit).toList();
+
+    return {
+      'count': result.length,
+      'totalBuffered': _eventBuffer.length,
+      'filters': {
+        if (sender != null) 'sender': sender,
+        if (type != null) 'type': type,
+        if (roomId != null) 'room': roomId,
+      },
+      'events': result,
+    };
+  }
+
+  /// Messages in a specific room from the event buffer.
+  Map<String, dynamic> _roomMessages(
+      String roomId, Map<String, String> params) {
+    final room = _client.getRoomById(roomId);
+    if (room == null) return {'error': 'Room not found', 'roomId': roomId};
+
+    final limit = int.tryParse(params['limit'] ?? '') ?? 50;
+
+    // Get message events from the buffer for this room
+    final messages = _eventBuffer.reversed
+        .where((e) =>
+            e['roomId'] == roomId && e['type'] == 'm.room.message')
+        .take(limit)
+        .toList();
+
+    // Get all events (any type) from the buffer for this room
+    final allEvents = _eventBuffer.reversed
+        .where((e) => e['roomId'] == roomId)
+        .take(limit)
+        .toList();
+
+    return {
+      'roomId': roomId,
+      'roomName': room.getLocalizedDisplayname(),
+      'encrypted': room.encrypted,
+      'lastEvent': room.lastEvent?.body,
+      'lastEventType': room.lastEvent?.type,
+      'messages': messages,
+      'allEvents': allEvents,
+    };
+  }
+
+  /// Pending and recent invite events.
+  Map<String, dynamic> _invites() {
+    // Current pending invites from the client
+    final pendingInvites = _client.rooms
+        .where((r) => r.membership == Membership.invite)
+        .map((r) {
+      final inviter = r.getState(EventTypes.RoomMember, _client.userID ?? '');
+      return {
+        'roomId': r.id,
+        'roomName': r.getLocalizedDisplayname(),
+        'isSpace': r.isSpace,
+        'isDirect': r.isDirectChat,
+        'inviter': inviter?.senderId,
+        'inviterName': inviter?.content['displayname'],
+        'ts': (inviter is MatrixEvent) ? inviter.originServerTs.toIso8601String() : null,
+        'processed': false,
+      };
+    }).toList();
+
+    // Recent invite events from the buffer
+    final recentInviteEvents = _eventBuffer.reversed
+        .where((e) => e['source'] == 'invite')
+        .take(20)
+        .toList();
+
+    return {
+      'pending': pendingInvites,
+      'recentFromBuffer': recentInviteEvents,
+    };
+  }
+
+  /// Look up a single event by ID from the buffer.
+  Map<String, dynamic> _singleEvent(String eventId) {
+    final event = _eventBuffer.firstWhere(
+      (e) => e['eventId'] == eventId,
+      orElse: () => <String, dynamic>{},
+    );
+
+    if (event.isEmpty) {
+      return {'error': 'Event not found in buffer', 'eventId': eventId};
+    }
+
+    return event;
+  }
+
+  // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
 
   /// Get the content of a state event by type.
-  Map<String, dynamic>? r(Room room, String eventType) {
+  Map<String, dynamic>? _r(Room room, String eventType) {
     final event = room.getState(eventType);
     return event?.content;
   }
@@ -291,6 +536,7 @@ class DebugServer {
 
   /// Stop the debug server.
   Future<void> dispose() async {
+    await _syncSub?.cancel();
     await _server?.close();
     _server = null;
   }

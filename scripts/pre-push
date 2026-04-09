@@ -1,0 +1,20 @@
+#!/bin/bash
+# Git pre-push hook — blocks push if tests or analysis fail.
+# Install: cp scripts/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+# Or run: ./scripts/setup-hooks.sh
+
+set -e
+
+echo "Running pre-push checks..."
+
+# Run static analysis (exits non-zero on errors, ignores infos/warnings)
+echo "→ flutter analyze"
+fvm flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
+echo "✓ Analysis passed"
+
+# Run service tests (the unit test suite)
+echo "→ flutter test"
+fvm flutter test test/services/
+echo "✓ Tests passed"
+
+echo "✓ All pre-push checks passed"

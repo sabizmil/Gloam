@@ -287,7 +287,32 @@ class SpaceRail extends ConsumerWidget {
               onTap: () => showSettingsModal(ctx),
             ),
           ),
-          const SizedBox(height: 16),
+          // DEV badge — only visible in dev builds
+          if (const bool.fromEnvironment('IS_DEV'))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: context.gloam.warning.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: context.gloam.warning.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Text(
+                  'DEV',
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: context.gloam.warning,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+            )
+          else
+            const SizedBox(height: 16),
         ],
       ),
     );

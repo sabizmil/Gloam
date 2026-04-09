@@ -1,2 +1,7 @@
 #include "../../Flutter/Flutter-Debug.xcconfig"
 #include "Warnings.xcconfig"
+
+// Use a separate bundle ID for debug builds so dev and production
+// can run side by side without macOS confusing them.
+PRODUCT_BUNDLE_IDENTIFIER = chat.gloam.gloam.dev
+PRODUCT_NAME = Gloam Dev

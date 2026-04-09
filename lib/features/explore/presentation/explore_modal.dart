@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../app/theme/gloam_color_extension.dart';
 import '../../../app/theme/gloam_theme_ext.dart';
 import '../../../app/theme/spacing.dart';
 import '../../../services/matrix_service.dart';
 import '../../chat/presentation/providers/timeline_provider.dart';
+import '../../spaces/presentation/create_space_wizard.dart';
+import '../../spaces/providers/space_operation_provider.dart';
 import '../providers/explore_provider.dart';
 import 'widgets/public_room_tile.dart';
 import 'widgets/server_selector.dart';
@@ -34,6 +37,7 @@ class _ExploreModalState extends ConsumerState<_ExploreModal>
   final _scrollController = ScrollController();
   String? _joinByAddressError;
   String? _joinByAddressSuccess;
+  bool _showCreateWizard = false;
 
   @override
   void initState() {
@@ -164,19 +168,27 @@ class _ExploreModalState extends ConsumerState<_ExploreModal>
                         ref.read(exploreProvider.notifier).joinRoom(roomId),
                     onOpen: _openRoom,
                   ),
-                  _BrowseTab(
-                    state: state,
-                    homeServer: homeServer,
-                    searchController: _searchController,
-                    scrollController: _scrollController,
-                    onServerChanged: (s) =>
-                        ref.read(exploreProvider.notifier).setServer(s),
-                    onSearchChanged: (q) =>
-                        ref.read(exploreProvider.notifier).setSearchQuery(q),
-                    onJoin: (roomId) =>
-                        ref.read(exploreProvider.notifier).joinRoom(roomId),
-                    onOpen: _openRoom,
-                  ),
+                  _showCreateWizard
+                      ? CreateSpaceWizard(
+                          onBack: () =>
+                              setState(() => _showCreateWizard = false),
+                        )
+                      : _SpacesTab(
+                          state: state,
+                          homeServer: homeServer,
+                          searchController: _searchController,
+                          scrollController: _scrollController,
+                          onServerChanged: (s) =>
+                              ref.read(exploreProvider.notifier).setServer(s),
+                          onSearchChanged: (q) => ref
+                              .read(exploreProvider.notifier)
+                              .setSearchQuery(q),
+                          onJoin: (roomId) =>
+                              ref.read(exploreProvider.notifier).joinRoom(roomId),
+                          onOpen: _openRoom,
+                          onCreateSpace: () =>
+                              setState(() => _showCreateWizard = true),
+                        ),
                   _JoinByAddressTab(
                     controller: _addressController,
                     error: _joinByAddressError,
@@ -454,6 +466,240 @@ class _BrowseTab extends StatelessWidget {
       return '${(count / 1000).toStringAsFixed(count >= 10000 ? 0 : 1)}k';
     }
     return '$count';
+  }
+}
+
+// =============================================================================
+// Spaces tab — wraps BrowseTab with Create Space CTA and progress banner
+// =============================================================================
+
+class _SpacesTab extends ConsumerWidget {
+  const _SpacesTab({
+    required this.state,
+    required this.homeServer,
+    required this.searchController,
+    required this.scrollController,
+    required this.onServerChanged,
+    required this.onSearchChanged,
+    required this.onJoin,
+    required this.onOpen,
+    required this.onCreateSpace,
+  });
+
+  final ExploreState state;
+  final String homeServer;
+  final TextEditingController searchController;
+  final ScrollController scrollController;
+  final ValueChanged<String> onServerChanged;
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<String> onJoin;
+  final ValueChanged<String> onOpen;
+  final VoidCallback onCreateSpace;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.gloam;
+    final opState = ref.watch(spaceOperationProvider);
+    final showProgressBanner = opState.type == OperationType.create &&
+        !opState.isComplete &&
+        opState.spaceId != null;
+
+    // If no results and not loading, show empty state with prominent CTA
+    if (!state.isLoading &&
+        state.rooms.isEmpty &&
+        state.searchQuery.isEmpty &&
+        state.error == null) {
+      return Column(
+        children: [
+          if (showProgressBanner) _buildProgressBanner(colors, opState),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: colors.bgElevated,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Center(
+                      child: Icon(Icons.workspaces_outlined,
+                          size: 28, color: colors.accent),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'No spaces yet',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Create a space to organize your rooms and people',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: colors.textTertiary,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  GestureDetector(
+                    onTap: onCreateSpace,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: colors.accentDim,
+                        borderRadius:
+                            BorderRadius.circular(GloamSpacing.radiusMd),
+                        border: Border.all(color: colors.accent),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add, size: 16, color: colors.accent),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Create Space',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: colors.accent,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Normal browse with CTA at top
+    return Column(
+      children: [
+        if (showProgressBanner) _buildProgressBanner(colors, opState),
+        // Create Space CTA row
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+          child: GestureDetector(
+            onTap: onCreateSpace,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: colors.bgElevated,
+                borderRadius:
+                    BorderRadius.circular(GloamSpacing.radiusMd),
+                border: Border.all(color: colors.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: colors.accentDim,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Icon(Icons.add,
+                          size: 16, color: colors.accent),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Create a space',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          'Organize rooms and people',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: colors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right,
+                      size: 18, color: colors.textTertiary),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // Server selector + search + results
+        Expanded(
+          child: _BrowseTab(
+            state: state,
+            homeServer: homeServer,
+            searchController: searchController,
+            scrollController: scrollController,
+            onServerChanged: onServerChanged,
+            onSearchChanged: onSearchChanged,
+            onJoin: onJoin,
+            onOpen: onOpen,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgressBanner(
+      GloamColorExtension colors, SpaceOperationState opState) {
+    final currentStep = opState.steps
+        .where((s) => s.status == StepStatus.running)
+        .firstOrNull;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colors.accentDim,
+        borderRadius: BorderRadius.circular(GloamSpacing.radiusMd),
+        border: Border.all(color: colors.accent.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: colors.accent,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              currentStep != null
+                  ? 'Creating ${opState.spaceName}: ${currentStep.label}...'
+                  : 'Creating ${opState.spaceName}...',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: colors.accent,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

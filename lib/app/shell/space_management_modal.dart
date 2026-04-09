@@ -9,6 +9,7 @@ import '../../features/chat/presentation/providers/timeline_provider.dart';
 import '../../features/rooms/presentation/providers/space_hierarchy_provider.dart';
 import '../../features/rooms/presentation/widgets/create_room_dialog.dart';
 import '../../features/rooms/presentation/widgets/invite_dialog.dart';
+import '../../features/spaces/presentation/delete_space_dialog.dart';
 import '../../services/matrix_service.dart';
 import '../../widgets/gloam_avatar.dart';
 import 'right_panel.dart';
@@ -552,6 +553,26 @@ class _SettingsTab extends StatelessWidget {
               ),
             ),
           ),
+        // Danger zone — admin only
+        if (space.ownPowerLevel >= 100) ...[
+          const SizedBox(height: 32),
+          Divider(color: colors.border),
+          const SizedBox(height: 16),
+          Text(
+            '// danger zone',
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 10,
+              color: colors.danger,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _ActionChip(
+            label: 'delete space',
+            color: colors.danger,
+            onTap: () => showDeleteSpaceDialog(context, space.id),
+          ),
+        ],
       ],
     );
   }

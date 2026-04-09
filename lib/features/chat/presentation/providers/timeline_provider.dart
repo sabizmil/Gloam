@@ -414,7 +414,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
   }
 
   /// Fast check: do the new messages match the current state?
-  /// Compares event IDs, redacted status, edit status, and reaction counts
+  /// Compares event IDs, redacted status, edit status, and reaction details
   /// to detect meaningful changes without deep equality.
   bool _stateUnchanged(List<TimelineMessage> newState) {
     final old = state;
@@ -425,8 +425,24 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
           old[i].redactedCount != newState[i].redactedCount ||
           old[i].isEdited != newState[i].isEdited ||
           old[i].body != newState[i].body ||
-          old[i].reactions.length != newState[i].reactions.length ||
-          old[i].sendState != newState[i].sendState) {
+          old[i].sendState != newState[i].sendState ||
+          !_reactionsEqual(old[i].reactions, newState[i].reactions)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static bool _reactionsEqual(
+    Map<String, ReactionGroup> a,
+    Map<String, ReactionGroup> b,
+  ) {
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      final other = b[entry.key];
+      if (other == null ||
+          other.count != entry.value.count ||
+          other.includesMe != entry.value.includesMe) {
         return false;
       }
     }
