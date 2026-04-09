@@ -347,7 +347,7 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    needs: [build-macos, build-windows, build-linux]
+    needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -364,11 +364,12 @@ jobs:
           name: windows-build
           path: artifacts/
 
-      - name: Download Linux build
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-build
-          path: artifacts/
+      # TODO: re-enable once Linux build dependencies are sorted
+      # - name: Download Linux build
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: linux-build
+      #     path: artifacts/
 
       - name: Upload artifacts to release
         uses: softprops/action-gh-release@v2
