@@ -1,6 +1,4 @@
-import 'dart:io';
-import 'dart:typed_data';
-
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,10 +12,9 @@ import '../../../../app/theme/spacing.dart';
 import '../../../../services/debug_server.dart';
 import '../../../../services/download_service.dart';
 import '../../../../services/matrix_service.dart';
+import '../../data/encrypted_media_cache.dart';
+import '../providers/media_provider.dart';
 import '../providers/timeline_provider.dart';  // TimelineMessage, MessageSendState
-
-/// Cache decrypted image bytes to avoid re-downloading.
-final _imageCache = <String, Uint8List>{};
 
 /// Renders an image message. For encrypted rooms, downloads and decrypts
 /// the attachment via the SDK. For unencrypted rooms, uses Image.network.
@@ -31,8 +28,8 @@ class ImageMessage extends ConsumerStatefulWidget {
 }
 
 class _ImageMessageState extends ConsumerState<ImageMessage> {
-  Uint8List? _imageBytes;
-  Uri? _httpUrl;
+  bool _isEncrypted = false;
+  String? _httpUrl;
   bool _loading = true;
   bool _error = false;
 
@@ -43,14 +40,14 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
         'send=${widget.message.sendState} local=${widget.message.isLocalEcho} '
         'fileStatus=${widget.message.fileSendingStatus} '
         'url=${widget.message.mediaUrl} type=${widget.message.type}');
-    _loadImage();
+    _resolveSource();
   }
 
   @override
   void didUpdateWidget(ImageMessage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Reload when the event updates (e.g., local echo replaced by server echo
-    // with a real MXC URL after upload completes)
+    // Re-resolve when the event updates (e.g., local echo replaced by server
+    // echo with a real MXC URL after upload completes).
     DebugServer.logs.add('[ImageMessage] didUpdate: id=${widget.message.eventId} '
         'send=${widget.message.sendState} local=${widget.message.isLocalEcho} '
         'fileStatus=${widget.message.fileSendingStatus} '
@@ -58,26 +55,15 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
     if (oldWidget.message.eventId != widget.message.eventId ||
         oldWidget.message.mediaUrl != widget.message.mediaUrl ||
         oldWidget.message.sendState != widget.message.sendState) {
-      _imageBytes = null;
+      _isEncrypted = false;
       _httpUrl = null;
       _loading = true;
       _error = false;
-      _loadImage();
+      _resolveSource();
     }
   }
 
-  Future<void> _loadImage() async {
-    final eventId = widget.message.eventId;
-
-    // Check cache first
-    if (_imageCache.containsKey(eventId)) {
-      setState(() {
-        _imageBytes = _imageCache[eventId];
-        _loading = false;
-      });
-      return;
-    }
-
+  Future<void> _resolveSource() async {
     final client = ref.read(matrixServiceProvider).client;
     if (client == null || widget.message.mediaUrl == null) {
       setState(() { _loading = false; _error = true; });
@@ -85,28 +71,25 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
     }
 
     try {
-      // Try to get the event from the room to use SDK's download+decrypt
       final roomId = widget.roomId;
       if (roomId != null) {
         final room = client.getRoomById(roomId);
         if (room != null) {
-          final event = await room.getEventById(eventId);
+          final event = await room.getEventById(widget.message.eventId);
           if (event != null && event.isAttachmentEncrypted) {
-            // Encrypted: download + decrypt via SDK
-            final matrixFile = await event.downloadAndDecryptAttachment();
-            _imageCache[eventId] = matrixFile.bytes;
+            // Encrypted: bytes come from the provider (disk-backed cache).
             if (mounted) {
-              setState(() { _imageBytes = matrixFile.bytes; _loading = false; });
+              setState(() { _isEncrypted = true; _loading = false; });
             }
             return;
           }
         }
       }
 
-      // Unencrypted: resolve MXC to HTTP URL
+      // Unencrypted: resolve MXC → HTTP URL; cached_network_image handles disk.
       final httpUri = await widget.message.mediaUrl!.getDownloadUri(client);
       if (mounted) {
-        setState(() { _httpUrl = httpUri; _loading = false; });
+        setState(() { _httpUrl = httpUri.toString(); _loading = false; });
       }
     } catch (e) {
       Logs().e('Image load failed', e);
@@ -114,6 +97,16 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
         setState(() { _loading = false; _error = true; });
       }
     }
+  }
+
+  MediaRef get _mediaRef => MediaRef(
+        roomId: widget.roomId!,
+        eventId: widget.message.eventId,
+      );
+
+  Uint8List? _encryptedBytesOrNull() {
+    if (!_isEncrypted || widget.roomId == null) return null;
+    return ref.read(encryptedMediaProvider(_mediaRef)).valueOrNull;
   }
 
   /// Compute a stable size for the image container so the layout
@@ -137,8 +130,10 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = _stableSize(constraints.maxWidth);
+        final canOpen =
+            (_isEncrypted && _encryptedBytesOrNull() != null) || _httpUrl != null;
         return GestureDetector(
-      onTap: (_imageBytes != null || _httpUrl != null) ? () => _openFullscreen(context) : null,
+      onTap: canOpen ? () => _openFullscreen(context) : null,
       onSecondaryTapUp: (details) => _showImageContextMenu(
         context, details.globalPosition,
       ),
@@ -206,33 +201,38 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
 
     if (_error) return _errorWidget();
 
-    // Decrypted bytes (encrypted rooms)
-    if (_imageBytes != null) {
-      return Image.memory(
-        _imageBytes!,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _errorWidget(),
+    // Encrypted rooms — decrypted bytes come from the provider.
+    if (_isEncrypted && widget.roomId != null) {
+      final async = ref.watch(encryptedMediaProvider(_mediaRef));
+      return async.when(
+        loading: () => Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+                strokeWidth: 2, color: colors.accentDim),
+          ),
+        ),
+        error: (_, _) => _errorWidget(),
+        data: (bytes) => Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _errorWidget(),
+        ),
       );
     }
 
-    // HTTP URL (unencrypted rooms)
+    // Unencrypted rooms — cached_network_image handles disk caching.
     if (_httpUrl != null) {
-      return Image.network(
-        _httpUrl.toString(),
+      return CachedNetworkImage(
+        imageUrl: _httpUrl!,
         fit: BoxFit.cover,
-        headers: _authHeaders,
-        loadingBuilder: (_, child, progress) {
-          if (progress == null) return child;
-          return Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2, color: colors.accentDim,
-              value: progress.expectedTotalBytes != null
-                  ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
-                  : null,
-            ),
-          );
-        },
-        errorBuilder: (_, __, ___) => _errorWidget(),
+        httpHeaders: _authHeaders,
+        placeholder: (_, _) => Center(
+          child: CircularProgressIndicator(
+              strokeWidth: 2, color: colors.accentDim),
+        ),
+        errorWidget: (_, _, _) => _errorWidget(),
       );
     }
 
@@ -265,11 +265,17 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
   }
 
   Future<Uint8List?> _getImageBytes() async {
-    if (_imageBytes != null) return _imageBytes;
+    if (_isEncrypted && widget.roomId != null) {
+      try {
+        return await ref.read(encryptedMediaProvider(_mediaRef).future);
+      } catch (_) {
+        return null;
+      }
+    }
     if (_httpUrl == null) return null;
     try {
       final response = await Dio().get<List<int>>(
-        _httpUrl.toString(),
+        _httpUrl!,
         options: Options(
           responseType: ResponseType.bytes,
           headers: _authHeaders,
@@ -346,17 +352,19 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
   }
 
   void _openFullscreen(BuildContext context) {
+    final bytes = _encryptedBytesOrNull();
+    final url = _httpUrl != null ? Uri.tryParse(_httpUrl!) : null;
     Navigator.of(context).push(
       PageRouteBuilder(
         opaque: false,
         barrierColor: Colors.black87,
-        pageBuilder: (_, __, ___) => _FullscreenImageView(
-          bytes: _imageBytes,
-          url: _httpUrl,
+        pageBuilder: (_, _, _) => _FullscreenImageView(
+          bytes: bytes,
+          url: url,
           filename: widget.message.body,
           authHeaders: _authHeaders,
         ),
-        transitionsBuilder: (_, animation, __, child) =>
+        transitionsBuilder: (_, animation, _, child) =>
             FadeTransition(opacity: animation, child: child),
       ),
     );
@@ -497,7 +505,12 @@ class _FullscreenImageView extends StatelessWidget {
                 maxScale: 4.0,
                 child: bytes != null
                     ? Image.memory(bytes!)
-                    : (url != null ? Image.network(url.toString(), headers: authHeaders) : const SizedBox()),
+                    : (url != null
+                        ? CachedNetworkImage(
+                            imageUrl: url.toString(),
+                            httpHeaders: authHeaders,
+                          )
+                        : const SizedBox()),
               ),
             ),
           ),

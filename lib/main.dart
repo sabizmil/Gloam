@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
 import 'app/theme/theme_preferences.dart';
+import 'features/chat/data/encrypted_media_cache.dart';
 
 /// Work around BoringSSL's limited root CA bundle on Windows/Linux.
 /// Flutter's bundled BoringSSL doesn't include all CA roots the OS trusts
@@ -184,6 +185,11 @@ void main() async {
     await _fixWindowsShortcutAumid();
     await sharedPrefs.setBool('windows_aumid_fixed', true);
   }
+
+  // Evict oldest decrypted attachments if the media cache is over budget.
+  // Fire-and-forget; happens on a background-walking scan that doesn't block UI.
+  // ignore: unawaited_futures
+  EncryptedMediaCache.instance.sweepLRU().catchError((Object _) => 0);
 
   runApp(
     ProviderScope(

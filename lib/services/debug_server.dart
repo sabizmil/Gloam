@@ -32,6 +32,12 @@ class DebugServer {
   static final Map<String, Map<String, dynamic> Function()> timelineRegistry =
       {};
 
+  /// Link preview cache telemetry. Incremented by the provider.
+  static final LinkPreviewStats linkPreviewStats = LinkPreviewStats();
+
+  /// Encrypted media cache telemetry. Incremented by the provider.
+  static final MediaCacheStats mediaStats = MediaCacheStats();
+
   /// Start the debug server. No-op in release mode.
   Future<void> start({int port = 9999}) async {
     if (!kDebugMode) return;
@@ -144,6 +150,8 @@ class DebugServer {
           }(),
         '/debug/timelines' => Map.fromEntries(
             timelineRegistry.entries.map((e) => MapEntry(e.key, e.value()))),
+        '/debug/link-preview-stats' => linkPreviewStats.toJson(),
+        '/debug/media-stats' => mediaStats.toJson(),
 
         // --- Content-level endpoints (dev-only) ---
         '/debug/events' => _isDev
@@ -194,6 +202,8 @@ class DebugServer {
         'GET /debug/sync               — sync status',
         'GET /debug/spaces             — space hierarchy',
         'GET /debug/timelines          — active timeline notifiers',
+        'GET /debug/link-preview-stats — link preview cache hit/miss counters',
+        'GET /debug/media-stats        — encrypted media cache hit/miss counters',
         'GET /debug/logs               — app logs',
         'GET /debug/logs/clear         — clear logs',
         if (_isDev) ...[
@@ -540,4 +550,32 @@ class DebugServer {
     await _server?.close();
     _server = null;
   }
+}
+
+class LinkPreviewStats {
+  int hits = 0;
+  int staleHits = 0;
+  int misses = 0;
+  int fetches = 0;
+  int failures = 0;
+
+  Map<String, dynamic> toJson() => {
+        'hits': hits,
+        'stale_hits': staleHits,
+        'misses': misses,
+        'fetches': fetches,
+        'failures': failures,
+      };
+}
+
+class MediaCacheStats {
+  int hits = 0;
+  int misses = 0;
+  int fetches = 0;
+
+  Map<String, dynamic> toJson() => {
+        'hits': hits,
+        'misses': misses,
+        'fetches': fetches,
+      };
 }
