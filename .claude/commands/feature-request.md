@@ -1,5 +1,5 @@
 ---
-description: Request a new feature. I'll analyze 5 implementation approaches, recommend the best one, and create a detailed plan. Runs in the background so you can keep working.
+description: Request a new feature. I'll analyze 5 implementation approaches, recommend the best one, and create a detailed plan in the wiki. Runs in the background so you can keep working.
 ---
 
 Launch a background agent to process this feature request. Do NOT process the feature yourself — delegate entirely to the agent.
@@ -15,7 +15,7 @@ For each feature described below:
 1. Check existing files with Glob to determine the next FEAT number
 2. Read relevant source files to understand the current architecture
 3. Read the competitive analysis at COMPETITIVE_ANALYSIS.md and design system at docs/plan/09-design-system.md for context
-4. Create a markdown file in `docs/features/` named `FEAT-NNN-short-description.md` with:
+4. Create a markdown file at `~/Developer/Wiki/projects/gloam/features/FEAT-NNN-short-description.md` with (per `~/.claude/CLAUDE.md` routing rules, feature specs are wiki artifacts — do NOT write to the repo's `docs/features/`; note matrix-chat repo maps to `gloam` wiki project):
    - **Title**: Short description
    - **Requested**: Today's date
    - **Status**: Proposed
@@ -36,7 +36,7 @@ For each feature described below:
      - Edge cases
    - **Acceptance Criteria**: Checkboxes
    - **Related**: Links to related bugs, features, or plan docs
-5. Read existing `docs/features/ROADMAP.md` and update it with any new features, keeping existing entries
+5. Read existing `~/Developer/Wiki/projects/gloam/features/ROADMAP.md` and update it with any new features, keeping existing entries
 6. Return a summary of the features created with the recommendation for each
 
 The user's feature request:

@@ -8,7 +8,9 @@ You are starting a collaborative brainstorming session with the user. This is NO
 
 ### Step 1: Capture the Seed Idea
 
-Create a markdown file at `docs/brainstorms/YYYY-MM-DD-<short-slug>.md` with this structure:
+Create a markdown file at `~/Developer/Wiki/projects/gloam/brainstorms/YYYY-MM-DD-<short-slug>.md` with this structure. Brainstorms are wiki artifacts per `~/.claude/CLAUDE.md` — do NOT place them in the repo's `docs/` folder. Note the project-name mapping: this repo is `matrix-chat` but the wiki project is `gloam`.
+
+Structure:
 
 ```markdown
 # Brainstorm: <Title>
