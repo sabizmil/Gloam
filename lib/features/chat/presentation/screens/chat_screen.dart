@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show compute;
 
 import 'package:desktop_drop/desktop_drop.dart';
-import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,12 +14,14 @@ import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
 import '../../../../services/clipboard_paste_service.dart';
 import '../../../../services/debug_server.dart';
-import 'package:matrix/matrix.dart' show EventTypes, Membership;
+import 'package:matrix/matrix.dart' show EventTypes, MatrixFile, Membership;
 
 import '../../../../services/matrix_service.dart';
 import '../../../../services/klipy_service.dart';
 import '../../../../services/upload_service.dart';
 import '../../../../widgets/gloam_avatar.dart';
+import '../../data/staged_attachment.dart';
+import '../providers/draft_attachments_provider.dart';
 import '../providers/timeline_provider.dart';
 import '../../../rooms/presentation/providers/space_hierarchy_provider.dart';
 import '../widgets/connection_status_bar.dart';
@@ -208,6 +209,32 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return a.year != b.year || a.month != b.month || a.day != b.day;
   }
 
+  /// Stage [files] to the draft composer. Toasts when the cap rejects some.
+  /// Size errors should already have been filtered by the caller.
+  void _stageAttachments(List<MatrixFile> files) {
+    if (files.isEmpty) return;
+    final staged = files
+        .map((f) => StagedAttachment(id: _attachmentId(), file: f))
+        .toList();
+    final accepted = ref
+        .read(draftAttachmentsProvider(widget.roomId).notifier)
+        .add(staged);
+    if (accepted < staged.length && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Attachments limited to ${DraftAttachmentsNotifier.maxPerDraft} per message',
+          ),
+          backgroundColor: context.gloam.danger,
+        ),
+      );
+    }
+  }
+
+  int _attachmentCounter = 0;
+  String _attachmentId() =>
+      '${DateTime.now().microsecondsSinceEpoch}-${_attachmentCounter++}';
+
   Future<void> _pickAndUploadFile() async {
     try {
       final result = await FilePicker.platform.pickFiles();
@@ -224,7 +251,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
 
       final matrixFile = await UploadService.fromPath(picked.path!);
-      ref.read(timelineProvider(widget.roomId).notifier).sendFileMessage(matrixFile);
+      _stageAttachments([matrixFile]);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -263,6 +290,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _handleDroppedFiles(List<DropDoneDetails> detailsList) async {
+    final collected = <MatrixFile>[];
     for (final details in detailsList) {
       for (final xFile in details.files) {
         try {
@@ -276,11 +304,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             continue;
           }
 
-          final matrixFile = UploadService.createMatrixFile(
+          collected.add(UploadService.createMatrixFile(
             bytes: bytes,
             name: xFile.name,
-          );
-          ref.read(timelineProvider(widget.roomId).notifier).sendFileMessage(matrixFile);
+          ));
         } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -290,6 +317,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         }
       }
     }
+    _stageAttachments(collected);
   }
 
   /// Handle Cmd+V / Ctrl+V — check clipboard for file or image data.
@@ -302,11 +330,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       // Try file paths FIRST (e.g. copied from Finder/Explorer).
       final files = await ClipboardPasteService.getClipboardFiles();
       if (files.isNotEmpty) {
-        // Restore the user's text from before the paste
+        // Restore the user's text from before the paste — pasted files go
+        // to the chip strip, the typed text stays in the composer.
         _composerKey.currentState?.text = _prePasteText;
-        for (final file in files) {
-          ref.read(timelineProvider(widget.roomId).notifier).sendFileMessage(file);
-        }
+        _stageAttachments(files);
         return;
       }
 
@@ -320,9 +347,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           );
           return;
         }
-        // Restore the user's text from before the paste
         _composerKey.currentState?.text = _prePasteText;
-        ref.read(timelineProvider(widget.roomId).notifier).sendFileMessage(imageFile);
+        _stageAttachments([imageFile]);
         return;
       }
 
@@ -844,6 +870,38 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               .setTyping(isTyping),
           onAttach: () => _pickAndUploadFile(),
           onGif: (item) => _sendGif(item),
+          onSendWithAttachments: (text) async {
+            final staged = ref.read(draftAttachmentsProvider(widget.roomId));
+            if (staged.isEmpty) return;
+            final replyToEventId =
+                _composerState.mode == ComposerMode.reply
+                    ? _composerState.targetEventId
+                    : null;
+            // Clear the draft immediately so the chip strip disappears
+            // before the upload starts; local echoes will render in the
+            // timeline via the existing fileSendingStatus pipeline.
+            ref
+                .read(draftAttachmentsProvider(widget.roomId).notifier)
+                .clear();
+            try {
+              await ref
+                  .read(timelineProvider(widget.roomId).notifier)
+                  .sendWithAttachments(
+                    files: staged.map((a) => a.file).toList(),
+                    text: text,
+                    replyToEventId: replyToEventId,
+                  );
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('send failed: $e'),
+                    backgroundColor: context.gloam.danger,
+                  ),
+                );
+              }
+            }
+          },
           onCancelAction: () =>
               setState(() => _composerState = ComposerState.normal),
         ),

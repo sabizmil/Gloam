@@ -125,7 +125,7 @@ class _FileMessageState extends ConsumerState<FileMessage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.message.body,
+                  widget.message.displayFilename,
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -261,7 +261,7 @@ class VideoMessage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                message.body,
+                message.displayFilename,
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 10,
                   color: colors.textPrimary,

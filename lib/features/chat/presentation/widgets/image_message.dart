@@ -249,7 +249,7 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
           children: [
             Icon(Icons.broken_image_outlined, size: 24, color: colors.textTertiary),
             const SizedBox(height: 4),
-            Text(widget.message.body,
+            Text(widget.message.displayFilename,
               style: GoogleFonts.inter(fontSize: 11, color: colors.textTertiary),
               maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
@@ -345,7 +345,7 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
       } else if (value == 'save') {
         await DownloadService.saveFile(
           bytes: bytes,
-          filename: widget.message.body,
+          filename: widget.message.displayFilename,
         );
       }
     });
@@ -361,7 +361,7 @@ class _ImageMessageState extends ConsumerState<ImageMessage> {
         pageBuilder: (_, _, _) => _FullscreenImageView(
           bytes: bytes,
           url: url,
-          filename: widget.message.body,
+          filename: widget.message.displayFilename,
           authHeaders: _authHeaders,
         ),
         transitionsBuilder: (_, animation, _, child) =>

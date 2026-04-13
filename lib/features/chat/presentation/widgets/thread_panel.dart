@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:matrix/matrix.dart' show MatrixFile;
 
 import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../app/theme/spacing.dart';
@@ -17,7 +18,10 @@ import '../../../../services/matrix_service.dart';
 import '../../../../services/upload_service.dart';
 import '../../../../widgets/gloam_avatar.dart';
 import '../../../profile/presentation/user_profile_modal.dart';
+import '../../data/staged_attachment.dart';
+import '../providers/draft_attachments_provider.dart';
 import '../providers/timeline_provider.dart';
+import 'attachment_chip_strip.dart';
 import 'drop_overlay.dart';
 import 'emoji_picker.dart';
 import 'gif_picker.dart';
@@ -96,8 +100,63 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
     setState(() => _replyTo = null);
   }
 
-  void _send() {
+  /// Thread drafts are scoped by `roomId#rootEventId` so staged files in
+  /// one thread don't leak into the main room or sibling threads.
+  String get _draftKey => '${widget.roomId}#${widget.rootMessage.eventId}';
+
+  int _attachmentCounter = 0;
+  String _attachmentId() =>
+      '${DateTime.now().microsecondsSinceEpoch}-${_attachmentCounter++}';
+
+  void _stageAttachments(List<MatrixFile> files) {
+    if (files.isEmpty) return;
+    final staged = files
+        .map((f) => StagedAttachment(id: _attachmentId(), file: f))
+        .toList();
+    final accepted = ref
+        .read(draftAttachmentsProvider(_draftKey).notifier)
+        .add(staged);
+    if (accepted < staged.length && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Attachments limited to ${DraftAttachmentsNotifier.maxPerDraft} per message',
+          ),
+          backgroundColor: context.gloam.danger,
+        ),
+      );
+    }
+  }
+
+  void _send() async {
     final text = _controller.text.trim();
+    final staged = ref.read(draftAttachmentsProvider(_draftKey));
+
+    if (staged.isNotEmpty) {
+      ref.read(draftAttachmentsProvider(_draftKey).notifier).clear();
+      _controller.clear();
+      _clearReplyTo();
+      try {
+        await ref
+            .read(timelineProvider(widget.roomId).notifier)
+            .sendWithAttachments(
+              files: staged.map((a) => a.file).toList(),
+              text: text,
+              threadRootEventId: widget.rootMessage.eventId,
+            );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('send failed: $e'),
+              backgroundColor: context.gloam.danger,
+            ),
+          );
+        }
+      }
+      return;
+    }
+
     if (text.isEmpty) return;
     ref.read(timelineProvider(widget.roomId).notifier).sendThreadReply(
           text,
@@ -388,6 +447,7 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
   }
 
   Future<void> _handleDroppedFiles(List<DropDoneDetails> detailsList) async {
+    final collected = <MatrixFile>[];
     for (final details in detailsList) {
       for (final xFile in details.files) {
         try {
@@ -401,12 +461,10 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
             continue;
           }
 
-          final matrixFile = UploadService.createMatrixFile(
+          collected.add(UploadService.createMatrixFile(
             bytes: bytes,
             name: xFile.name,
-          );
-          ref.read(timelineProvider(widget.roomId).notifier)
-              .sendThreadFile(matrixFile, widget.rootMessage.eventId);
+          ));
         } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -416,6 +474,7 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
         }
       }
     }
+    _stageAttachments(collected);
   }
 
   Future<void> _pickAndUploadFile() async {
@@ -434,8 +493,7 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
       }
 
       final matrixFile = await UploadService.fromPath(picked.path!);
-      ref.read(timelineProvider(widget.roomId).notifier)
-          .sendThreadFile(matrixFile, widget.rootMessage.eventId);
+      _stageAttachments([matrixFile]);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -473,10 +531,7 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
       final files = await ClipboardPasteService.getClipboardFiles();
       if (files.isNotEmpty) {
         _controller.text = _prePasteText;
-        for (final file in files) {
-          ref.read(timelineProvider(widget.roomId).notifier)
-              .sendThreadFile(file, widget.rootMessage.eventId);
-        }
+        _stageAttachments(files);
         return;
       }
 
@@ -490,8 +545,7 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
           return;
         }
         _controller.text = _prePasteText;
-        ref.read(timelineProvider(widget.roomId).notifier)
-            .sendThreadFile(imageFile, widget.rootMessage.eventId);
+        _stageAttachments([imageFile]);
         return;
       }
     } catch (e) {
@@ -505,9 +559,19 @@ class _ThreadPanelState extends ConsumerState<ThreadPanel> {
 
   Widget _buildComposer() {
     final colors = context.gloam;
+    final staged = ref.watch(draftAttachmentsProvider(_draftKey));
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Staged attachments
+        if (staged.isNotEmpty)
+          AttachmentChipStrip(
+            attachments: staged,
+            onRemove: (id) => ref
+                .read(draftAttachmentsProvider(_draftKey).notifier)
+                .remove(id),
+          ),
+
         // Reply bar
         if (_replyTo != null)
           Container(

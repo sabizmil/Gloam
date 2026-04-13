@@ -19,6 +19,10 @@ class TimelineMessage {
   final String type; // m.text, m.image, m.file, m.audio, m.video, m.emote, m.notice
   final String body;
   final String? formattedBody;
+  /// MSC2530: separate from `body` when present. When set, `body` is a
+  /// caption and this holds the real filename. When null (older clients),
+  /// `body` doubles as the filename.
+  final String? filename;
   final String? mimeType;
   final Uri? mediaUrl;
   final MessageSendState sendState;
@@ -48,6 +52,7 @@ class TimelineMessage {
     required this.type,
     required this.body,
     this.formattedBody,
+    this.filename,
     this.mimeType,
     this.mediaUrl,
     this.sendState = MessageSendState.sent,
@@ -70,6 +75,21 @@ class TimelineMessage {
   });
 
   bool get isLocalEcho => eventId.startsWith('~');
+
+  /// For media messages, the filename to show to the user.
+  /// Returns the MSC2530 `filename` when present, else falls back to `body`
+  /// (which doubles as filename for older media events).
+  String get displayFilename => filename ?? body;
+
+  /// User-provided caption, if any. Null for media events that have no
+  /// caption, or for text-type events (text uses [body] directly).
+  String? get caption {
+    if (filename == null) return null;
+    final trimmed = body.trim();
+    if (trimmed.isEmpty) return null;
+    if (body == filename) return null;
+    return body;
+  }
 }
 
 enum MessageSendState { sending, sent, error }
@@ -599,6 +619,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
       type: type,
       body: _extractBody(event),
       formattedBody: event.formattedText.isNotEmpty ? event.formattedText : null,
+      filename: event.content.tryGet<String>('filename'),
       mimeType: event.content.tryGetMap<String, Object?>('info')?.tryGet<String>('mimetype'),
       mediaUrl: event.attachmentMxcUrl,
       sendState: sendState,
@@ -1039,6 +1060,59 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     final room = _room;
     if (room == null) return;
     await room.sendFileEvent(file);
+  }
+
+  /// Send text + attachments as a batch. Each file becomes its own
+  /// `m.{image,file,video,audio}` event in order. The typed [text] rides as
+  /// the caption (`body`) on the first event via Matrix 1.10 MSC2530 —
+  /// `filename` stays the real name. Subsequent events have no caption.
+  /// When [replyToEventId] is provided, the reply relation goes only on the
+  /// first event. [threadRootEventId] puts the whole batch in a thread.
+  Future<void> sendWithAttachments({
+    required List<MatrixFile> files,
+    String text = '',
+    String? replyToEventId,
+    String? threadRootEventId,
+  }) async {
+    final room = _room;
+    if (room == null || files.isEmpty) return;
+
+    Event? replyEvent;
+    if (replyToEventId != null) {
+      try {
+        replyEvent = _timeline?.events
+            .firstWhere((e) => e.eventId == replyToEventId);
+      } catch (_) {
+        replyEvent = await room.getEventById(replyToEventId);
+      }
+    }
+
+    final caption = text.trim();
+
+    for (var i = 0; i < files.length; i++) {
+      final file = files[i];
+      final isFirst = i == 0;
+      final extra = <String, dynamic>{};
+
+      if (isFirst && caption.isNotEmpty) {
+        // MSC2530: override `body` (caption) while `filename` stays real.
+        extra['body'] = caption;
+      }
+
+      if (threadRootEventId != null) {
+        extra['m.relates_to'] = {
+          'rel_type': RelationshipTypes.thread,
+          'event_id': threadRootEventId,
+        };
+      }
+
+      await room.sendFileEvent(
+        file,
+        inReplyTo: isFirst ? replyEvent : null,
+        threadRootEventId: threadRootEventId,
+        extraContent: extra.isEmpty ? null : extra,
+      );
+    }
   }
 
   /// Send a GIF/sticker with known dimensions.

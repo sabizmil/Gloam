@@ -85,7 +85,7 @@ class _VideoMessageState extends ConsumerState<VideoMessage> {
         if (event != null) {
           final matrixFile = await event.downloadAndDecryptAttachment();
           final dir = await getTemporaryDirectory();
-          final file = File('${dir.path}/${widget.message.body}');
+          final file = File('${dir.path}/${widget.message.displayFilename}');
           await file.writeAsBytes(matrixFile.bytes);
           _localVideoPath = file.path;
           return file.path;
@@ -135,7 +135,7 @@ class _VideoMessageState extends ConsumerState<VideoMessage> {
         pageBuilder: (_, _, _) => _FullscreenVideoView(
           player: session.player,
           controller: session.controller,
-          filename: widget.message.body,
+          filename: widget.message.displayFilename,
           localPath: _localVideoPath,
         ),
         transitionsBuilder: (_, animation, _, child) =>
@@ -243,7 +243,7 @@ class _VideoMessageState extends ConsumerState<VideoMessage> {
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      widget.message.body,
+                      widget.message.displayFilename,
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 10,
                         color: colors.textPrimary,

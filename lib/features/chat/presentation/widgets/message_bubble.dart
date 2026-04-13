@@ -287,10 +287,34 @@ class _MessageContent extends StatelessWidget {
             height: 1.5,
           ),
         ),
-      'm.image' => ImageMessage(message: message, roomId: roomId),
-      'm.video' => VideoMessage(message: message, roomId: roomId),
-      'm.file' => _FileMessagePreviewWrapper(message: message, roomId: roomId, selfUserId: selfUserId, onMentionTap: onMentionTap),
-      'm.audio' => VoiceMessage(message: message),
+      'm.image' => _withCaption(
+          ImageMessage(message: message, roomId: roomId),
+          message,
+          selfUserId,
+          onMentionTap,
+        ),
+      'm.video' => _withCaption(
+          VideoMessage(message: message, roomId: roomId),
+          message,
+          selfUserId,
+          onMentionTap,
+        ),
+      'm.file' => _withCaption(
+          _FileMessagePreviewWrapper(
+              message: message,
+              roomId: roomId,
+              selfUserId: selfUserId,
+              onMentionTap: onMentionTap),
+          message,
+          selfUserId,
+          onMentionTap,
+        ),
+      'm.audio' => _withCaption(
+          VoiceMessage(message: message),
+          message,
+          selfUserId,
+          onMentionTap,
+        ),
       'm.bad_encrypted' => Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -326,6 +350,32 @@ class _MessageContent extends StatelessWidget {
         ),
     };
   }
+}
+
+/// Wraps a media widget with the message's caption below, if any.
+/// Caption rendering mirrors the text-message path (Markdown + mentions).
+Widget _withCaption(
+  Widget media,
+  TimelineMessage message,
+  String? selfUserId,
+  void Function(String userId)? onMentionTap,
+) {
+  final caption = message.caption;
+  if (caption == null) return media;
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      media,
+      const SizedBox(height: 6),
+      MarkdownBody(
+        text: caption,
+        formattedBody: null,
+        selfUserId: selfUserId,
+        onMentionTap: onMentionTap,
+        selectable: false,
+      ),
+    ],
+  );
 }
 
 bool _hasUrl(String text) =>

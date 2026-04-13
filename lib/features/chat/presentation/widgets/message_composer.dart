@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/theme/gloam_theme_ext.dart';
+import '../../../../app/theme/spacing.dart';
+import '../../../../services/klipy_service.dart';
+import '../providers/draft_attachments_provider.dart';
+import 'attachment_chip_strip.dart';
 import 'emoji_picker.dart';
 import 'gif_picker.dart';
 import 'mention_autocomplete.dart';
-import '../../../../app/theme/spacing.dart';
-import '../../../../services/klipy_service.dart';
 
 /// The state of the composer — normal, replying to a message, or editing.
 class ComposerState {
@@ -28,12 +31,13 @@ class ComposerState {
 
 enum ComposerMode { normal, reply, edit }
 
-class MessageComposer extends StatefulWidget {
+class MessageComposer extends ConsumerStatefulWidget {
   const MessageComposer({
     super.key,
     required this.roomName,
     required this.roomId,
     required this.onSend,
+    this.onSendWithAttachments,
     this.onReply,
     this.onEdit,
     this.onTyping,
@@ -47,6 +51,11 @@ class MessageComposer extends StatefulWidget {
   final String roomName;
   final String roomId;
   final void Function(String text) onSend;
+
+  /// Called when the user submits with staged attachments. The handler is
+  /// expected to read the draft provider, send, and clear.
+  final void Function(String text)? onSendWithAttachments;
+
   final void Function(String text, String eventId)? onReply;
   final void Function(String text, String eventId)? onEdit;
   final void Function(bool isTyping)? onTyping;
@@ -60,7 +69,7 @@ class MessageComposer extends StatefulWidget {
   MessageComposerState createState() => MessageComposerState();
 }
 
-class MessageComposerState extends State<MessageComposer> {
+class MessageComposerState extends ConsumerState<MessageComposer> {
   final _controller = MentionTextController();
   final _focusNode = FocusNode();
   final _autocompleteKey = GlobalKey<MentionAutocompleteState>();
@@ -147,6 +156,20 @@ class MessageComposerState extends State<MessageComposer> {
 
   void _handleSend() {
     final text = _controller.text.trim();
+    final attachments = ref.read(draftAttachmentsProvider(widget.roomId));
+
+    // Attachments present — route to the combined send path regardless of mode.
+    // Edit mode + attachments is explicitly unsupported (see chip strip gating
+    // in build), so reply + attachments and normal + attachments fall here.
+    if (attachments.isNotEmpty) {
+      widget.onSendWithAttachments?.call(text);
+      _controller.clear();
+      _isTyping = false;
+      widget.onTyping?.call(false);
+      widget.onCancelAction?.call();
+      return;
+    }
+
     if (text.isEmpty) return;
 
     switch (widget.composerState.mode) {
@@ -205,6 +228,11 @@ class MessageComposerState extends State<MessageComposer> {
   @override
   Widget build(BuildContext context) {
     final colors = context.gloam;
+    final attachments = ref.watch(draftAttachmentsProvider(widget.roomId));
+    final isEdit = widget.composerState.mode == ComposerMode.edit;
+    // Chips disabled in edit mode — you can't edit a message to add attachments.
+    final showChips = attachments.isNotEmpty && !isEdit;
+    final canSubmit = _hasText || (attachments.isNotEmpty && !isEdit);
     return Container(
       decoration: BoxDecoration(
         border: Border(
@@ -221,6 +249,15 @@ class MessageComposerState extends State<MessageComposer> {
               senderName: widget.composerState.targetSenderName,
               body: widget.composerState.targetBody,
               onCancel: widget.onCancelAction,
+            ),
+
+          // Staged attachments
+          if (showChips)
+            AttachmentChipStrip(
+              attachments: attachments,
+              onRemove: (id) => ref
+                  .read(draftAttachmentsProvider(widget.roomId).notifier)
+                  .remove(id),
             ),
 
           // Composer row
@@ -335,9 +372,9 @@ class MessageComposerState extends State<MessageComposer> {
                 // Send button
                 AnimatedOpacity(
                   duration: const Duration(milliseconds: 150),
-                  opacity: _hasText ? 1.0 : 0.3,
+                  opacity: canSubmit ? 1.0 : 0.3,
                   child: IconButton(
-                    onPressed: _hasText ? _handleSend : null,
+                    onPressed: canSubmit ? _handleSend : null,
                     icon: Icon(
                       widget.composerState.mode == ComposerMode.edit
                           ? Icons.check
