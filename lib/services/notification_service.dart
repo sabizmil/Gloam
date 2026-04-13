@@ -7,6 +7,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:matrix/matrix.dart';
 
+import 'platform_service.dart';
+
 /// Desktop notification service — fires local notifications based on
 /// app focus state, per-room push rules, and message context.
 ///
@@ -65,6 +67,11 @@ class NotificationService with WidgetsBindingObserver {
   }
 
   void _onNotificationTapped(NotificationResponse response) {
+    // Bring the window forward first — on Windows the click callback arrives
+    // while the window is still behind or minimized; on macOS the app may be
+    // backgrounded. Focus before navigating so the user actually sees the room.
+    PlatformService.instance.focusWindow();
+
     final roomId = response.payload;
     if (roomId != null && roomId.isNotEmpty) {
       onSelectRoom?.call(roomId);
@@ -257,6 +264,7 @@ class NotificationService with WidgetsBindingObserver {
           presentSound: false, // sound played via audioplayers
           presentBanner: true,
           presentList: true,
+          interruptionLevel: InterruptionLevel.active,
         ),
         linux: const LinuxNotificationDetails(),
         windows: WindowsNotificationDetails(

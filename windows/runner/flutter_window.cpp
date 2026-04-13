@@ -3,6 +3,9 @@
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
+#include <flutter/encodable_value.h>
+#include <flutter/method_channel.h>
+#include <flutter/standard_method_codec.h>
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -26,6 +29,34 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
+
+  // `chat.gloam/platform` — window focus from notification tap.
+  // Badge on Windows stays in Dart via WindowsTaskbar overlay icons.
+  platform_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(), "chat.gloam/platform",
+          &flutter::StandardMethodCodec::GetInstance());
+  HWND hwnd = GetHandle();
+  platform_channel_->SetMethodCallHandler(
+      [hwnd](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
+                 result) {
+        if (call.method_name() == "focusWindow") {
+          if (IsIconic(hwnd)) {
+            ShowWindow(hwnd, SW_RESTORE);
+          } else {
+            ShowWindow(hwnd, SW_SHOW);
+          }
+          SetForegroundWindow(hwnd);
+          result->Success();
+        } else if (call.method_name() == "setBadge") {
+          // No-op on Windows — badging is handled Dart-side via
+          // WindowsTaskbar. Defined here so the channel contract matches.
+          result->Success();
+        } else {
+          result->NotImplemented();
+        }
+      });
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();

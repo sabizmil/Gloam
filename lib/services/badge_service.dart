@@ -2,9 +2,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/widgets.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:matrix/matrix.dart';
 import 'package:windows_taskbar/windows_taskbar.dart';
+
+import 'platform_service.dart';
 
 /// Updates the app icon badge (macOS dock / Windows taskbar overlay)
 /// based on aggregated unread counts across all rooms.
@@ -68,23 +69,14 @@ class BadgeService with WidgetsBindingObserver {
   }
 
   Future<void> _applyMacOsBadge(int count) async {
-    try {
-      final plugin = FlutterLocalNotificationsPlugin();
-      await plugin.show(
-        id: 99999,
-        title: null,
-        body: null,
-        notificationDetails: NotificationDetails(
-          macOS: DarwinNotificationDetails(
-            badgeNumber: count,
-            presentAlert: false,
-            presentBanner: false,
-            presentList: false,
-            presentSound: false,
-          ),
-        ),
-      );
-    } catch (_) {}
+    // Native method channel sets `NSApp.dockTile.badgeLabel` directly —
+    // phantom-notification approach was unreliable on recent macOS versions.
+    final label = count <= 0
+        ? null
+        : count > 99
+            ? '99+'
+            : count.toString();
+    await PlatformService.instance.setMacDockBadge(label);
   }
 
   Future<void> _applyWindowsBadge(int count) async {
