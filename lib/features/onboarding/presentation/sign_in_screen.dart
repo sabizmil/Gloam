@@ -6,6 +6,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../app/theme/gloam_theme_ext.dart';
 import '../../../app/theme/spacing.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
+import '../domain/mxid_parser.dart';
+
+/// Default homeserver when the input is a plain username with no `:` or `@`.
+const _defaultHomeserver = 'https://matrix.org';
 
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
@@ -15,20 +19,52 @@ class SignInScreen extends ConsumerStatefulWidget {
 }
 
 class _SignInScreenState extends ConsumerState<SignInScreen> {
-  final _emailController = TextEditingController();
+  final _mxidController = TextEditingController();
   final _passwordController = TextEditingController();
   final _homeserverController =
-      TextEditingController(text: 'https://matrix.org');
+      TextEditingController(text: _defaultHomeserver);
+  final _mxidFocus = FocusNode();
+
+  /// True once the user has typed in the homeserver field themselves — after
+  /// which auto-extract never overwrites their value.
+  bool _homeserverManuallyEdited = false;
+
   bool _showServerField = false;
   bool _isLoading = false;
   String? _error;
 
+  /// Stored extracted server for the error message CTA copy.
+  String? _lastExtractedHomeserver;
+
+  @override
+  void initState() {
+    super.initState();
+    _mxidFocus.addListener(() {
+      if (!_mxidFocus.hasFocus) _syncHomeserverFromMxid();
+    });
+  }
+
   @override
   void dispose() {
-    _emailController.dispose();
+    _mxidController.dispose();
     _passwordController.dispose();
     _homeserverController.dispose();
+    _mxidFocus.dispose();
     super.dispose();
+  }
+
+  /// On MXID blur, prefill the (usually hidden) homeserver field with the
+  /// extracted server so if the user later opens the advanced panel, it's
+  /// already correct. Skipped when the user has taken manual control.
+  void _syncHomeserverFromMxid() {
+    if (_homeserverManuallyEdited) return;
+    final parsed = parseMxid(_mxidController.text);
+    final target = parsed.homeserver != null
+        ? 'https://${parsed.homeserver}'
+        : _defaultHomeserver;
+    if (_homeserverController.text != target) {
+      _homeserverController.text = target;
+    }
   }
 
   Future<void> _handleSignIn() async {
@@ -37,10 +73,28 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       _error = null;
     });
 
+    final parsed = parseMxid(_mxidController.text);
+    if (!parsed.isValid) {
+      setState(() {
+        _error = 'Enter a Matrix ID like @you:server.xyz';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // The homeserver controller is the authoritative source: either the
+    // user typed it (advanced panel), or blur auto-filled it from the MXID,
+    // or it's the matrix.org default. No branching needed.
+    final homeserver = _homeserverController.text.trim().isEmpty
+        ? _defaultHomeserver
+        : _homeserverController.text.trim();
+
+    _lastExtractedHomeserver = parsed.homeserver;
+
     try {
       await ref.read(authProvider.notifier).login(
-            homeserver: _homeserverController.text.trim(),
-            username: _emailController.text.trim(),
+            homeserver: homeserver,
+            username: parsed.localpart,
             password: _passwordController.text,
           );
       if (mounted) context.go('/');
@@ -143,26 +197,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Homeserver field (hidden by default)
-                  if (_showServerField) ...[
-                    _FieldLabel('// homeserver'),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _homeserverController,
-                      decoration: const InputDecoration(
-                        hintText: 'https://matrix.org',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  // Email field
-                  _FieldLabel('// username or email'),
+                  // Matrix ID field
+                  _FieldLabel('// matrix id'),
                   const SizedBox(height: 8),
                   TextField(
-                    controller: _emailController,
-                    decoration:
-                        const InputDecoration(hintText: 'you@example.com'),
+                    controller: _mxidController,
+                    focusNode: _mxidFocus,
+                    decoration: const InputDecoration(
+                      hintText: '@you:server.xyz',
+                    ),
                     textInputAction: TextInputAction.next,
                   ),
                   const SizedBox(height: 16),
@@ -184,23 +227,34 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     ),
                     onSubmitted: (_) => _handleSignIn(),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
 
-                  // Error
-                  if (_error != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(
-                        _error!,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: context.gloam.danger,
-                        ),
-                        textAlign: TextAlign.center,
+                  // Homeserver field (collapsed by default, always available)
+                  if (_showServerField) ...[
+                    _FieldLabel('// homeserver'),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _homeserverController,
+                      onChanged: (_) => _homeserverManuallyEdited = true,
+                      decoration: const InputDecoration(
+                        hintText: 'https://matrix.org',
                       ),
                     ),
+                    const SizedBox(height: 16),
+                  ],
 
-                  const SizedBox(height: 16),
+                  // Error
+                  if (_error != null) ...[
+                    _ErrorBlock(
+                      error: _error!,
+                      extractedHomeserver: _lastExtractedHomeserver,
+                      showServerCTA: !_showServerField,
+                      onOpenServerField: () =>
+                          setState(() => _showServerField = true),
+                    ),
+                    const SizedBox(height: 12),
+                  ] else
+                    const SizedBox(height: 8),
 
                   // Sign In button
                   SizedBox(
@@ -253,7 +307,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     child: Text(
                       _showServerField
                           ? 'hide server settings'
-                          : 'advanced: use your own server \u2192',
+                          : 'advanced: set a custom server \u2192',
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 10,
                         color: context.gloam.textTertiary,
@@ -268,6 +322,74 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         ),
       ),
     );
+  }
+}
+
+class _ErrorBlock extends StatelessWidget {
+  const _ErrorBlock({
+    required this.error,
+    required this.extractedHomeserver,
+    required this.showServerCTA,
+    required this.onOpenServerField,
+  });
+
+  final String error;
+  final String? extractedHomeserver;
+  final bool showServerCTA;
+  final VoidCallback onOpenServerField;
+
+  @override
+  Widget build(BuildContext context) {
+    final looksLikeHostFailure = _looksLikeHostFailure(error);
+    final friendly = looksLikeHostFailure && extractedHomeserver != null
+        ? "Couldn't reach $extractedHomeserver. Check the server part of your Matrix ID."
+        : error;
+
+    return Column(
+      children: [
+        Text(
+          friendly,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: context.gloam.danger,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        if (looksLikeHostFailure && showServerCTA) ...[
+          const SizedBox(height: 6),
+          GestureDetector(
+            onTap: onOpenServerField,
+            child: Text(
+              'set a custom server URL',
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 11,
+                color: context.gloam.accent,
+                decoration: TextDecoration.underline,
+                decorationColor: context.gloam.accentDim,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Heuristic: the SDK's errors for unreachable hosts tend to mention
+  /// host/DNS/connection failures. Anything else (wrong password, etc.)
+  /// keeps the original message and no CTA.
+  static bool _looksLikeHostFailure(String error) {
+    final lower = error.toLowerCase();
+    return lower.contains('host') ||
+        lower.contains('dns') ||
+        lower.contains('unreachable') ||
+        lower.contains('socket') ||
+        lower.contains('no address associated') ||
+        lower.contains('failed host lookup') ||
+        lower.contains('connection') ||
+        lower.contains('timeout') ||
+        lower.contains('well-known') ||
+        lower.contains('not a valid');
   }
 }
 
