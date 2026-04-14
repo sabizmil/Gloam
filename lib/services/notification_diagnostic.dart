@@ -5,6 +5,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:matrix/matrix.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'platform_service.dart';
+
 /// Runs a step-by-step diagnostic of the notification pipeline (macOS + iOS).
 /// Writes results to both the logger and a file for easy retrieval.
 class NotificationDiagnostic {
@@ -132,8 +134,53 @@ class NotificationDiagnostic {
       final found = pending.any((p) => p.id == 99999);
       _log('Step 7: Notification 99999 in pending list: $found');
       _log('Step 7: Total pending: ${pending.length}');
+      _log('Step 7: (immediate show() notifications are not expected to be pending)');
     } catch (e) {
       _log('Step 7: pendingNotificationRequests() threw: $e');
+    }
+
+    // Step 7b: Delivered notifications — did it land in Notification Center?
+    try {
+      final active = await plugin.getActiveNotifications();
+      final found = active.any((a) => a.id == 99999);
+      _log('Step 7b: Notification 99999 in delivered (Notification Center): $found');
+      _log('Step 7b: Total delivered: ${active.length}');
+    } catch (e) {
+      _log('Step 7b: getActiveNotifications() threw: $e');
+    }
+
+    // Step 7c (iOS): raw UNUserNotificationCenter authorization status
+    if (Platform.isIOS) {
+      try {
+        final auth = await PlatformService.instance.notificationAuthStatus();
+        if (auth == null) {
+          _log('Step 7c: authStatus returned null — channel not wired?');
+        } else {
+          _log('Step 7c: authorizationStatus = ${auth['authorizationStatus']}');
+          _log('Step 7c: alert=${auth['alertSetting']} badge=${auth['badgeSetting']} sound=${auth['soundSetting']}');
+          _log('Step 7c: lockScreen=${auth['lockScreenSetting']} notifCenter=${auth['notificationCenterSetting']}');
+        }
+      } catch (e) {
+        _log('Step 7c: FAIL — notificationAuthStatus() threw: $e');
+      }
+
+      // Step 7d (iOS): fire a native UNUserNotificationCenter notification,
+      // bypassing flutter_local_notifications entirely.
+      try {
+        final err = await PlatformService.instance.fireNativeNotification(
+          title: 'Gloam Native Test',
+          body: 'Fired via UNUserNotificationCenter directly at ${DateTime.now()}',
+        );
+        if (err == null) {
+          _log('Step 7d: native UNUserNotificationCenter.add() succeeded');
+          _log('Step 7d: if you see "Gloam Native Test" → plugin is broken, iOS is fine');
+          _log('Step 7d: if nothing → iOS-level issue (Focus / app settings / iOS 26 quirk)');
+        } else {
+          _log('Step 7d: FAIL — native fire returned: $err');
+        }
+      } catch (e) {
+        _log('Step 7d: FAIL — fireNativeNotification() threw: $e');
+      }
     }
 
     // Step 8: macOS-only osascript fallback (bypasses UNUserNotificationCenter)
