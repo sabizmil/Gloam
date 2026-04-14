@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -109,6 +110,42 @@ class _NotificationSectionState extends ConsumerState<NotificationSection> {
               ),
             ),
           ),
+        ],
+
+        // ── Permissions (Darwin only) ──
+        if (Platform.isIOS || Platform.isMacOS) ...[
+          const SettingsSectionHeader('permissions'),
+          SettingsTile(
+            icon: Icons.notifications_outlined,
+            label: 'request notification permission',
+            onTap: () async {
+              final granted =
+                  await NotificationService.requestPermissionsStatic();
+              if (!context.mounted) return;
+              final msg = switch (granted) {
+                true => 'Permission granted.',
+                false =>
+                  'Permission denied. Open ${Platform.isIOS ? "Settings" : "System Settings"} > Notifications > Gloam to change.',
+                null => 'No response from system. Already determined?',
+              };
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(msg)),
+              );
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(42, 0, 12, 0),
+            child: Text(
+              Platform.isIOS
+                  ? 'iOS only shows the system prompt the first time. After that, change the grant in Settings > Notifications > Gloam.'
+                  : 'macOS only shows the system prompt the first time. After that, change the grant in System Settings > Notifications > Gloam.',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: context.gloam.textTertiary,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
         ],
 
         // ── Test ──

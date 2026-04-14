@@ -59,17 +59,46 @@ class NotificationService with WidgetsBindingObserver {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
+    await requestPermissions();
+  }
+
+  /// Explicit permission request — exposed so a Settings button can re-trigger
+  /// it if the user dismissed the system prompt or the initial request never
+  /// fired (e.g. iOS installs from prior versions where this code didn't run).
+  /// Returns the granted status; null on platforms that don't apply.
+  Future<bool?> requestPermissions() async {
     if (Platform.isMacOS) {
-      await _plugin
+      return await _plugin
           .resolvePlatformSpecificImplementation<
               MacOSFlutterLocalNotificationsPlugin>()
           ?.requestPermissions(alert: true, badge: true, sound: true);
     } else if (Platform.isIOS) {
-      await _plugin
+      return await _plugin
           .resolvePlatformSpecificImplementation<
               IOSFlutterLocalNotificationsPlugin>()
           ?.requestPermissions(alert: true, badge: true, sound: true);
     }
+    return null;
+  }
+
+  /// Static variant for Settings UI / diagnostic — uses a fresh plugin
+  /// instance so it works even before [NotificationService] is constructed.
+  static Future<bool?> requestPermissionsStatic() async {
+    if (!Platform.isMacOS && !Platform.isIOS) return null;
+    final plugin = FlutterLocalNotificationsPlugin();
+    const darwin = DarwinInitializationSettings();
+    const settings = InitializationSettings(iOS: darwin, macOS: darwin);
+    await plugin.initialize(settings: settings);
+    if (Platform.isIOS) {
+      return await plugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
+    }
+    return await plugin
+        .resolvePlatformSpecificImplementation<
+            MacOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
   void _onNotificationTapped(NotificationResponse response) {
