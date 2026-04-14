@@ -39,7 +39,7 @@ class NotificationService with WidgetsBindingObserver {
   NotificationService(this.client, {this.onSelectRoom});
 
   Future<void> initialize() async {
-    const initMacOS = DarwinInitializationSettings();
+    const initDarwin = DarwinInitializationSettings();
     const initLinux =
         LinuxInitializationSettings(defaultActionName: 'Open');
     const initWindows = WindowsInitializationSettings(
@@ -48,7 +48,8 @@ class NotificationService with WidgetsBindingObserver {
       guid: 'd3b5b5e0-8c9a-4e7f-b5d1-a2c3e4f5a6b7',
     );
     const initSettings = InitializationSettings(
-      macOS: initMacOS,
+      iOS: initDarwin,
+      macOS: initDarwin,
       linux: initLinux,
       windows: initWindows,
     );
@@ -62,6 +63,11 @@ class NotificationService with WidgetsBindingObserver {
       await _plugin
           .resolvePlatformSpecificImplementation<
               MacOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
+    } else if (Platform.isIOS) {
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>()
           ?.requestPermissions(alert: true, badge: true, sound: true);
     }
   }
@@ -188,12 +194,15 @@ class NotificationService with WidgetsBindingObserver {
   /// Fire a single test notification to verify system configuration.
   /// If [soundName] is provided, plays that sound alongside the notification.
   static Future<bool> sendTestNotification({String? soundName}) async {
-    if (!Platform.isMacOS && !Platform.isLinux && !Platform.isWindows) {
+    if (!Platform.isMacOS &&
+        !Platform.isLinux &&
+        !Platform.isWindows &&
+        !Platform.isIOS) {
       return false;
     }
     try {
       final plugin = FlutterLocalNotificationsPlugin();
-      const initMacOS = DarwinInitializationSettings();
+      const initDarwin = DarwinInitializationSettings();
       const initLinux =
           LinuxInitializationSettings(defaultActionName: 'Open');
       const initWindows = WindowsInitializationSettings(
@@ -202,7 +211,8 @@ class NotificationService with WidgetsBindingObserver {
         guid: 'd3b5b5e0-8c9a-4e7f-b5d1-a2c3e4f5a6b7',
       );
       const initSettings = InitializationSettings(
-        macOS: initMacOS,
+        iOS: initDarwin,
+        macOS: initDarwin,
         linux: initLinux,
         windows: initWindows,
       );
@@ -218,11 +228,19 @@ class NotificationService with WidgetsBindingObserver {
         title: 'Gloam',
         body: 'Notifications are working.',
         notificationDetails: NotificationDetails(
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentSound: false,
+            presentBanner: true,
+            presentList: true,
+            interruptionLevel: InterruptionLevel.active,
+          ),
           macOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentSound: false,
             presentBanner: true,
             presentList: true,
+            interruptionLevel: InterruptionLevel.active,
           ),
           linux: const LinuxNotificationDetails(),
           windows: WindowsNotificationDetails(
@@ -242,7 +260,12 @@ class NotificationService with WidgetsBindingObserver {
     required String body,
     bool isMention = false,
   }) async {
-    if (!Platform.isMacOS && !Platform.isLinux && !Platform.isWindows) return;
+    if (!Platform.isMacOS &&
+        !Platform.isLinux &&
+        !Platform.isWindows &&
+        !Platform.isIOS) {
+      return;
+    }
 
     final roomName = room.getLocalizedDisplayname();
     final title = room.isDirectChat ? sender : '$sender in $roomName';
@@ -259,6 +282,13 @@ class NotificationService with WidgetsBindingObserver {
       body: body,
       payload: room.id,
       notificationDetails: NotificationDetails(
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentSound: false, // sound played via audioplayers
+          presentBanner: true,
+          presentList: true,
+          interruptionLevel: InterruptionLevel.active,
+        ),
         macOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentSound: false, // sound played via audioplayers

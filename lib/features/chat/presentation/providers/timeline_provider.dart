@@ -8,6 +8,7 @@ import '../../../../data/slash_commands.dart';
 import '../../../../services/debug_server.dart';
 import '../../../../services/matrix_service.dart';
 import '../../../../services/search_service.dart';
+import '../../data/text_sanitize.dart';
 
 /// Lightweight message model — isolates UI from SDK types.
 class TimelineMessage {
@@ -896,7 +897,10 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     // Gloam text-append commands (/shrug, /tableflip, /unflip, /lenny)
     final transformed = handleGloamCommand(text);
     if (transformed != null) {
-      await room.sendTextEvent(transformed, parseCommands: false);
+      await room.sendTextEvent(
+        escapeLatexDollars(transformed),
+        parseCommands: false,
+      );
       return;
     }
 
@@ -927,7 +931,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     }
 
     // Everything else — SDK handles it (including /me, /join, /leave, etc.)
-    await room.sendTextEvent(text);
+    await room.sendTextEvent(escapeLatexDollars(text));
   }
 
   /// Send a reply to a specific event.
@@ -945,7 +949,10 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
       replyEvent = await room.getEventById(replyToEventId);
     }
     if (replyEvent != null) {
-      await room.sendTextEvent(text, inReplyTo: replyEvent);
+      await room.sendTextEvent(
+        escapeLatexDollars(text),
+        inReplyTo: replyEvent,
+      );
     }
   }
 
@@ -970,7 +977,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     }
 
     await room.sendTextEvent(
-      text,
+      escapeLatexDollars(text),
       threadRootEventId: rootEventId,
       inReplyTo: replyEvent,
     );
@@ -983,7 +990,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineMessage>> {
     // Disable command parsing for edits — otherwise text starting with
     // "/" or "*" gets interpreted as slash commands instead of edited content
     await room.sendTextEvent(
-      newText,
+      escapeLatexDollars(newText),
       editEventId: eventId,
       parseCommands: false,
     );

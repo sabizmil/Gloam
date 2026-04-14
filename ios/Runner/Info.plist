@@ -4,6 +4,19 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<!-- Export compliance: Gloam uses E2EE (Olm/Megolm) purely for
+	     end-user data protection, which qualifies for the standard
+	     encryption exemption. `false` avoids the upload-time prompt. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<!-- Purpose strings — Apple requires these whenever ANY API referencing
+	     these permissions is present (transitively, via deps). -->
+	<key>NSCameraUsageDescription</key>
+	<string>Gloam needs camera access so you can attach photos and videos to messages.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Gloam needs photo library access so you can attach photos and videos to messages.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Gloam needs microphone access for voice messages and voice/video calls.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

@@ -44,11 +44,73 @@ class MarkdownBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.gloam;
 
+    // Slack/Discord-style forgiveness: when the user wraps content in ``` but
+    // the content itself contains backticks, CommonMark rejects the fence and
+    // collapses everything into a paragraph of inline code (dropping line
+    // breaks). Detect that case and render a code block ourselves.
+    final forced = _extractForcedFence();
+    if (forced != null) {
+      return _buildForcedCodeBlock(colors, forced.$1, forced.$2);
+    }
+
     if (formattedBody != null && formattedBody!.isNotEmpty) {
       return _buildHtmlBody(colors);
     }
 
     return _buildMarkdownBody(colors);
+  }
+
+  /// Returns `(content, language)` if the message is a triple-backtick-wrapped
+  /// multi-line block. Extracts from the plain-text [text] body because the
+  /// Matrix SDK's `convertLinebreaksToBr` mangles newlines inside `<pre>` tags
+  /// that carry attributes (e.g. `data-metadata`) — so the HTML path can't be
+  /// trusted to preserve line breaks.
+  (String, String?)? _extractForcedFence() {
+    final trimmed = text.trim();
+    if (!trimmed.startsWith('```') || !trimmed.endsWith('```')) return null;
+    if (trimmed.length < 7) return null;
+    if (!trimmed.contains('\n')) return null;
+
+    // If the formatted body contains multiple <pre> blocks, the user used
+    // explicit fences correctly — don't flatten them into one.
+    final fb = formattedBody ?? '';
+    if (RegExp(r'<pre').allMatches(fb).length > 1) return null;
+
+    var inner = trimmed.substring(3, trimmed.length - 3);
+    String? language;
+    final firstNl = inner.indexOf('\n');
+    if (firstNl > 0 && firstNl < 20) {
+      final firstLine = inner.substring(0, firstNl).trim();
+      if (_isLanguageToken(firstLine)) {
+        language = firstLine;
+        inner = inner.substring(firstNl + 1);
+      }
+    }
+    if (inner.startsWith('\n')) inner = inner.substring(1);
+    return (inner.trimRight(), language);
+  }
+
+  Widget _buildForcedCodeBlock(
+    GloamColorExtension colors,
+    String code,
+    String? language,
+  ) {
+    final themeId = syntaxThemeId ?? defaultSyntaxTheme;
+    final theme = getSyntaxTheme(themeId);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(GloamMessageStyles.codeBlockRadius),
+      child: Container(
+        width: double.infinity,
+        decoration: GloamMessageStyles.codeBlockDecoration(colors),
+        child: SelectableHighlightView(
+          code,
+          language: language ?? 'plaintext',
+          theme: theme,
+          padding: GloamMessageStyles.codeBlockPadding,
+          textStyle: GloamMessageStyles.codeBlockTextStyle(),
+        ),
+      ),
+    );
   }
 
   // ── HTML path (primary) ───────────────────────────────────────────────
@@ -60,9 +122,31 @@ class MarkdownBody extends StatelessWidget {
     dotAll: true,
   );
 
+  /// Matrix clients wrap `$…$` inline LaTeX as
+  /// `<span data-mx-maths="…"><code>…</code></span>`. We don't render math —
+  /// unwrap to literal `$…$` text so `$9/$10` stays as-is.
+  static final _inlineLatexRegex = RegExp(
+    r'<span[^>]*data-mx-maths[^>]*>\s*<code>(.*?)</code>\s*</span>',
+    dotAll: true,
+  );
+
+  /// Block LaTeX: `<div data-mx-maths="…"><pre><code>…</code></pre></div>`.
+  static final _blockLatexRegex = RegExp(
+    r'<div[^>]*data-mx-maths[^>]*>\s*<pre>\s*<code>(.*?)</code>\s*</pre>\s*</div>',
+    dotAll: true,
+  );
+
   Widget _buildHtmlBody(GloamColorExtension colors) {
     final themeId = syntaxThemeId ?? defaultSyntaxTheme;
-    final html = formattedBody!.replaceAll(_mxReplyRegex, '').trimLeft();
+    var html = formattedBody!.replaceAll(_mxReplyRegex, '').trimLeft();
+    html = html.replaceAllMapped(
+      _blockLatexRegex,
+      (m) => r'$$' + (m.group(1) ?? '') + r'$$',
+    );
+    html = html.replaceAllMapped(
+      _inlineLatexRegex,
+      (m) => r'$' + (m.group(1) ?? '') + r'$',
+    );
 
     return HtmlWidget(
       html,
@@ -230,6 +314,25 @@ class MarkdownBody extends StatelessWidget {
         }
       }
 
+      // Slack/Discord-style forgiveness: CommonMark treats everything after
+      // the opening ``` on line 1 as the info string (language +
+      // data-metadata). When that "info" is really prose — either the block
+      // has no body, or the language token isn't a valid language
+      // identifier — fold it back into the code content as the first line.
+      final metadata = element.attributes['data-metadata'];
+      final hasMetadata = metadata != null && metadata.isNotEmpty;
+      if (code.isEmpty || !_isLanguageToken(language)) {
+        final parts = [
+          if (language != null && language.isNotEmpty) language,
+          if (hasMetadata) metadata,
+        ];
+        if (parts.isNotEmpty) {
+          final firstLine = parts.join(' ');
+          code = code.isEmpty ? firstLine : '$firstLine\n$code';
+          language = null;
+        }
+      }
+
       code = code.trimRight();
       final theme = getSyntaxTheme(syntaxThemeId);
 
@@ -259,6 +362,14 @@ class MarkdownBody extends StatelessWidget {
     }
 
     return null;
+  }
+
+  /// Whether [token] looks like a programming-language identifier (short,
+  /// alphanumeric start). Used to decide when an info string is really code.
+  static bool _isLanguageToken(String? token) {
+    if (token == null || token.isEmpty) return false;
+    if (token.length > 20) return false;
+    return RegExp(r'^[a-zA-Z][\w+-]*$').hasMatch(token);
   }
 
   /// Converts a [Color] to a CSS hex string (#RRGGBB).
@@ -314,7 +425,7 @@ class _CodeBlockBuilder extends md.MarkdownElementBuilder {
 
   @override
   Widget? visitElementAfter(element, TextStyle? preferredStyle) {
-    final code = element.textContent.trimRight();
+    var code = element.textContent.trimRight();
 
     String? language;
     if (element.children != null) {
@@ -323,6 +434,23 @@ class _CodeBlockBuilder extends md.MarkdownElementBuilder {
           language = child.attributes['class']?.replaceFirst('language-', '');
           break;
         }
+      }
+    }
+
+    // Slack/Discord-style forgiveness: when the info string was really prose
+    // (empty body, or the "language" isn't a valid language token), fold it
+    // back into the content as the first line.
+    final metadata = element.attributes['data-metadata'];
+    final hasMetadata = metadata != null && metadata.isNotEmpty;
+    if (code.isEmpty || !MarkdownBody._isLanguageToken(language)) {
+      final parts = [
+        if (language != null && language.isNotEmpty) language,
+        if (hasMetadata) metadata,
+      ];
+      if (parts.isNotEmpty) {
+        final firstLine = parts.join(' ');
+        code = code.isEmpty ? firstLine : '$firstLine\n$code';
+        language = null;
       }
     }
 

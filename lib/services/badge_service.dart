@@ -61,22 +61,11 @@ class BadgeService with WidgetsBindingObserver {
   }
 
   Future<void> _applyBadge(int count) async {
-    if (Platform.isMacOS) {
-      await _applyMacOsBadge(count);
+    if (Platform.isMacOS || Platform.isIOS) {
+      await PlatformService.instance.setBadge(count);
     } else if (Platform.isWindows) {
       await _applyWindowsBadge(count);
     }
-  }
-
-  Future<void> _applyMacOsBadge(int count) async {
-    // Native method channel sets `NSApp.dockTile.badgeLabel` directly —
-    // phantom-notification approach was unreliable on recent macOS versions.
-    final label = count <= 0
-        ? null
-        : count > 99
-            ? '99+'
-            : count.toString();
-    await PlatformService.instance.setMacDockBadge(label);
   }
 
   Future<void> _applyWindowsBadge(int count) async {
