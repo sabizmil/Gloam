@@ -371,11 +371,30 @@ jobs:
       #     name: linux-build
       #     path: artifacts/
 
+      # Locate the dated changelog file for this tag — we file them as
+      # `docs/changelog/YYYY-MM-DD-vX.Y.Z.md`. If found, the release body
+      # comes from that file. If missing, we fall back to GitHub's
+      # auto-generated notes so the release isn't empty either way.
+      - name: Resolve changelog file
+        id: changelog
+        run: |
+          VERSION="${{ needs.build-macos.outputs.version }}"
+          MATCH=$(ls docs/changelog/*-v${VERSION}.md 2>/dev/null | head -1)
+          if [ -n "$MATCH" ] && [ -f "$MATCH" ]; then
+            echo "path=$MATCH" >> $GITHUB_OUTPUT
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "Using changelog: $MATCH"
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "No changelog file found for v${VERSION} — falling back to auto-generated notes."
+          fi
+
       - name: Upload artifacts to release
         uses: softprops/action-gh-release@v2
         with:
-          # Don't set name or body — preserve the changelog we wrote
-          # via `gh release create` before tagging.
+          name: v${{ needs.build-macos.outputs.version }}
+          body_path: ${{ steps.changelog.outputs.path }}
+          generate_release_notes: ${{ steps.changelog.outputs.found != 'true' }}
           files: artifacts/*
           draft: false
           prerelease: ${{ env.IS_BETA == 'true' }}
