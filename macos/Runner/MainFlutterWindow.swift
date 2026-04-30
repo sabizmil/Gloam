@@ -8,6 +8,14 @@ class MainFlutterWindow: NSWindow {
     self.contentViewController = flutterViewController
     self.setFrame(windowFrame, display: true)
 
+    // Frameless chrome: traffic lights float over a Flutter-drawn top strip.
+    // The Flutter content extends under the titlebar; the strip is responsible
+    // for drag region (via window_manager) and double-click zoom.
+    self.titlebarAppearsTransparent = true
+    self.titleVisibility = .hidden
+    self.styleMask.insert(.fullSizeContentView)
+    self.isMovableByWindowBackground = false
+
     RegisterGeneratedPlugins(registry: flutterViewController)
 
     // `chat.gloam/platform` — dock badge + window focus from notification tap.

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'app/app.dart';
 import 'app/theme/theme_preferences.dart';
@@ -130,6 +131,20 @@ public static class ShortcutAumid {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
+
+  // Frameless window — Flutter draws its own top strip with traffic lights
+  // (macOS) or custom min/max/close buttons (Windows/Linux) inline.
+  // macOS handles transparency natively in MainFlutterWindow.swift; here we
+  // only need ensureInitialized() so windowManager.startDragging() works.
+  if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+    await windowManager.ensureInitialized();
+    if (Platform.isWindows || Platform.isLinux) {
+      await windowManager.setTitleBarStyle(
+        TitleBarStyle.hidden,
+        windowButtonVisibility: false,
+      );
+    }
+  }
 
   // Use the OS certificate store on desktop platforms
   if (Platform.isWindows || Platform.isLinux) {

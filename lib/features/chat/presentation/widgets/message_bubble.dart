@@ -9,6 +9,7 @@ import '../providers/timeline_provider.dart';
 import 'delivery_indicator.dart';
 import 'file_message.dart' hide VideoMessage;
 import 'file_preview_modal.dart';
+import 'gloam_message_styles.dart';
 import 'video_message.dart';
 import 'hover_toolbar.dart';
 import 'image_message.dart';
@@ -424,7 +425,7 @@ class _ReactionPill extends StatelessWidget {
           hoverColor: colors.border.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(12),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: reaction.includesMe
                   ? colors.accentDim.withValues(alpha: 0.3)
@@ -439,8 +440,13 @@ class _ReactionPill extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(reaction.emoji, style: const TextStyle(fontSize: 13)),
-                const SizedBox(width: 4),
+                Text(
+                  reaction.emoji,
+                  style: const TextStyle(
+                    fontSize: GloamMessageStyles.emojiReactionSize,
+                  ),
+                ),
+                const SizedBox(width: 5),
                 Text(
                   '${reaction.count}',
                   style: GoogleFonts.jetBrainsMono(

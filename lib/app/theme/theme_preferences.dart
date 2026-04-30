@@ -86,6 +86,15 @@ class ThemePreferencesNotifier extends StateNotifier<ThemePreferences> {
     state = state.copyWith(syntaxThemeId: id);
     _prefs.setString('syntax_theme', id);
   }
+
+  /// Advance to the next ThemeVariant in the enum, wrapping around.
+  /// Returns the new variant so callers can surface it (e.g. snackbar).
+  ThemeVariant cycleVariant() {
+    final values = ThemeVariant.values;
+    final next = values[(state.variant.index + 1) % values.length];
+    setVariant(next);
+    return next;
+  }
 }
 
 /// Injected in main.dart via ProviderScope.overrides.

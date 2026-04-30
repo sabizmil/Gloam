@@ -34,7 +34,6 @@ class RoomListPanel extends ConsumerStatefulWidget {
 }
 
 class _RoomListPanelState extends ConsumerState<RoomListPanel> {
-  String _searchQuery = '';
   _RoomFilter _filter = _RoomFilter.all;
 
   void _showRoomContextMenu(
@@ -185,14 +184,6 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
           // Header with homeserver name
           _PanelHeader(selectedSpace: selectedSpace),
 
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-            child: _SearchBar(
-              onChanged: (q) => setState(() => _searchQuery = q),
-            ),
-          ),
-
           // Filter chips
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
@@ -252,15 +243,13 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
                 ),
               ),
               data: (rooms) {
-                var filtered = _applyFilters(
-                    rooms, _searchQuery, _filter, selectedSpace, ref);
+                var filtered =
+                    _applyFilters(rooms, _filter, selectedSpace, ref);
 
                 if (filtered.isEmpty) {
                   return Center(
                     child: Text(
-                      _searchQuery.isNotEmpty
-                          ? '// no matches'
-                          : '// no conversations',
+                      '// no conversations',
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 11,
                         color: context.gloam.textTertiary,
@@ -338,7 +327,6 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
 
   List<RoomListItem> _applyFilters(
     List<RoomListItem> rooms,
-    String query,
     _RoomFilter filter,
     String? spaceId,
     WidgetRef ref,
@@ -390,14 +378,6 @@ class _RoomListPanelState extends ConsumerState<RoomListPanel> {
         final name = ref.read(hierarchyRoomNameProvider(r.roomId));
         return name != null ? r.withDisplayName(name) : r;
       }).toList();
-    }
-
-    // Text search
-    if (query.isNotEmpty) {
-      final q = query.toLowerCase();
-      result = result
-          .where((r) => r.displayName.toLowerCase().contains(q))
-          .toList();
     }
 
     // Category filter
@@ -991,67 +971,6 @@ class _PanelHeader extends ConsumerWidget {
               cursor: SystemMouseCursors.click,
               child: Icon(Icons.add,
                   size: 18, color: context.gloam.textSecondary),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SearchBar extends StatelessWidget {
-  const _SearchBar({required this.onChanged});
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 36,
-      decoration: BoxDecoration(
-        color: context.gloam.bg,
-        borderRadius: BorderRadius.circular(GloamSpacing.radiusSm),
-        border: Border.all(color: context.gloam.border),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Row(
-        children: [
-          Icon(Icons.search,
-              size: 14, color: context.gloam.textTertiary),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              onChanged: onChanged,
-              style: GoogleFonts.jetBrainsMono(
-                fontSize: 12,
-                color: context.gloam.textPrimary,
-              ),
-              decoration: InputDecoration(
-                hintText: 'search or jump to...',
-                hintStyle: GoogleFonts.jetBrainsMono(
-                  fontSize: 12,
-                  color: context.gloam.textTertiary,
-                ),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                isDense: true,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: context.gloam.bgElevated,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: context.gloam.border),
-            ),
-            child: Text(
-              '\u2318K',
-              style: GoogleFonts.jetBrainsMono(
-                fontSize: 10,
-                color: context.gloam.textTertiary,
-              ),
             ),
           ),
         ],

@@ -14,6 +14,7 @@ import 'space_rail.dart';
 import 'room_list_panel.dart';
 import 'mobile_tabs.dart';
 import 'right_panel.dart';
+import 'top_strip.dart';
 
 /// Top-level adaptive layout — switches between desktop (3-col),
 /// tablet (2-col), and mobile (tab bar) based on viewport width.
@@ -24,13 +25,18 @@ class AdaptiveShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth >= GloamSpacing.breakpointTablet) {
-          return const _DesktopShell();
-        } else if (constraints.maxWidth >= GloamSpacing.breakpointPhone) {
-          return const _TabletShell();
-        } else {
+        if (constraints.maxWidth < GloamSpacing.breakpointPhone) {
           return const MobileTabs();
         }
+        final shell = constraints.maxWidth >= GloamSpacing.breakpointTablet
+            ? const _DesktopShell()
+            : const _TabletShell();
+        return Column(
+          children: [
+            const TopStrip(),
+            Expanded(child: shell),
+          ],
+        );
       },
     );
   }

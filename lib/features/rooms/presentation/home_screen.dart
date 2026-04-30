@@ -8,7 +8,8 @@ import '../../../app/theme/gloam_theme_ext.dart';
 import '../../../app/theme/spacing.dart';
 import '../../../app/router.dart';
 import '../../../app/shell/adaptive_shell.dart';
-import '../../../app/shell/quick_switcher.dart';
+import '../../../app/shell/command_palette/command_palette.dart';
+import '../../../app/shell/command_palette/palette_usage.dart';
 import '../../../app/shell/right_panel.dart';
 import '../../../app/shell/shortcut_help_overlay.dart';
 import '../../../app/shortcuts.dart';
@@ -195,6 +196,9 @@ class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
   @override
   Widget build(BuildContext context) {
     final voiceState = ref.watch(voiceServiceProvider);
+    // Keep the palette usage tracker alive so it can listen to room visits
+    // even when the palette itself is closed.
+    ref.watch(paletteUsageProvider);
 
     return Scaffold(
       backgroundColor: context.gloam.bg,
@@ -203,7 +207,10 @@ class _AuthenticatedHomeState extends ConsumerState<_AuthenticatedHome> {
         child: Actions(
           actions: {
             QuickSwitcherIntent: CallbackAction<QuickSwitcherIntent>(
-              onInvoke: (_) => showQuickSwitcher(context, ref),
+              onInvoke: (_) {
+                showCommandPalette(context, ref);
+                return null;
+              },
             ),
             NewRoomIntent: CallbackAction<NewRoomIntent>(
               onInvoke: (_) async {

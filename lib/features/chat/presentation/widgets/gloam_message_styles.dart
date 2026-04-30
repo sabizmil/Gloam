@@ -32,6 +32,23 @@ abstract final class GloamMessageStyles {
   static const codeBlockPadding = EdgeInsets.all(12);
   static const codeBlockRadius = GloamSpacing.radiusSm;
 
+  // ── Emoji ─────────────────────────────────────────────────────────────
+  static const emojiInlineSize = 18.0;
+  static const emojiCustomInlineSize = 24.0;
+  static const emojiJumboSize1 = 44.0;
+  static const emojiJumboSize2 = 36.0;
+  static const emojiJumboSize3 = 32.0;
+  static const emojiReactionSize = 16.0;
+
+  /// Pick the jumbo size for a given emoji count. Returns null when the
+  /// count is outside the jumbo range (use inline sizing instead).
+  static double? jumboSizeFor(int count) => switch (count) {
+        1 => emojiJumboSize1,
+        2 => emojiJumboSize2,
+        3 => emojiJumboSize3,
+        _ => null,
+      };
+
   // ── Blockquote ────────────────────────────────────────────────────────
   static const blockquoteBorderWidth = 3.0;
   static const blockquotePaddingLeft = 12.0;

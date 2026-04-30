@@ -9,11 +9,12 @@ abstract final class GloamSpacing {
   static const double xxxl = 32;
 
   // Component-specific
-  static const double spaceRailWidth = 64;
+  static const double spaceRailWidth = 68;
   static const double roomListWidth = 280;
   static const double rightPanelWidth = 320;
   static const double threadPanelWidth = 380;
   static const double headerHeight = 56;
+  static const double topStripHeight = 36;
   static const double tabBarHeight = 80;
   static const double composerHeight = 56;
   static const double mobileSafeBottom = 24;

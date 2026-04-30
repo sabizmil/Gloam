@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../../app/theme/gloam_theme_ext.dart';
 import '../../../app/theme/spacing.dart';
@@ -12,7 +13,7 @@ import 'sections/about_section.dart';
 import 'sections/notification_section.dart';
 import '../../calls/presentation/screens/voice_settings_screen.dart';
 
-enum _SettingsSection {
+enum SettingsSection {
   account('account', Icons.person_outline),
   appearance('appearance', Icons.palette_outlined),
   voiceAudio('voice & audio', Icons.headphones_outlined),
@@ -21,21 +22,24 @@ enum _SettingsSection {
   server('server', Icons.dns_outlined),
   about('about gloam', Icons.info_outline);
 
-  const _SettingsSection(this.label, this.icon);
+  const SettingsSection(this.label, this.icon);
   final String label;
   final IconData icon;
 }
 
 /// Full-screen settings modal overlay.
 class SettingsModal extends ConsumerStatefulWidget {
-  const SettingsModal({super.key});
+  const SettingsModal({super.key, this.initialSection});
+
+  final SettingsSection? initialSection;
 
   @override
   ConsumerState<SettingsModal> createState() => _SettingsModalState();
 }
 
 class _SettingsModalState extends ConsumerState<SettingsModal> {
-  _SettingsSection _selected = _SettingsSection.account;
+  late SettingsSection _selected =
+      widget.initialSection ?? SettingsSection.account;
 
   @override
   Widget build(BuildContext context) {
@@ -46,26 +50,38 @@ class _SettingsModalState extends ConsumerState<SettingsModal> {
       body: SafeArea(
         child: Column(
           children: [
-            // Top bar
-            Container(
-              height: 56,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
+            // Top strip — draggable, leaves room for the macOS traffic
+            // lights on the left; close button on the right.
+            SizedBox(
+              height: GloamSpacing.topStripHeight,
+              child: Stack(
                 children: [
-                  Text(
-                    'settings',
-                    style: GoogleFonts.spectral(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w300,
-                      fontStyle: FontStyle.italic,
-                      color: context.gloam.accent,
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onPanStart: (_) => windowManager.startDragging(),
+                      onDoubleTap: () async {
+                        if (await windowManager.isMaximized()) {
+                          await windowManager.unmaximize();
+                        } else {
+                          await windowManager.maximize();
+                        }
+                      },
                     ),
                   ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close,
-                        size: 20, color: context.gloam.textTertiary),
+                  Positioned(
+                    top: 0,
+                    bottom: 0,
+                    right: 4,
+                    child: IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      iconSize: 18,
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      tooltip: 'close',
+                      icon: Icon(Icons.close,
+                          color: context.gloam.textTertiary),
+                    ),
                   ),
                 ],
               ),
@@ -97,7 +113,7 @@ class _SettingsModalState extends ConsumerState<SettingsModal> {
                             scrollDirection: Axis.horizontal,
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 8),
-                            children: _SettingsSection.values.map((s) {
+                            children: SettingsSection.values.map((s) {
                               final active = s == _selected;
                               return Padding(
                                 padding: const EdgeInsets.only(right: 6),
@@ -150,7 +166,7 @@ class _SettingsModalState extends ConsumerState<SettingsModal> {
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(
-        children: _SettingsSection.values.map((s) {
+        children: SettingsSection.values.map((s) {
           final active = s == _selected;
           return Padding(
             padding: const EdgeInsets.only(bottom: 2),
@@ -196,13 +212,13 @@ class _SettingsModalState extends ConsumerState<SettingsModal> {
 
   Widget _buildContent() {
     return switch (_selected) {
-      _SettingsSection.account => const AccountSection(),
-      _SettingsSection.appearance => const AppearanceSection(),
-      _SettingsSection.voiceAudio => const VoiceSettingsScreen(),
-      _SettingsSection.notifications => const NotificationSection(),
-      _SettingsSection.encryption => const EncryptionSection(),
-      _SettingsSection.server => const ServerSection(),
-      _SettingsSection.about => const AboutSection(),
+      SettingsSection.account => const AccountSection(),
+      SettingsSection.appearance => const AppearanceSection(),
+      SettingsSection.voiceAudio => const VoiceSettingsScreen(),
+      SettingsSection.notifications => const NotificationSection(),
+      SettingsSection.encryption => const EncryptionSection(),
+      SettingsSection.server => const ServerSection(),
+      SettingsSection.about => const AboutSection(),
     };
   }
 }
@@ -227,10 +243,14 @@ class _PlaceholderSection extends StatelessWidget {
 }
 
 /// Shows the settings modal as a full-screen overlay.
-void showSettingsModal(BuildContext context) {
+/// Pass [initialSection] to deep-link directly to a section (used by ⌘K).
+void showSettingsModal(
+  BuildContext context, {
+  SettingsSection? initialSection,
+}) {
   Navigator.of(context).push(
     PageRouteBuilder(
-      pageBuilder: (_, __, ___) => const SettingsModal(),
+      pageBuilder: (_, __, ___) => SettingsModal(initialSection: initialSection),
       transitionsBuilder: (_, animation, __, child) =>
           FadeTransition(opacity: animation, child: child),
       transitionDuration: const Duration(milliseconds: 200),

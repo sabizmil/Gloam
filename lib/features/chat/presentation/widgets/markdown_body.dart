@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme/gloam_color_extension.dart';
 import '../../../../app/theme/gloam_theme_ext.dart';
 import '../../../../data/syntax_themes.dart';
+import '../utils/emoji_detection.dart';
 import 'gloam_message_styles.dart';
 import 'selectable_highlight.dart';
 import 'spoiler_widget.dart';
@@ -53,11 +54,82 @@ class MarkdownBody extends StatelessWidget {
       return _buildForcedCodeBlock(colors, forced.$1, forced.$2);
     }
 
+    // Jumbo emoji-only branch — must run before code-fence detection above
+    // already cleared, but after, so legitimate code fences still win.
+    final classification = classifyMessage(
+      plainText: text,
+      formattedHtml: formattedBody,
+    );
+    final jumbo = GloamMessageStyles.jumboSizeFor(classification.emojiCount);
+    if (classification.isEmojiOnly && jumbo != null) {
+      return _buildJumboBody(colors, jumbo);
+    }
+
     if (formattedBody != null && formattedBody!.isNotEmpty) {
       return _buildHtmlBody(colors);
     }
 
     return _buildMarkdownBody(colors);
+  }
+
+  // ── Jumbo emoji-only path ─────────────────────────────────────────────
+
+  /// Renders an emoji-only message at jumbo size. Routes through HtmlWidget
+  /// when there's a formatted body so custom emoji (`<img data-mx-emoticon>`)
+  /// are rendered alongside unicode glyphs at the same scaled size.
+  Widget _buildJumboBody(GloamColorExtension colors, double size) {
+    final fb = formattedBody;
+    if (fb != null && fb.isNotEmpty) {
+      // Strip wrapper paragraphs so the row sits flush — keeps spacing tight.
+      final stripped = fb.replaceAll(_mxReplyRegex, '').trim();
+      return HtmlWidget(
+        stripped,
+        textStyle: TextStyle(
+          fontSize: size,
+          height: 1.2,
+          color: colors.textPrimary,
+        ),
+        customWidgetBuilder: (element) {
+          if (element.localName == 'img' &&
+              element.attributes.containsKey('data-mx-emoticon')) {
+            return _renderCustomEmoji(element, size);
+          }
+          return null;
+        },
+        renderMode: RenderMode.column,
+      );
+    }
+    return Text(
+      text.trim(),
+      style: TextStyle(
+        fontSize: size,
+        height: 1.2,
+        color: colors.textPrimary,
+      ),
+    );
+  }
+
+  /// Renders a Matrix custom emoji (`<img data-mx-emoticon>`) at the given
+  /// pixel size. Matrix `mxc://` URIs aren't fetchable directly — they'd
+  /// typically be resolved via the homeserver. For now we honor the `src`
+  /// attribute as-is (some clients put http(s) thumbnails there).
+  static Widget _renderCustomEmoji(dom.Element element, double size) {
+    final src = element.attributes['src'];
+    final alt = element.attributes['alt'] ?? '';
+    if (src == null || src.startsWith('mxc://')) {
+      // Fall back to alt text — better than a broken image glyph.
+      return Text(alt, style: TextStyle(fontSize: size));
+    }
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Image.network(
+        src,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) =>
+            Text(alt, style: TextStyle(fontSize: size)),
+      ),
+    );
   }
 
   /// Returns `(content, language)` if the message is a triple-backtick-wrapped
@@ -147,6 +219,9 @@ class MarkdownBody extends StatelessWidget {
       _inlineLatexRegex,
       (m) => r'$' + (m.group(1) ?? '') + r'$',
     );
+    // Bump inline unicode emoji glyphs above body 14pt so they're legible.
+    // Skips text inside <pre>, <code>, and tag attributes.
+    html = _bumpInlineEmojisInHtml(html, GloamMessageStyles.emojiInlineSize);
 
     return HtmlWidget(
       html,
@@ -361,7 +436,53 @@ class MarkdownBody extends StatelessWidget {
       );
     }
 
+    // ── Custom emoji inline: <img data-mx-emoticon …> ──────────────────
+    // Jumbo path is handled separately in _buildJumboBody; this branch
+    // sizes inline custom emoji above the default img size for legibility.
+    if (element.localName == 'img' &&
+        element.attributes.containsKey('data-mx-emoticon')) {
+      return _renderCustomEmoji(element, GloamMessageStyles.emojiCustomInlineSize);
+    }
+
     return null;
+  }
+
+  /// Wraps each emoji grapheme in a `<span>` with the bumped font size,
+  /// while leaving HTML tags and `<pre>`/`<code>` content untouched.
+  static String _bumpInlineEmojisInHtml(String html, double size) {
+    // Match either a code block (whole thing) or any single tag.
+    final segmentRe = RegExp(
+      r'<(pre|code)\b[^>]*>.*?</\1>|<[^>]+>',
+      dotAll: true,
+      caseSensitive: false,
+    );
+    final out = StringBuffer();
+    var pos = 0;
+    for (final m in segmentRe.allMatches(html)) {
+      out.write(_wrapEmojisInPlainText(html.substring(pos, m.start), size));
+      out.write(m.group(0));
+      pos = m.end;
+    }
+    out.write(_wrapEmojisInPlainText(html.substring(pos), size));
+    return out.toString();
+  }
+
+  static String _wrapEmojisInPlainText(String text, double size) {
+    if (text.isEmpty) return text;
+    final out = StringBuffer();
+    for (final g in text.characters) {
+      if (isEmojiGrapheme(g)) {
+        out
+          ..write('<span style="font-size: ')
+          ..write(size)
+          ..write('px;">')
+          ..write(g)
+          ..write('</span>');
+      } else {
+        out.write(g);
+      }
+    }
+    return out.toString();
   }
 
   /// Whether [token] looks like a programming-language identifier (short,
